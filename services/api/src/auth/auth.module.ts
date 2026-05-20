@@ -3,7 +3,7 @@ import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtStrategy } from './strategies/jwt.strategy';
-import { ClerkWebhookController } from './webhooks/clerk-webhook.controller';
+import { SupabaseModule } from '../common/supabase/supabase.module';
 import { UsersModule } from '../users/users.module';
 
 @Module({
@@ -19,9 +19,10 @@ import { UsersModule } from '../users/users.module';
         },
       }),
     }),
+    SupabaseModule,
     UsersModule,
   ],
-  controllers: [ClerkWebhookController],
+  controllers: [],
   providers: [JwtStrategy],
   exports: [PassportModule, JwtModule],
 })

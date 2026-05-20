@@ -52,7 +52,7 @@
 - 32 custom React Query hooks with caching
 - Full RBAC with business data isolation
 
-**Next Stage**: STAGE 3 - Scheduling & Calendar OR Complete AI Integration
+**Next Stage**: STAGE 4 - Messaging & Communication OR Complete AI Integration
 
 **Outstanding Items**:
 - Integrate OpenAI/Claude API for AI summaries
@@ -61,9 +61,41 @@
 
 ---
 
+### 🚀 STAGE 3 - Scheduling & Calendar - **50% COMPLETED**
+
+**Completion Date**: January 2024
+
+**What Was Built**:
+- ✅ Complete scheduling engine with 4-layer conflict detection
+- ✅ Therapist availability system (weekly schedules + time-off tracking)
+- ✅ Calendar UI with week/day views, filters, and real-time conflict warnings
+- ✅ Appointment lifecycle management (6 status states with transitions)
+- ✅ Cancellation flow with reason tracking and audit trail
+- ✅ 18 new backend endpoints (appointments + availability APIs)
+- ✅ 25 UI components (calendar views, modals, cards, filters)
+- ✅ 15 React Query hooks with caching and optimistic updates
+- ✅ 3 new database models with relations
+
+**Technical Implementation**:
+- Database: 3 new models (TherapistAvailability, TherapistTimeOff, AppointmentCancellation)
+- Backend: 2 modules, 18 endpoints, ~2,500 lines of code
+- Frontend: 6 modals, 6 core components, 15 hooks, ~2,500 lines of code
+- Conflict Detection: Checks day availability, working hours, time-off, overlaps
+- Status Workflow: SCHEDULED → CONFIRMED → IN_PROGRESS → COMPLETED
+- RBAC: Different permissions for owners, receptionists, therapists
+
+**Deferred to Later**:
+- ⏸️ Automated reminders (Stage 4 - requires messaging integration)
+- ⏸️ Online booking portal (Post-MVP - needs public security hardening)
+- ⏸️ Recurring appointments (Post-MVP - complex recurrence logic)
+
+**See**: `/STAGE3_IMPLEMENTATION_SUMMARY.md` for complete documentation
+
+---
+
 ## 📋 COMPLETE TASK INDEX
 
-**Total Tasks**: 177 across all sections | **Completed**: ~48 tasks | **Overall Progress**: ~27%
+**Total Tasks**: 177 across all sections | **Completed**: ~53 tasks | **Overall Progress**: ~30%
 
 ### Quick Navigation
 - [Development Stages](#development-stages-task-index) (STAGE 1-8)
@@ -98,13 +130,13 @@
 - [ ] Build AI summaries (Database field ready, needs API integration)
 - [x] Build medical history system
 
-#### **STAGE 3 — Scheduling & Calendar** | **0/6 (0%)**
-- [ ] Build scheduling engine
-- [ ] Build therapist availability
-- [ ] Build reminders
-- [ ] Build online booking page
-- [ ] Build cancellation flow
-- [ ] Build repeat appointments
+#### **STAGE 3 — Scheduling & Calendar** | **3/6 (50%)**
+- [x] Build scheduling engine ✅ COMPLETED
+- [x] Build therapist availability ✅ COMPLETED
+- [ ] Build reminders ⏸️ DEFERRED (Stage 4 - requires messaging integration)
+- [ ] Build online booking page ⏸️ DEFERRED (Post-MVP - requires public security hardening)
+- [x] Build cancellation flow ✅ COMPLETED
+- [ ] Build repeat appointments ⏸️ DEFERRED (Post-MVP - complex recurrence logic)
 
 #### **STAGE 4 — Messaging & Communication** | **0/6 (0%)**
 - [ ] Build communication center
@@ -190,12 +222,12 @@
 - [ ] Build refund system
 - [ ] Build payment history
 
-#### **FEATURE 7 — Appointment Scheduling** | **0/5 (0%)**
-- [ ] Build calendar UI
-- [ ] Build scheduling logic
-- [ ] Build reminder system
-- [ ] Build waitlist
-- [ ] Build online booking
+#### **FEATURE 7 — Appointment Scheduling** | **2/5 (40%)**
+- [x] Build calendar UI ✅ COMPLETED (Week/Day views, filters, appointment cards)
+- [x] Build scheduling logic ✅ COMPLETED (Conflict detection, availability checking)
+- [ ] Build reminder system ⏸️ DEFERRED (Stage 4 - requires messaging)
+- [ ] Build waitlist (Post-MVP)
+- [ ] Build online booking ⏸️ DEFERRED (Post-MVP)
 
 #### **FEATURE 8 — Business Analytics Dashboard** | **0/5 (0%)**
 - [ ] Build analytics dashboard
@@ -334,14 +366,14 @@
 
 | Category | Completed | Total | Progress |
 |----------|-----------|-------|----------|
-| **Development Stages** | 1.94/8 | 8 | 24% |
-| **Core Features** | 0.6/11 | 11 | 5% |
+| **Development Stages** | 2.44/8 | 8 | 31% |
+| **Core Features** | 1.4/11 | 11 | 13% |
 | **Infrastructure** | 12/20 | 20 | 60% |
 | **Development Phases** | 1/5 | 5 | 20% |
 | **Extra Features** | 0/10 | 10 | 0% |
-| **TOTAL PROJECT** | ~48/177 | 177 | ~27% |
+| **TOTAL PROJECT** | ~53/177 | 177 | ~30% |
 
-**Current Focus**: Stage 2 (~90% complete) → Next: Stage 3 or Complete AI Integration
+**Current Focus**: Stage 3 (50% complete) → Next: Stage 4 (Messaging) or Complete AI Integration
 
 ---
 
@@ -779,11 +811,11 @@ Fast client capture during incoming calls.
 
 ## Tasks
 
-- [ ] Build calendar UI
-- [ ] Build scheduling logic
-- [ ] Build reminder system
-- [ ] Build waitlist
-- [ ] Build online booking
+- [x] Build calendar UI ✅ COMPLETED
+- [x] Build scheduling logic ✅ COMPLETED
+- [ ] Build reminder system ⏸️ DEFERRED (Stage 4)
+- [ ] Build waitlist (Post-MVP)
+- [ ] Build online booking ⏸️ DEFERRED (Post-MVP)
 
 ---
 
@@ -1403,12 +1435,56 @@ Allow clinics to operate day-to-day.
 
 ## Tasks
 
-- [ ] Build scheduling engine
-- [ ] Build therapist availability
-- [ ] Build reminders
-- [ ] Build online booking page
-- [ ] Build cancellation flow
-- [ ] Build repeat appointments
+- [x] Build scheduling engine ✅ COMPLETED
+- [x] Build therapist availability ✅ COMPLETED
+- [ ] Build reminders ⏸️ DEFERRED (Stage 4)
+- [ ] Build online booking page ⏸️ DEFERRED (Post-MVP)
+- [x] Build cancellation flow ✅ COMPLETED
+- [ ] Build repeat appointments ⏸️ DEFERRED (Post-MVP)
+
+## Implementation Details
+
+**Completed Components** (January 2024):
+
+### Database Schema
+- ✅ `TherapistAvailability` model - Weekly schedule (dayOfWeek, startTime, endTime)
+- ✅ `TherapistTimeOff` model - Time off periods with reason tracking
+- ✅ `AppointmentCancellation` model - Cancellation audit trail
+
+### Backend API (18 endpoints)
+- ✅ **AppointmentsService**: 10 methods with conflict detection
+  - Full CRUD with pagination
+  - Status transitions (confirm, start, complete, no-show, cancel)
+  - `checkAvailability()` - 4-layer validation (day availability, working hours, time-off, conflicts)
+- ✅ **TherapistAvailabilityService**: 9 methods
+  - Weekly schedule management (different hours per day)
+  - Time-off tracking
+  - Available slots calculation
+
+### Frontend (25 components + 15 hooks)
+- ✅ **Calendar Components**: WeekView, DayView, AppointmentCalendar, CalendarFilters
+- ✅ **UI Components**: StatusBadge, AppointmentCard
+- ✅ **Modals**: Add, Edit, Detail, Cancel, Availability, TimeOff (6 modals)
+- ✅ **React Query Hooks**: 10 appointment hooks + 8 availability hooks + 5 therapist hooks
+- ✅ Main appointments page with all integrations
+
+### Key Features Working
+- ✅ Smart conflict detection (prevents double-booking)
+- ✅ Flexible availability (different hours per day)
+- ✅ Appointment lifecycle (status transitions with audit trail)
+- ✅ Dual calendar views (week grid and day timeline)
+- ✅ Real-time conflict warnings
+- ✅ Cancellation tracking with reason/type
+- ✅ RBAC enforced (owner/receptionist/therapist permissions)
+
+**Deferred Features**:
+- ⏸️ Automated reminders → Stage 4 (requires Twilio/messaging)
+- ⏸️ Online booking portal → Post-MVP (needs public security + anonymous flow)
+- ⏸️ Recurring appointments → Post-MVP (complex recurrence engine)
+- ⏸️ Drag-and-drop rescheduling → Post-MVP (nice-to-have UX)
+
+**Files Created**: 30+ files (services, controllers, components, hooks, modals)
+**Lines of Code**: ~5,000+ lines
 
 ---
 

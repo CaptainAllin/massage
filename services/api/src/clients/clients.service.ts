@@ -1,6 +1,5 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@/common/prisma/prisma.service';
-import { UserRole } from '@massage/types';
 
 @Injectable()
 export class ClientsService {

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
@@ -12,11 +13,15 @@ export const apiClient = axios.create({
 // Request interceptor to add auth token
 apiClient.interceptors.request.use(
   async (config) => {
-    // Get Clerk token from window.__clerk_token if available
+    // Get Supabase session token
     if (typeof window !== 'undefined') {
-      const token = await (window as any).__clerk?.session?.getToken();
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
+      const supabase = createClientComponentClient();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (session?.access_token) {
+        config.headers.Authorization = `Bearer ${session.access_token}`;
       }
     }
     return config;
@@ -29,10 +34,12 @@ apiClient.interceptors.request.use(
 // Response interceptor for error handling
 apiClient.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     if (error.response?.status === 401) {
-      // Redirect to sign in on unauthorized
+      // Sign out and redirect to sign in
       if (typeof window !== 'undefined') {
+        const supabase = createClientComponentClient();
+        await supabase.auth.signOut();
         window.location.href = '/sign-in';
       }
     }

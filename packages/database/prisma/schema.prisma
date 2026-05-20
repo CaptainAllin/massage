@@ -31,7 +31,7 @@ enum AppointmentStatus {
 // User model - Core authentication and profile
 model User {
   id               String    @id @default(cuid())
-  authProviderId   String    @unique // Clerk user ID
+  authUserId       String    @unique // Supabase auth.users.id
   email            String    @unique
   firstName        String?
   lastName         String?
@@ -48,7 +48,7 @@ model User {
   auditLogs        AuditLog[]
 
   @@index([email])
-  @@index([authProviderId])
+  @@index([authUserId])
   @@map("users")
 }
 
