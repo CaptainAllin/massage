@@ -90,6 +90,10 @@ model Business {
   appointmentCancellations   AppointmentCancellation[]     // Stage 3: Cancellation records
   recurringAppointmentSeries RecurringAppointmentSeries[]  // Stage 3: Recurring appointment templates
   appointmentReminders       AppointmentReminder[]         // Stage 3: Appointment reminders
+  messages                   Message[]                     // Stage 4: Communication center messages
+  conversations              Conversation[]                // Stage 4: Communication center conversations
+  messageTemplates           MessageTemplate[]             // Stage 4: Message templates
+  communicationSettings      CommunicationSettings?        // Stage 4: Provider configuration
 
   @@index([ownerId])
   @@map("businesses")
@@ -168,6 +172,7 @@ model Client {
   medicalConditions          MedicalCondition[]
   bodyMaps                   BodyMap[]
   recurringAppointmentSeries RecurringAppointmentSeries[]  // Stage 3: Recurring appointment series
+  conversations              Conversation[]                // Stage 4: Communication center conversations
 
   @@index([businessId])
   @@index([userId])
@@ -525,4 +530,145 @@ model AppointmentReminder {
   @@index([scheduledFor])
   @@index([status])
   @@map("appointment_reminders")
+}
+
+// ============================================================================
+// STAGE 4: Communication Center Models
+// ============================================================================
+
+// Message model - Core message storage with delivery tracking
+model Message {
+  id              String    @id @default(cuid())
+  businessId      String
+  conversationId  String?
+
+  // Participants
+  senderId        String?
+  senderType      String    // "USER", "CLIENT", "SYSTEM"
+  recipientId     String
+  recipientType   String    // "CLIENT", "USER"
+
+  // Message content
+  type            String    // "SMS", "EMAIL", "WHATSAPP"
+  subject         String?
+  content         String    @db.Text
+
+  // Status tracking
+  status          String    @default("PENDING") // "PENDING", "SENT", "DELIVERED", "FAILED", "READ"
+  direction       String    // "INBOUND", "OUTBOUND"
+
+  // External integration
+  externalId      String?   // Provider's message ID (Twilio SID, SendGrid message ID, etc.)
+  externalStatus  String?   // Provider's status
+  failureReason   String?   @db.Text
+
+  // Metadata
+  metadata        Json?     // Additional context (appointmentId, templateId, etc.)
+  scheduledFor    DateTime? // For scheduled messages
+  sentAt          DateTime?
+  deliveredAt     DateTime?
+  readAt          DateTime?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  business      Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  conversation  Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+
+  @@index([businessId])
+  @@index([conversationId])
+  @@index([senderId])
+  @@index([recipientId])
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
+  @@index([scheduledFor])
+  @@map("messages")
+}
+
+// Conversation model - Thread grouping for messages
+model Conversation {
+  id                  String    @id @default(cuid())
+  businessId          String
+  clientId            String
+  type                String    // "SMS", "EMAIL", "WHATSAPP", "MIXED"
+  subject             String?   // For email threads
+  status              String    @default("ACTIVE") // "ACTIVE", "ARCHIVED", "CLOSED"
+  lastMessageAt       DateTime?
+  lastMessagePreview  String?   @db.Text
+  unreadCount         Int       @default(0)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  // Relations
+  business  Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  client    Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  messages  Message[]
+
+  @@index([businessId])
+  @@index([clientId])
+  @@index([type])
+  @@index([status])
+  @@index([lastMessageAt])
+  @@map("conversations")
+}
+
+// MessageTemplate model - Reusable message templates with variables
+model MessageTemplate {
+  id          String   @id @default(cuid())
+  businessId  String
+  name        String
+  description String?  @db.Text
+  type        String   // "SMS", "EMAIL", "WHATSAPP"
+  category    String?  // "REMINDER", "CONFIRMATION", "FOLLOW_UP", "MARKETING", "CUSTOM"
+  subject     String?  // For email templates
+  content     String   @db.Text // Supports variables like {{clientName}}, {{appointmentDate}}
+  isActive    Boolean  @default(true)
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+  @@index([type])
+  @@index([category])
+  @@index([isActive])
+  @@map("message_templates")
+}
+
+// CommunicationSettings model - Provider configuration per business
+model CommunicationSettings {
+  id                     String   @id @default(cuid())
+  businessId             String   @unique
+
+  // Provider credentials (encrypted in production)
+  twilioAccountSid       String?
+  twilioAuthToken        String?
+  twilioPhoneNumber      String?
+  sendGridApiKey         String?
+  sendGridFromEmail      String?
+  sendGridFromName       String?
+  whatsappPhoneNumberId  String?
+  whatsappAccessToken    String?
+
+  // Feature toggles
+  smsEnabled             Boolean  @default(false)
+  emailEnabled           Boolean  @default(false)
+  whatsappEnabled        Boolean  @default(false)
+
+  // Settings
+  defaultReminderHours   Int      @default(24) // Send reminders N hours before appointment
+  autoSendReminders      Boolean  @default(false)
+  emailSignature         String?  @db.Text
+
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  // Relations
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@map("communication_settings")
 }
