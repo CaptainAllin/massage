@@ -74,20 +74,22 @@ model Business {
   updatedAt          DateTime  @updatedAt
 
   // Relations
-  owner                   User                       @relation("BusinessOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  therapists              Therapist[]
-  clients                 Client[]
-  appointments            Appointment[]
-  intakeForms             IntakeForm[]
-  intakeFormTemplates     IntakeFormTemplate[]       // Stage 2: Form templates
-  treatmentNotes          TreatmentNote[]
-  therapistNotes          TherapistNote[]            // Stage 2: Private therapist notes
-  bodyMaps                BodyMap[]                  // Stage 2: Body maps
-  medicalConditions       MedicalCondition[]         // Stage 2: Medical conditions
-  auditLogs               AuditLog[]
-  therapistAvailability   TherapistAvailability[]    // Stage 3: Therapist schedules
-  therapistTimeOff        TherapistTimeOff[]         // Stage 3: Time off periods
-  appointmentCancellations AppointmentCancellation[] // Stage 3: Cancellation records
+  owner                      User                          @relation("BusinessOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  therapists                 Therapist[]
+  clients                    Client[]
+  appointments               Appointment[]
+  intakeForms                IntakeForm[]
+  intakeFormTemplates        IntakeFormTemplate[]          // Stage 2: Form templates
+  treatmentNotes             TreatmentNote[]
+  therapistNotes             TherapistNote[]               // Stage 2: Private therapist notes
+  bodyMaps                   BodyMap[]                     // Stage 2: Body maps
+  medicalConditions          MedicalCondition[]            // Stage 2: Medical conditions
+  auditLogs                  AuditLog[]
+  therapistAvailability      TherapistAvailability[]       // Stage 3: Therapist schedules
+  therapistTimeOff           TherapistTimeOff[]            // Stage 3: Time off periods
+  appointmentCancellations   AppointmentCancellation[]     // Stage 3: Cancellation records
+  recurringAppointmentSeries RecurringAppointmentSeries[]  // Stage 3: Recurring appointment templates
+  appointmentReminders       AppointmentReminder[]         // Stage 3: Appointment reminders
 
   @@index([ownerId])
   @@map("businesses")
@@ -108,14 +110,15 @@ model Therapist {
   updatedAt       DateTime  @updatedAt
 
   // Relations
-  user                   User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  business               Business                 @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  appointments           Appointment[]
-  treatmentNotes         TreatmentNote[]
-  therapistNotes         TherapistNote[]          // Stage 2: Private therapist notes
-  preferredClients       Client[]                 @relation("PreferredClients") // Stage 2: Clients who prefer this therapist
-  availability           TherapistAvailability[]  // Stage 3: Weekly schedule
-  timeOff                TherapistTimeOff[]       // Stage 3: Time off periods
+  user                       User                          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  business                   Business                      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  appointments               Appointment[]
+  treatmentNotes             TreatmentNote[]
+  therapistNotes             TherapistNote[]               // Stage 2: Private therapist notes
+  preferredClients           Client[]                      @relation("PreferredClients") // Stage 2: Clients who prefer this therapist
+  availability               TherapistAvailability[]       // Stage 3: Weekly schedule
+  timeOff                    TherapistTimeOff[]            // Stage 3: Time off periods
+  recurringAppointmentSeries RecurringAppointmentSeries[]  // Stage 3: Recurring appointment series
 
   @@index([userId])
   @@index([businessId])
@@ -155,15 +158,16 @@ model Client {
   updatedAt             DateTime  @updatedAt
 
   // Relations
-  user              User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
-  business          Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  preferredTherapist Therapist?        @relation("PreferredClients", fields: [preferredTherapistId], references: [id], onDelete: SetNull)
-  appointments      Appointment[]
-  intakeForms       IntakeForm[]
-  treatmentNotes    TreatmentNote[]
-  therapistNotes    TherapistNote[]
-  medicalConditions MedicalCondition[]
-  bodyMaps          BodyMap[]
+  user                       User?                         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  business                   Business                      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  preferredTherapist         Therapist?                    @relation("PreferredClients", fields: [preferredTherapistId], references: [id], onDelete: SetNull)
+  appointments               Appointment[]
+  intakeForms                IntakeForm[]
+  treatmentNotes             TreatmentNote[]
+  therapistNotes             TherapistNote[]
+  medicalConditions          MedicalCondition[]
+  bodyMaps                   BodyMap[]
+  recurringAppointmentSeries RecurringAppointmentSeries[]  // Stage 3: Recurring appointment series
 
   @@index([businessId])
   @@index([userId])
@@ -177,31 +181,35 @@ model Client {
 
 // Appointment model - Scheduling data
 model Appointment {
-  id          String            @id @default(cuid())
-  businessId  String
-  clientId    String
-  therapistId String
-  startTime   DateTime
-  endTime     DateTime
-  status      AppointmentStatus @default(SCHEDULED)
-  serviceType String?
-  duration    Int               // Duration in minutes
-  price       Float?
-  notes       String?           @db.Text
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
+  id                    String            @id @default(cuid())
+  businessId            String
+  clientId              String
+  therapistId           String
+  recurringSeriesId     String?           // Link to recurring series if part of one
+  startTime             DateTime
+  endTime               DateTime
+  status                AppointmentStatus @default(SCHEDULED)
+  serviceType           String?
+  duration              Int               // Duration in minutes
+  price                 Float?
+  notes                 String?           @db.Text
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
 
   // Relations
-  business       Business                  @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  client         Client                    @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  therapist      Therapist                 @relation(fields: [therapistId], references: [id], onDelete: Cascade)
-  treatmentNotes TreatmentNote[]
-  bodyMaps       BodyMap[]                 // Stage 2: Body maps associated with appointment
-  cancellation   AppointmentCancellation?  // Stage 3: Cancellation audit trail
+  business         Business                      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  client           Client                        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  therapist        Therapist                     @relation(fields: [therapistId], references: [id], onDelete: Cascade)
+  recurringSeries  RecurringAppointmentSeries?   @relation(fields: [recurringSeriesId], references: [id], onDelete: SetNull)
+  treatmentNotes   TreatmentNote[]
+  bodyMaps         BodyMap[]                     // Stage 2: Body maps associated with appointment
+  cancellation     AppointmentCancellation?      // Stage 3: Cancellation audit trail
+  reminders        AppointmentReminder[]         // Stage 3: Scheduled reminders
 
   @@index([businessId])
   @@index([clientId])
   @@index([therapistId])
+  @@index([recurringSeriesId])
   @@index([startTime])
   @@index([status])
   @@map("appointments")
@@ -457,4 +465,64 @@ model AppointmentCancellation {
   @@index([cancelledBy])
   @@index([cancelledAt])
   @@map("appointment_cancellations")
+}
+
+// RecurringAppointmentSeries model - Template for recurring appointments
+model RecurringAppointmentSeries {
+  id              String   @id @default(cuid())
+  businessId      String
+  clientId        String
+  therapistId     String
+  frequency       String   // "DAILY", "WEEKLY", "BIWEEKLY", "MONTHLY"
+  interval        Int      @default(1) // Every N days/weeks/months
+  dayOfWeek       Int?     // For WEEKLY: 0=Sunday, 6=Saturday
+  dayOfMonth      Int?     // For MONTHLY: 1-31
+  startTime       String   // "09:00" format
+  duration        Int      // Duration in minutes
+  startDate       DateTime // Series start date
+  endDate         DateTime? // Optional series end date
+  occurrences     Int?     // Or stop after N occurrences
+  serviceType     String?
+  price           Float?
+  notes           String?  @db.Text
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  business     Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  client       Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  therapist    Therapist     @relation(fields: [therapistId], references: [id], onDelete: Cascade)
+  appointments Appointment[] // Generated appointments from this series
+
+  @@index([businessId])
+  @@index([clientId])
+  @@index([therapistId])
+  @@index([isActive])
+  @@index([startDate])
+  @@map("recurring_appointment_series")
+}
+
+// AppointmentReminder model - Scheduled reminders for appointments
+model AppointmentReminder {
+  id            String    @id @default(cuid())
+  appointmentId String
+  businessId    String
+  reminderType  String    // "SMS", "EMAIL", "WHATSAPP"
+  scheduledFor  DateTime  // When to send the reminder
+  status        String    @default("PENDING") // "PENDING", "SENT", "FAILED", "CANCELLED"
+  sentAt        DateTime?
+  failureReason String?   @db.Text
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  business    Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+  @@index([appointmentId])
+  @@index([scheduledFor])
+  @@index([status])
+  @@map("appointment_reminders")
 }

@@ -15,6 +15,8 @@ import { TreatmentNotesModule } from './treatment-notes/treatment-notes.module';
 import { TherapistNotesModule } from './therapist-notes/therapist-notes.module';
 // Stage 3 modules
 import { TherapistAvailabilityModule } from './therapist-availability/therapist-availability.module';
+import { RecurringAppointmentsModule } from './recurring-appointments/recurring-appointments.module';
+import { RemindersModule } from './reminders/reminders.module';
 import { AppController } from './app.controller';
 
 @Module({
@@ -37,6 +39,8 @@ import { AppController } from './app.controller';
     TherapistNotesModule,
     // Stage 3 modules
     TherapistAvailabilityModule,
+    RecurringAppointmentsModule,
+    RemindersModule,
   ],
   controllers: [AppController],
 })

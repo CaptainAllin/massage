@@ -1,7 +1,7 @@
 import './globals.css';
 import type { Metadata } from 'next';
-import { ClerkProvider } from '@clerk/nextjs';
 import { inter, poppins } from '@/lib/fonts';
+import { AuthProvider } from '@/components/providers/AuthProvider';
 import { QueryProvider } from '@/components/providers/QueryProvider';
 
 export const metadata: Metadata = {
@@ -16,14 +16,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ClerkProvider>
-      <html lang="en" className={`${inter.variable} ${poppins.variable}`}>
-        <body>
+    <html lang="en" className={`${inter.variable} ${poppins.variable}`}>
+      <body>
+        <AuthProvider>
           <QueryProvider>
             {children}
           </QueryProvider>
-        </body>
-      </html>
-    </ClerkProvider>
+        </AuthProvider>
+      </body>
+    </html>
   );
 }

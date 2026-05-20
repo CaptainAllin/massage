@@ -569,3 +569,135 @@ export interface TherapistTimeOffFilters extends PaginationParams {
   startDate?: Date | string;
   endDate?: Date | string;
 }
+
+// ============================================================================
+// Recurring Appointments Types
+// ============================================================================
+
+export enum RecurrenceFrequency {
+  DAILY = 'DAILY',
+  WEEKLY = 'WEEKLY',
+  BIWEEKLY = 'BIWEEKLY',
+  MONTHLY = 'MONTHLY',
+}
+
+export interface RecurringAppointmentSeries {
+  id: string;
+  businessId: string;
+  clientId: string;
+  therapistId: string;
+  frequency: RecurrenceFrequency | string;
+  interval: number;
+  dayOfWeek: number | null;
+  dayOfMonth: number | null;
+  startTime: string;
+  duration: number;
+  startDate: Date;
+  endDate: Date | null;
+  occurrences: number | null;
+  serviceType: string | null;
+  price: number | null;
+  notes: string | null;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CreateRecurringSeriesDto {
+  businessId: string;
+  clientId: string;
+  therapistId: string;
+  frequency: RecurrenceFrequency | string;
+  interval?: number;
+  dayOfWeek?: number;
+  dayOfMonth?: number;
+  startTime: string;
+  duration: number;
+  startDate: Date | string;
+  endDate?: Date | string;
+  occurrences?: number;
+  serviceType?: string;
+  price?: number;
+  notes?: string;
+}
+
+export interface UpdateRecurringSeriesDto {
+  frequency?: RecurrenceFrequency | string;
+  interval?: number;
+  dayOfWeek?: number;
+  dayOfMonth?: number;
+  startTime?: string;
+  duration?: number;
+  endDate?: Date | string;
+  occurrences?: number;
+  serviceType?: string;
+  price?: number;
+  notes?: string;
+  isActive?: boolean;
+}
+
+export interface RecurringSeriesWithRelations extends RecurringAppointmentSeries {
+  client?: Client;
+  therapist?: Therapist & { user?: User };
+  appointments?: Appointment[];
+}
+
+// ============================================================================
+// Appointment Reminders Types
+// ============================================================================
+
+export enum ReminderType {
+  SMS = 'SMS',
+  EMAIL = 'EMAIL',
+  WHATSAPP = 'WHATSAPP',
+}
+
+export enum ReminderStatus {
+  PENDING = 'PENDING',
+  SENT = 'SENT',
+  FAILED = 'FAILED',
+  CANCELLED = 'CANCELLED',
+}
+
+export interface AppointmentReminder {
+  id: string;
+  appointmentId: string;
+  businessId: string;
+  reminderType: ReminderType | string;
+  scheduledFor: Date;
+  status: ReminderStatus | string;
+  sentAt: Date | null;
+  failureReason: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CreateReminderDto {
+  appointmentId: string;
+  businessId: string;
+  reminderType: ReminderType | string;
+  scheduledFor: Date | string;
+}
+
+export interface ReminderSettings {
+  enabled: boolean;
+  types: ReminderType[];
+  hoursBeforeAppointment: number;
+  customMessage?: string;
+}
+
+// Filters
+export interface RecurringSeriesFilters extends PaginationParams {
+  clientId?: string;
+  therapistId?: string;
+  businessId?: string;
+  isActive?: boolean;
+  frequency?: RecurrenceFrequency;
+}
+
+export interface ReminderFilters extends PaginationParams {
+  appointmentId?: string;
+  businessId?: string;
+  status?: ReminderStatus;
+  reminderType?: ReminderType;
+}
