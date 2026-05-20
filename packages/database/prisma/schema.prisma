@@ -1,0 +1,460 @@
+// Prisma schema for Wellness CRM Platform
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums
+enum UserRole {
+  SUPER_ADMIN
+  BUSINESS_OWNER
+  RECEPTIONIST
+  THERAPIST
+  CLIENT
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+// User model - Core authentication and profile
+model User {
+  id               String    @id @default(cuid())
+  authProviderId   String    @unique // Clerk user ID
+  email            String    @unique
+  firstName        String?
+  lastName         String?
+  role             UserRole  @default(CLIENT)
+  phoneNumber      String?
+  profileImageUrl  String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  // Relations
+  ownedBusiness    Business? @relation("BusinessOwner")
+  therapist        Therapist?
+  client           Client?
+  auditLogs        AuditLog[]
+
+  @@index([email])
+  @@index([authProviderId])
+  @@map("users")
+}
+
+// Business model - Clinic/practice information
+model Business {
+  id                 String    @id @default(cuid())
+  name               String
+  email              String?
+  phoneNumber        String?
+  address            String?
+  city               String?
+  state              String?
+  postalCode         String?
+  country            String?   @default("USA")
+  website            String?
+  logo               String?
+  primaryColor       String?   @default("#A8C3A0") // sage green
+  secondaryColor     String?   @default("#E7D8C9") // warm sand
+  subscriptionTier   String?   @default("FREE")
+  subscriptionStatus String?   @default("ACTIVE")
+  ownerId            String    @unique
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  // Relations
+  owner                   User                       @relation("BusinessOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  therapists              Therapist[]
+  clients                 Client[]
+  appointments            Appointment[]
+  intakeForms             IntakeForm[]
+  intakeFormTemplates     IntakeFormTemplate[]       // Stage 2: Form templates
+  treatmentNotes          TreatmentNote[]
+  therapistNotes          TherapistNote[]            // Stage 2: Private therapist notes
+  bodyMaps                BodyMap[]                  // Stage 2: Body maps
+  medicalConditions       MedicalCondition[]         // Stage 2: Medical conditions
+  auditLogs               AuditLog[]
+  therapistAvailability   TherapistAvailability[]    // Stage 3: Therapist schedules
+  therapistTimeOff        TherapistTimeOff[]         // Stage 3: Time off periods
+  appointmentCancellations AppointmentCancellation[] // Stage 3: Cancellation records
+
+  @@index([ownerId])
+  @@map("businesses")
+}
+
+// Therapist model - Professional therapist information
+model Therapist {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  businessId      String
+  specializations String[]  @default([])
+  bio             String?   @db.Text
+  licenseNumber   String?
+  licenseExpiry   DateTime?
+  hourlyRate      Float?
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  user                   User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  business               Business                 @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  appointments           Appointment[]
+  treatmentNotes         TreatmentNote[]
+  therapistNotes         TherapistNote[]          // Stage 2: Private therapist notes
+  preferredClients       Client[]                 @relation("PreferredClients") // Stage 2: Clients who prefer this therapist
+  availability           TherapistAvailability[]  // Stage 3: Weekly schedule
+  timeOff                TherapistTimeOff[]       // Stage 3: Time off periods
+
+  @@index([userId])
+  @@index([businessId])
+  @@index([isActive])
+  @@map("therapists")
+}
+
+// Client model - Patient/client information
+model Client {
+  id                    String    @id @default(cuid())
+  businessId            String
+  userId                String?   @unique // Optional link to User account
+  firstName             String
+  lastName              String
+  email                 String?
+  phoneNumber           String?
+  dateOfBirth           DateTime?
+  address               String?
+  city                  String?
+  state                 String?
+  postalCode            String?
+  emergencyContactName  String?
+  emergencyContactPhone String?
+  medicalHistory        Json?     // Flexible JSON storage
+  allergies             String[]  @default([])
+  medications           String[]  @default([])
+  primaryPhysician      String?   // Stage 2: Primary care physician
+  insuranceProvider     String?   // Stage 2: Insurance company name
+  insurancePolicyNumber String?   // Stage 2: Insurance policy number
+  occupation            String?   // Stage 2: Client's occupation
+  goals                 String?   @db.Text // Stage 2: Wellness goals
+  preferredTherapistId  String?   // Stage 2: Preferred therapist
+  lastVisitDate         DateTime? // Stage 2: Last appointment date
+  totalVisits           Int       @default(0) // Stage 2: Total number of visits
+  isActive              Boolean   @default(true)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  // Relations
+  user              User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+  business          Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  preferredTherapist Therapist?        @relation("PreferredClients", fields: [preferredTherapistId], references: [id], onDelete: SetNull)
+  appointments      Appointment[]
+  intakeForms       IntakeForm[]
+  treatmentNotes    TreatmentNote[]
+  therapistNotes    TherapistNote[]
+  medicalConditions MedicalCondition[]
+  bodyMaps          BodyMap[]
+
+  @@index([businessId])
+  @@index([userId])
+  @@index([email])
+  @@index([phoneNumber])
+  @@index([isActive])
+  @@index([preferredTherapistId])
+  @@index([lastVisitDate])
+  @@map("clients")
+}
+
+// Appointment model - Scheduling data
+model Appointment {
+  id          String            @id @default(cuid())
+  businessId  String
+  clientId    String
+  therapistId String
+  startTime   DateTime
+  endTime     DateTime
+  status      AppointmentStatus @default(SCHEDULED)
+  serviceType String?
+  duration    Int               // Duration in minutes
+  price       Float?
+  notes       String?           @db.Text
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  // Relations
+  business       Business                  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  client         Client                    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  therapist      Therapist                 @relation(fields: [therapistId], references: [id], onDelete: Cascade)
+  treatmentNotes TreatmentNote[]
+  bodyMaps       BodyMap[]                 // Stage 2: Body maps associated with appointment
+  cancellation   AppointmentCancellation?  // Stage 3: Cancellation audit trail
+
+  @@index([businessId])
+  @@index([clientId])
+  @@index([therapistId])
+  @@index([startTime])
+  @@index([status])
+  @@map("appointments")
+}
+
+// IntakeForm model - Form submissions
+model IntakeForm {
+  id          String   @id @default(cuid())
+  businessId  String
+  clientId    String
+  templateId  String?  // Stage 2: Link to IntakeFormTemplate
+  formData    Json     // Flexible JSON storage for form fields
+  submittedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  business Business             @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  client   Client               @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  template IntakeFormTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
+  @@index([businessId])
+  @@index([clientId])
+  @@index([templateId])
+  @@index([submittedAt])
+  @@map("intake_forms")
+}
+
+// TreatmentNote model - SOAP notes and session documentation
+model TreatmentNote {
+  id                 String    @id @default(cuid())
+  businessId         String
+  appointmentId      String
+  clientId           String
+  therapistId        String
+  subjectiveFindings String?   @db.Text // S in SOAP
+  objectiveFindings  String?   @db.Text // O in SOAP
+  assessment         String?   @db.Text // A in SOAP
+  plan               String?   @db.Text // P in SOAP
+  areasWorked        String[]  @default([])
+  techniques         String[]  @default([])
+  sessionDuration    Int?      // Stage 2: Actual session duration in minutes
+  followUpDate       DateTime? // Stage 2: Recommended follow-up date
+  aiSummary          String?   @db.Text // Stage 2: AI-generated summary (future use)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  // Relations
+  business    Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  client      Client      @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  therapist   Therapist   @relation(fields: [therapistId], references: [id], onDelete: Cascade)
+  bodyMaps    BodyMap[]   // Stage 2: Body maps associated with treatment note
+
+  @@index([businessId])
+  @@index([appointmentId])
+  @@index([clientId])
+  @@index([therapistId])
+  @@index([followUpDate])
+  @@map("treatment_notes")
+}
+
+// IntakeFormTemplate model - Customizable intake form templates
+model IntakeFormTemplate {
+  id          String   @id @default(cuid())
+  businessId  String
+  name        String
+  description String?  @db.Text
+  fields      Json     // Array of field definitions with type, label, validation
+  isActive    Boolean  @default(true)
+  isDefault   Boolean  @default(false) // One default template per business
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  business     Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  intakeForms  IntakeForm[]
+
+  @@index([businessId])
+  @@index([isActive])
+  @@index([isDefault])
+  @@map("intake_form_templates")
+}
+
+// BodyMap model - Visual body mapping with pain levels
+model BodyMap {
+  id              String   @id @default(cuid())
+  businessId      String
+  clientId        String
+  appointmentId   String?
+  treatmentNoteId String?
+  view            String   // "front", "back", "left", "right"
+  regions         Json     // Array of {name, coordinates, painLevel, notes}
+  notes           String?  @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  business      Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  client        Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  appointment   Appointment?   @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  treatmentNote TreatmentNote? @relation(fields: [treatmentNoteId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+  @@index([clientId])
+  @@index([appointmentId])
+  @@index([treatmentNoteId])
+  @@index([createdAt])
+  @@map("body_maps")
+}
+
+// TherapistNote model - Private therapist-only notes
+model TherapistNote {
+  id          String   @id @default(cuid())
+  businessId  String
+  clientId    String
+  therapistId String
+  content     String   @db.Text
+  isPinned    Boolean  @default(false) // Pinned notes show at top
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  business  Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  client    Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  therapist Therapist @relation(fields: [therapistId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+  @@index([clientId])
+  @@index([therapistId])
+  @@index([isPinned])
+  @@index([createdAt])
+  @@map("therapist_notes")
+}
+
+// MedicalCondition model - Structured medical history tracking
+model MedicalCondition {
+  id             String    @id @default(cuid())
+  businessId     String
+  clientId       String
+  name           String    // e.g., "Chronic lower back pain"
+  diagnosisDate  DateTime?
+  status         String    @default("active") // "active", "resolved", "managed"
+  severity       String?   // "mild", "moderate", "severe"
+  notes          String?   @db.Text
+  treatmentPlan  String?   @db.Text
+  resolvedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // Relations
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  client   Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+  @@index([clientId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("medical_conditions")
+}
+
+// AuditLog model - Security and compliance audit trail
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  businessId String?
+  action     String   // e.g., "USER_LOGIN", "CLIENT_CREATED", "APPOINTMENT_UPDATED"
+  entityType String   // e.g., "User", "Client", "Appointment"
+  entityId   String?
+  metadata   Json?    // Additional context data
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  // Relations
+  user     User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  business Business? @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([businessId])
+  @@index([action])
+  @@index([entityType])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ============================================================================
+// STAGE 3: Scheduling & Calendar Models
+// ============================================================================
+
+// TherapistAvailability model - Weekly schedule for therapists
+model TherapistAvailability {
+  id          String   @id @default(cuid())
+  businessId  String
+  therapistId String
+  dayOfWeek   Int      // 0=Sunday, 1=Monday, ..., 6=Saturday
+  startTime   String   // "09:00" format
+  endTime     String   // "17:00" format
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  business  Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  therapist Therapist @relation(fields: [therapistId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+  @@index([therapistId])
+  @@index([dayOfWeek])
+  @@index([isActive])
+  @@map("therapist_availability")
+}
+
+// TherapistTimeOff model - Track therapist time off periods
+model TherapistTimeOff {
+  id          String   @id @default(cuid())
+  businessId  String
+  therapistId String
+  startDate   DateTime
+  endDate     DateTime
+  reason      String?  @db.Text
+  isAllDay    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  business  Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  therapist Therapist @relation(fields: [therapistId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+  @@index([therapistId])
+  @@index([startDate])
+  @@index([endDate])
+  @@map("therapist_time_off")
+}
+
+// AppointmentCancellation model - Cancellation audit trail
+model AppointmentCancellation {
+  id               String   @id @default(cuid())
+  appointmentId    String   @unique
+  businessId       String
+  cancelledBy      String   // User ID who cancelled
+  reason           String?  @db.Text
+  cancellationType String   // "client", "therapist", "business"
+  cancelledAt      DateTime @default(now())
+
+  // Relations
+  business    Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+  @@index([appointmentId])
+  @@index([cancelledBy])
+  @@index([cancelledAt])
+  @@map("appointment_cancellations")
+}
