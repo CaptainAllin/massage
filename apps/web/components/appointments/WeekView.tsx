@@ -55,29 +55,32 @@ export function WeekView({
 
   return (
     <div className="bg-white rounded-xl shadow-soft border border-gray-200 overflow-hidden">
+      {/* Horizontal scroll wrapper for small screens */}
+      <div className="overflow-x-auto">
+      <div style={{ minWidth: '560px' }}>
       {/* Week Header */}
       <div className="grid grid-cols-8 border-b border-gray-200">
-        <div className="p-4 bg-gray-50"></div>
+        <div className="p-2 sm:p-4 bg-gray-50"></div>
         {weekDates.map((date, index) => {
           const isToday = isSameDay(date, new Date());
           return (
             <div
               key={index}
-              className={`p-4 text-center border-l border-gray-200 ${
+              className={`p-2 sm:p-4 text-center border-l border-gray-200 ${
                 isToday ? 'bg-sage-50' : 'bg-gray-50'
               }`}
             >
-              <div className="text-sm font-semibold text-gray-900">
+              <div className="text-xs sm:text-sm font-semibold text-gray-900">
                 {DAYS_OF_WEEK[index]}
               </div>
               <div
-                className={`text-2xl font-bold mt-1 ${
+                className={`text-lg sm:text-2xl font-bold mt-0.5 sm:mt-1 ${
                   isToday ? 'text-sage-600' : 'text-gray-700'
                 }`}
               >
                 {format(date, 'd')}
               </div>
-              <div className="text-xs text-gray-500">{format(date, 'MMM')}</div>
+              <div className="text-xs text-gray-500 hidden sm:block">{format(date, 'MMM')}</div>
             </div>
           );
         })}
@@ -86,9 +89,9 @@ export function WeekView({
       {/* Calendar Grid */}
       <div className="overflow-y-auto max-h-[calc(100vh-300px)]">
         {HOURS.map((hour) => (
-          <div key={hour} className="grid grid-cols-8 border-b border-gray-100 min-h-[80px]">
+          <div key={hour} className="grid grid-cols-8 border-b border-gray-100 min-h-[60px] sm:min-h-[80px]">
             {/* Hour Label */}
-            <div className="p-2 text-xs font-medium text-gray-600 bg-gray-50 flex items-start justify-end pr-4">
+            <div className="p-1 sm:p-2 text-xs font-medium text-gray-600 bg-gray-50 flex items-start justify-end pr-2 sm:pr-4">
               {format(setHours(new Date(), hour), 'h:mm a')}
             </div>
 
@@ -123,6 +126,8 @@ export function WeekView({
             })}
           </div>
         ))}
+      </div>
+      </div>
       </div>
     </div>
   );

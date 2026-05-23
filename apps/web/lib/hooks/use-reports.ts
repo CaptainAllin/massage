@@ -7,6 +7,7 @@ export interface ReportFilters {
   therapistId?: string;
   serviceType?: string;
   clientId?: string;
+  selectedFields?: string[];
 }
 
 export interface RevenueReportData {
@@ -226,6 +227,7 @@ export function useReports() {
   };
 
   const saveReport = async (data: {
+    businessId: string;
     name: string;
     type: ReportType;
     filters: ReportFilters;
@@ -281,14 +283,39 @@ export function useReports() {
     }
   };
 
-  const triggerScheduledReport = async (id: string): Promise<any> => {
+  const triggerScheduledReport = async (id: string, businessId: string): Promise<{ message: string }> => {
     setLoading(true);
     setError(null);
     try {
-      const response = await apiClient.post(`/reports/saved/${id}/trigger`);
+      const response = await apiClient.post(`/reports/saved/${id}/trigger?businessId=${businessId}`);
       return response.data;
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to trigger report');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const exportReport = async (params: {
+    businessId: string;
+    reportType: ReportType;
+    reportName?: string;
+    emailTo: string[];
+    startDate: Date;
+    endDate: Date;
+  }): Promise<{ message: string }> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await apiClient.post('/reports/export', {
+        ...params,
+        startDate: params.startDate.toISOString(),
+        endDate: params.endDate.toISOString(),
+      });
+      return response.data;
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to export report');
       throw err;
     } finally {
       setLoading(false);
@@ -308,5 +335,6 @@ export function useReports() {
     updateSavedReport,
     deleteSavedReport,
     triggerScheduledReport,
+    exportReport,
   };
 }

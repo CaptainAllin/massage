@@ -14,6 +14,7 @@ interface TherapistAvailabilityModalProps {
   onClose: () => void;
   businessId: string | undefined;
   therapist: Therapist | null;
+  therapists?: (Therapist & { user?: { firstName?: string; lastName?: string } })[];
 }
 
 const DAYS_OF_WEEK = [
@@ -39,19 +40,24 @@ export function TherapistAvailabilityModal({
   onClose,
   businessId,
   therapist,
+  therapists,
 }: TherapistAvailabilityModalProps) {
   const [schedule, setSchedule] = useState<DaySchedule[]>([]);
+  const [internalTherapistId, setInternalTherapistId] = useState<string>('');
+
+  const internalTherapist =
+    therapists?.find((t) => t.id === internalTherapistId) ?? null;
+  const effectiveTherapist = therapist ?? internalTherapist;
 
   const { data: existingAvailability } = useTherapistAvailability(businessId, {
-    therapistId: therapist?.id,
+    therapistId: effectiveTherapist?.id,
   });
 
   const createAvailability = useCreateAvailability(businessId);
   const deleteAvailability = useDeleteAvailability(businessId);
 
-  // Initialize schedule when therapist or existing availability changes
   useEffect(() => {
-    if (therapist && isOpen) {
+    if (effectiveTherapist && isOpen) {
       const initialSchedule: DaySchedule[] = DAYS_OF_WEEK.map((day) => {
         const existing = existingAvailability?.find(
           (avail) => avail.dayOfWeek === day.value && avail.isActive
@@ -68,7 +74,7 @@ export function TherapistAvailabilityModal({
 
       setSchedule(initialSchedule);
     }
-  }, [therapist, existingAvailability, isOpen]);
+  }, [effectiveTherapist, existingAvailability, isOpen]);
 
   const handleDayToggle = (dayOfWeek: number) => {
     setSchedule((prev) =>
@@ -89,16 +95,14 @@ export function TherapistAvailabilityModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!therapist) return;
+    if (!effectiveTherapist) return;
 
     try {
-      // Process each day
       for (const day of schedule) {
         if (day.isActive) {
-          // Create or update availability
           await createAvailability.mutateAsync({
             businessId: businessId!,
-            therapistId: therapist.id,
+            therapistId: effectiveTherapist.id,
             dayOfWeek: day.dayOfWeek,
             startTime: day.startTime,
             endTime: day.endTime,
@@ -115,83 +119,117 @@ export function TherapistAvailabilityModal({
     }
   };
 
-  if (!therapist) return null;
-
-  const therapistName = (therapist as any).user
-    ? `${(therapist as any).user.firstName || ''} ${(therapist as any).user.lastName || ''}`
-    : 'Unknown';
+  const therapistName = effectiveTherapist
+    ? (effectiveTherapist as any).user
+      ? `${(effectiveTherapist as any).user.firstName || ''} ${(effectiveTherapist as any).user.lastName || ''}`.trim() || 'Therapist'
+      : 'Therapist'
+    : '';
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={`${therapistName}'s Availability`}
+      title={effectiveTherapist ? `${therapistName}'s Availability` : 'Therapist Availability'}
       size="lg"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        <p className="text-sm text-gray-600">
-          Set the weekly working hours for this therapist. Uncheck days when they're not available.
-        </p>
+        {!therapist && therapists && therapists.length > 0 && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Select Therapist *
+            </label>
+            <select
+              value={internalTherapistId}
+              onChange={(e) => setInternalTherapistId(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+              required
+            >
+              <option value="">Select a therapist</option>
+              {therapists.map((t) => {
+                const name = t.user
+                  ? `${t.user.firstName || ''} ${t.user.lastName || ''}`.trim() || t.id
+                  : t.id;
+                return <option key={t.id} value={t.id}>{name}</option>;
+              })}
+            </select>
+          </div>
+        )}
 
-        <div className="space-y-3">
-          {DAYS_OF_WEEK.map((day) => {
-            const daySchedule = schedule.find((s) => s.dayOfWeek === day.value);
+        {effectiveTherapist && (
+          <p className="text-sm text-gray-600">
+            Set the weekly working hours for this therapist. Uncheck days when they're not available.
+          </p>
+        )}
 
-            return (
-              <div
-                key={day.value}
-                className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg"
-              >
-                <div className="w-32">
-                  <Checkbox
-                    checked={daySchedule?.isActive || false}
-                    onChange={() => handleDayToggle(day.value)}
-                    label={day.label}
-                  />
-                </div>
+        {effectiveTherapist && (
+          <>
+            <div className="space-y-3">
+              {DAYS_OF_WEEK.map((day) => {
+                const daySchedule = schedule.find((s) => s.dayOfWeek === day.value);
 
-                {daySchedule?.isActive && (
-                  <>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="time"
-                        value={daySchedule.startTime}
-                        onChange={(e) =>
-                          handleTimeChange(day.value, 'startTime', e.target.value)
-                        }
-                        required
-                      />
-                      <span className="text-gray-600">to</span>
-                      <Input
-                        type="time"
-                        value={daySchedule.endTime}
-                        onChange={(e) =>
-                          handleTimeChange(day.value, 'endTime', e.target.value)
-                        }
-                        required
+                return (
+                  <div
+                    key={day.value}
+                    className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg"
+                  >
+                    <div className="w-32">
+                      <Checkbox
+                        checked={daySchedule?.isActive || false}
+                        onChange={() => handleDayToggle(day.value)}
+                        label={day.label}
                       />
                     </div>
-                  </>
-                )}
-              </div>
-            );
-          })}
-        </div>
 
-        <div className="flex justify-end gap-3 pt-4">
-          <Button type="button" variant="secondary" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={createAvailability.isPending || deleteAvailability.isPending}
-          >
-            {createAvailability.isPending || deleteAvailability.isPending
-              ? 'Saving...'
-              : 'Save Availability'}
-          </Button>
-        </div>
+                    {daySchedule?.isActive && (
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="time"
+                          value={daySchedule.startTime}
+                          onChange={(e) =>
+                            handleTimeChange(day.value, 'startTime', e.target.value)
+                          }
+                          required
+                        />
+                        <span className="text-gray-600">to</span>
+                        <Input
+                          type="time"
+                          value={daySchedule.endTime}
+                          onChange={(e) =>
+                            handleTimeChange(day.value, 'endTime', e.target.value)
+                          }
+                          required
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4">
+              <Button type="button" variant="secondary" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                disabled={createAvailability.isPending || deleteAvailability.isPending}
+              >
+                {createAvailability.isPending || deleteAvailability.isPending
+                  ? 'Saving...'
+                  : 'Save Availability'}
+              </Button>
+            </div>
+          </>
+        )}
+
+        {!effectiveTherapist && (
+          <div className="flex justify-end pt-4">
+            <Button type="button" variant="secondary" onClick={onClose}>
+              Cancel
+            </Button>
+          </div>
+        )}
       </form>
     </Modal>
   );

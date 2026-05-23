@@ -58,12 +58,12 @@ export default function TreatmentNotesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground font-display">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground font-display">
             Treatment Notes
           </h1>
-          <p className="text-muted-foreground mt-2">SOAP notes and treatment documentation</p>
+          <p className="text-muted-foreground mt-1 sm:mt-2">SOAP notes and treatment documentation</p>
         </div>
         <Button variant="primary" onClick={() => router.push('/treatment-notes/new')}>
           New SOAP Note

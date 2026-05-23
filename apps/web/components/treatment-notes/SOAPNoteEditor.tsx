@@ -35,6 +35,10 @@ export interface SOAPNoteEditorProps {
   onSave: (data: SOAPNoteData) => void;
   onCancel: () => void;
   isLoading?: boolean;
+  userId?: string;
+  therapistId?: string;
+  clientId?: string;
+  appointmentId?: string;
 }
 
 export const SOAPNoteEditor: React.FC<SOAPNoteEditorProps> = ({
@@ -42,6 +46,10 @@ export const SOAPNoteEditor: React.FC<SOAPNoteEditorProps> = ({
   onSave,
   onCancel,
   isLoading = false,
+  userId: userIdProp,
+  therapistId: therapistIdProp,
+  clientId: clientIdProp,
+  appointmentId: appointmentIdProp,
 }) => {
   const [formData, setFormData] = useState<SOAPNoteData>({
     subjectiveFindings: initialData.subjectiveFindings || '',
@@ -66,15 +74,13 @@ export const SOAPNoteEditor: React.FC<SOAPNoteEditorProps> = ({
   const uploadVoiceNote = useVoiceNoteUpload();
   const businessId = useBusinessId();
 
-  // TODO: Get actual userId, therapistId, clientId, appointmentId from context/props
-  const userId = 'temp-user-id';
-  const therapistId = 'temp-therapist-id';
-  const clientId = 'temp-client-id';
-  const appointmentId = 'temp-appointment-id';
+  const userId = userIdProp ?? '';
+  const therapistId = therapistIdProp ?? '';
+  const clientId = clientIdProp ?? '';
+  const appointmentId = appointmentIdProp ?? '';
 
-  // Fetch voice notes for this appointment
   const { data: voiceNotesData } = useVoiceNotes({
-    appointmentId,
+    appointmentId: appointmentId || undefined,
     businessId,
   });
 

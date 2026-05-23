@@ -1,477 +1,260 @@
 # Contributing to Wellness CRM
 
-Thank you for contributing to the Wellness CRM platform! This guide will help you maintain code quality and consistency.
+## Development Principles
 
-## 🎯 Development Principles
+1. **Build for the stage** — only implement features planned for the current stage
+2. **Type safety first** — leverage TypeScript's strict mode throughout
+3. **No over-engineering** — three similar lines beats a premature abstraction
+4. **Test critical paths** — auth, RBAC, payments, and data integrity
+5. **Security at every boundary** — validate all external input; never trust request bodies for identity
 
-1. **Build for the stage** - Only implement features planned for the current stage
-2. **Keep it simple** - Avoid over-engineering and premature abstractions
-3. **Type safety first** - Leverage TypeScript's type system
-4. **Test critical paths** - Focus on auth, RBAC, and data integrity
-5. **Document as you go** - Clear code comments and inline documentation
+## Dev Environment Setup
 
-## 📁 Project Structure
+### Prerequisites
 
-### Monorepo Layout
+- Node.js >= 20, npm >= 10
+- Supabase project (see README for setup)
+- `.env.local` configured in `apps/web/`
+
+### Start developing
+
+```bash
+npm install
+npm run dev          # starts Next.js on http://localhost:3000
+```
+
+### Useful commands
+
+```bash
+npm run lint         # ESLint across all packages
+npm run type-check   # TypeScript check across all packages
+npm run test         # Jest integration + security tests
+npx playwright test  # E2E tests
+
+# Database
+cd packages/database
+npx prisma migrate dev      # create + apply migration
+npx prisma generate         # regenerate Prisma Client after schema change
+npx prisma studio           # browse data
+```
+
+## Project Structure
 
 ```
 massage/
-├── apps/           # User-facing applications
-├── services/       # Backend services
-└── packages/       # Shared libraries
+├── apps/web/
+│   ├── app/
+│   │   ├── (auth)/         # /sign-in, /sign-up
+│   │   ├── (dashboard)/    # Protected pages (one folder per feature)
+│   │   ├── (public)/       # Landing page, public booking
+│   │   └── api/            # Next.js Route Handlers
+│   ├── components/         # Shared React components
+│   └── lib/
+│       ├── api-auth.ts     # requireAuth(), requireBusinessAccess()
+│       ├── api-client.ts   # Axios instance with JWT interceptor
+│       ├── encryption.ts   # AES-256-GCM field encryption
+│       └── supabase/       # createBrowserClient(), createServerClient()
+├── packages/
+│   ├── database/           # Prisma schema + migrations
+│   ├── auth/               # AuthProvider (React context)
+│   ├── ui/                 # Shared UI components
+│   └── types/              # Shared TypeScript types
+└── docs/
+    ├── api.md              # API reference
+    └── pending.md          # Task backlog
 ```
 
-### Import Rules
+## Import Rules
 
-**DO**:
 ```typescript
 // Use workspace aliases
+import { prisma } from '@massage/database';
 import { Button } from '@massage/ui';
 import { UserRole } from '@massage/types';
-import { prisma } from '@massage/database';
 
-// Use relative imports within same package
-import { helper } from './utils/helper';
+// Use relative imports within the same package
+import { formatDate } from '../../lib/utils';
 ```
 
-**DON'T**:
-```typescript
-// Avoid deep imports across packages
-import { Button } from '../../packages/ui/src/Button';
+Never import across packages via deep relative paths.
 
-// Avoid circular dependencies
-// packages/auth importing from apps/web
-```
-
-## 🎨 Code Style
+## Code Style
 
 ### TypeScript
 
-- **Always use TypeScript** - No `.js` files in source
-- **Enable strict mode** - All packages use strict TypeScript
-- **Explicit types for exports** - Always type function returns and props
-- **Avoid `any`** - Use `unknown` or proper types instead
+- Strict mode everywhere — no `any`; use `unknown` or proper types
+- Always type function return values and exported interfaces
+- Functional components only for React
+
+### API routes
+
+Every protected Route Handler must start with auth:
 
 ```typescript
-// Good
-export function calculateTotal(items: CartItem[]): number {
-  return items.reduce((sum, item) => sum + item.price, 0);
-}
+export async function GET(req: NextRequest) {
+  const { user, error } = await requireAuth(req);
+  if (error) return error;
 
-// Bad
-export function calculateTotal(items: any): any {
-  return items.reduce((sum: any, item: any) => sum + item.price, 0);
+  const { business, error: bizError } = await requireBusinessAccess(user, businessId);
+  if (bizError) return bizError;
+
+  // handler logic
 }
 ```
 
-### React Components
+Never trust `userId` or `businessId` from request bodies — always derive from the validated JWT via `requireAuth`.
 
-- **Functional components only** - No class components
-- **Use TypeScript for props** - Always define prop interfaces
-- **Prefer named exports** - Easier to refactor
+### Prisma
 
-```typescript
-// Good
-export interface ButtonProps {
-  variant?: 'primary' | 'secondary';
-  children: React.ReactNode;
-  onClick?: () => void;
-}
-
-export function Button({ variant = 'primary', children, onClick }: ButtonProps) {
-  return <button className={variant} onClick={onClick}>{children}</button>;
-}
-
-// Bad
-export default ({ variant, children, onClick }: any) => {
-  return <button className={variant} onClick={onClick}>{children}</button>;
-};
-```
-
-### NestJS Services
-
-- **Use dependency injection** - Inject services via constructor
-- **Keep controllers thin** - Business logic in services
-- **One responsibility per service** - Small, focused services
+- Use transactions for operations that touch multiple tables
+- Select only the fields you need — avoid `findMany` without `select`
+- Never combine `select` and `include` at the same relation level — use nested `select` instead
 
 ```typescript
 // Good
-@Injectable()
-export class ClientsService {
-  constructor(private prisma: PrismaService) {}
-
-  async create(data: CreateClientDto) {
-    return this.prisma.client.create({ data });
-  }
-}
-
-// Bad
-@Controller('clients')
-export class ClientsController {
-  async create(@Body() data: any) {
-    // Business logic in controller ❌
-    const client = await prisma.client.create({ data });
-    return client;
-  }
-}
-```
-
-## 🛡️ Security Best Practices
-
-### Authentication
-
-- **Always use guards** - Apply `JwtAuthGuard` to protected routes
-- **Verify user context** - Check user ID from JWT, not request body
-- **Use RBAC** - Apply `@Roles()` decorator for role-based access
-
-```typescript
-// Good
-@Controller('businesses')
-@UseGuards(JwtAuthGuard, RolesGuard)
-export class BusinessesController {
-  @Post()
-  @Roles(UserRole.BUSINESS_OWNER)
-  create(@CurrentUser('id') userId: string, @Body() data: CreateBusinessDto) {
-    return this.businessesService.create(userId, data);
-  }
-}
-
-// Bad
-@Controller('businesses')
-export class BusinessesController {
-  @Post()
-  create(@Body() data: { userId: string; name: string }) {
-    // userId from request body - insecure! ❌
-    return this.businessesService.create(data.userId, data);
-  }
-}
-```
-
-### Input Validation
-
-- **Use DTOs** - Define Data Transfer Objects with validation
-- **Sanitize inputs** - Never trust user input
-- **Validate at boundaries** - API endpoints, webhooks
-
-```typescript
-// Good
-import { IsString, IsEmail, IsOptional } from 'class-validator';
-
-export class CreateClientDto {
-  @IsString()
-  firstName: string;
-
-  @IsString()
-  lastName: string;
-
-  @IsEmail()
-  @IsOptional()
-  email?: string;
-}
-
-@Post()
-create(@Body() data: CreateClientDto) {
-  // Validation happens automatically
-}
-```
-
-### Database Security
-
-- **Use parameterized queries** - Prisma handles this
-- **Implement soft deletes** - Set `isActive: false` instead of hard delete
-- **Create audit logs** - Track important actions
-
-```typescript
-// Good
-async delete(id: string, userId: string) {
-  await this.prisma.client.update({
-    where: { id },
-    data: { isActive: false },
-  });
-
-  await this.prisma.auditLog.create({
-    data: {
-      userId,
-      action: 'CLIENT_DELETED',
-      entityType: 'Client',
-      entityId: id,
+const client = await prisma.client.findUnique({
+  where: { id },
+  select: {
+    id: true,
+    firstName: true,
+    appointments: {
+      select: { id: true, scheduledAt: true, status: true },
     },
-  });
-}
+  },
+});
 
-// Bad
-async delete(id: string) {
-  await this.prisma.client.delete({ where: { id } });
-}
-```
-
-## 🧪 Testing
-
-### What to Test
-
-**Priority 1** (must have):
-- Authentication and authorization logic
-- RBAC guards and decorators
-- Critical business logic (payments, appointments)
-- Database operations with complex logic
-
-**Priority 2** (should have):
-- API endpoints (integration tests)
-- React hooks with complex state
-- Utility functions
-
-**Priority 3** (nice to have):
-- UI components
-- Simple CRUD operations
-
-### Testing Patterns
-
-```typescript
-// Unit test for guard
-describe('RolesGuard', () => {
-  it('should allow access when user has required role', () => {
-    const user = { role: UserRole.BUSINESS_OWNER };
-    expect(guard.canActivate(mockContext(user, [UserRole.BUSINESS_OWNER]))).toBe(true);
-  });
-
-  it('should deny access when user lacks required role', () => {
-    const user = { role: UserRole.CLIENT };
-    expect(() => guard.canActivate(mockContext(user, [UserRole.BUSINESS_OWNER])))
-      .toThrow(ForbiddenException);
-  });
+// Bad — mixing select + include
+const client = await prisma.client.findUnique({
+  where: { id },
+  select: { id: true },
+  include: { appointments: true },  // ❌ runtime error
 });
 ```
 
-## 📦 Package Management
+When using `$queryRaw`, use the `@@map` snake_case table name, not the Prisma model name:
 
-### Adding Dependencies
+```typescript
+// Good
+await prisma.$queryRaw`SELECT * FROM "clients" WHERE ...`
 
-```bash
-# Add to specific workspace
-npm install --workspace=apps/web package-name
-
-# Add to root (dev tools only)
-npm install -D package-name
-
-# Add to multiple packages
-npm install --workspace=@massage/ui --workspace=apps/web package-name
+// Bad
+await prisma.$queryRaw`SELECT * FROM "Client" WHERE ...`  // ❌
 ```
 
-### Creating New Packages
+### Encryption
 
-```bash
-# Create directory
-mkdir -p packages/new-package/src
+Fields containing PHI (protected health information) or credentials must be encrypted at rest using `lib/encryption.ts`:
 
-# Add package.json
-cat > packages/new-package/package.json << 'EOF'
-{
-  "name": "@massage/new-package",
-  "version": "0.1.0",
-  "private": true,
-  "main": "./src/index.ts",
-  "types": "./src/index.ts"
-}
-EOF
+```typescript
+import { encrypt, decrypt } from '@/lib/encryption';
+
+// Store
+data.twilioAuthToken = encrypt(plaintext);
+
+// Read
+const plaintext = decrypt(data.twilioAuthToken);
 ```
 
-## 🔄 Git Workflow
+Requires `ENCRYPTION_KEY` env var (32-byte hex string).
 
-### Branch Naming
+## Security
 
-- `feature/description` - New features
-- `fix/description` - Bug fixes
-- `refactor/description` - Code refactoring
-- `docs/description` - Documentation updates
+### Authentication
 
-### Commit Messages
+- Use `requireAuth(req)` from `lib/api-auth.ts` — never hand-roll JWT validation
+- Check `businessId` scoping via `requireBusinessAccess` on every endpoint that touches business data
+- Never expose internal IDs or error stack traces in API responses
 
-Use conventional commits format:
+### Input validation
+
+Validate at the API boundary. For structured data, check required fields before using them. For AI endpoints, enforce input length limits (the existing endpoints cap at 1k–3k chars) and strip or reject suspicious prompt-injection patterns.
+
+### Database
+
+Prisma parameterizes all queries — never concatenate user input into query strings. Raw SQL (`$queryRaw`) is acceptable for complex reporting queries but must use tagged template literals, never string interpolation.
+
+## Testing
+
+### Priorities
+
+1. Auth + RBAC — must be tested with a real DB connection (no mocks)
+2. Appointment conflict detection
+3. Payment flows and webhook handling
+4. Security: SQL injection, XSS, IDOR
+
+Integration tests live in `__tests__/integration/`. They expect a real Supabase test instance pointed to by `DATABASE_URL`. Do not mock the database — past experience showed mock/prod divergence masking real bugs.
+
+### Running tests
+
+```bash
+npm run test                   # all Jest tests
+npx playwright test            # E2E (requires dev server running)
+npx playwright test --project=mobile-safari   # iOS Safari
+npx playwright test --project=mobile-chrome   # Android Chrome
+```
+
+## Git Workflow
+
+### Branch naming
+
+- `feature/description` — new features
+- `fix/description` — bug fixes
+- `refactor/description` — code restructuring
+- `docs/description` — documentation
+
+### Commit messages (Conventional Commits)
 
 ```
 <type>(<scope>): <subject>
-
-<body>
-
-<footer>
 ```
 
-**Types**:
-- `feat` - New feature
-- `fix` - Bug fix
-- `docs` - Documentation
-- `style` - Formatting, missing semi-colons, etc.
-- `refactor` - Code restructuring
-- `test` - Adding tests
-- `chore` - Updating build tasks, package manager configs, etc.
+Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
 
-**Examples**:
+Examples:
 ```
-feat(auth): add role-based navigation filtering
-
-Implement useRole hook in sidebar component to filter menu items based on user role. Business owners see all items, therapists see limited items.
-
-Closes #123
+feat(appointments): add conflict detection on booking
+fix(payments): handle Stripe webhook duplicate events
+docs(api): add treatment-notes endpoint reference
 ```
 
-```
-fix(api): prevent duplicate business creation
+### Pull request process
 
-Add check in BusinessesService.create() to prevent users from creating multiple businesses.
-
-Fixes #456
-```
-
-### Pull Request Process
-
-1. **Create feature branch** from `develop`
-2. **Write code** following these guidelines
-3. **Write tests** for new functionality
-4. **Run checks** locally:
+1. Branch from `main`
+2. Write code following these guidelines
+3. Write or update tests for the changed paths
+4. Run locally:
    ```bash
-   npm run lint
-   npm run type-check
-   npm run test
-   npm run build
+   npm run lint && npm run type-check && npm run test && npm run build
    ```
-5. **Commit changes** with conventional commits
-6. **Push branch** and create PR to `develop`
-7. **Address review feedback**
-8. **Squash and merge** once approved
+5. Push and open PR to `main`
+6. Address review feedback
+7. Squash and merge when approved
 
-## 🎨 UI/UX Guidelines
+## UI/UX
 
-### Design System
+### Design system
 
-- **Use wellness colors** - Defined in `@massage/config-tailwind`
-- **Consistent spacing** - Use Tailwind's spacing scale
-- **Rounded corners** - Use `rounded-xl` or `rounded-2xl` for cards
-- **Soft shadows** - Use `shadow-soft` utilities
+- Use wellness tokens from `@massage/config-tailwind` (sage green, warm sand, calm cream, etc.)
+- Consistent spacing via Tailwind's scale
+- Cards: `rounded-xl` or `rounded-2xl`, `shadow-soft`
 
 ### Accessibility
 
-- **Semantic HTML** - Use proper HTML5 elements
-- **ARIA labels** - Add labels for screen readers
-- **Keyboard navigation** - Support tab and arrow keys
-- **Color contrast** - Ensure WCAG AA compliance
+- Semantic HTML5 elements
+- ARIA labels on icon-only buttons
+- Keyboard navigation support
+- WCAG AA color contrast
 
-```tsx
-// Good
-<button
-  aria-label="Close dialog"
-  className="rounded-xl bg-primary text-white hover:bg-primary/90"
-  onClick={onClose}
->
-  <X className="h-5 w-5" />
-</button>
+## Adding a new API endpoint
 
-// Bad
-<div onClick={onClose}>
-  <X />
-</div>
-```
+1. Create the route file at the correct path under `apps/web/app/api/`
+2. Call `requireAuth` + `requireBusinessAccess` at the top
+3. Add the endpoint to `docs/api.md`
+4. Add audit logging for state-changing operations via `logAudit(req, ...)`
 
-## 📊 Database Guidelines
+## Questions?
 
-### Prisma Best Practices
-
-- **Use transactions** for related operations
-- **Include only what you need** - Don't over-fetch
-- **Add indexes** for frequently queried fields
-- **Use Prisma Studio** for data inspection
-
-```typescript
-// Good - Transaction for related operations
-async createAppointment(data: CreateAppointmentDto) {
-  return this.prisma.$transaction(async (tx) => {
-    const appointment = await tx.appointment.create({ data });
-    await tx.auditLog.create({
-      data: {
-        action: 'APPOINTMENT_CREATED',
-        entityId: appointment.id,
-      },
-    });
-    return appointment;
-  });
-}
-
-// Good - Select only needed fields
-async findAll() {
-  return this.prisma.client.findMany({
-    select: {
-      id: true,
-      firstName: true,
-      lastName: true,
-      email: true,
-    },
-  });
-}
-```
-
-### Migrations
-
-- **Never edit migration files** - Always create new ones
-- **Test migrations** in development first
-- **Backup data** before production migrations
-- **Use descriptive names** for migrations
-
-```bash
-# Create migration
-npm run db:migrate
-
-# Name it descriptively
-# ✅ "add_body_map_to_intake_forms"
-# ❌ "update_schema"
-```
-
-## 🚀 Performance
-
-### Frontend Optimization
-
-- **Use React.memo** for expensive components
-- **Lazy load routes** with Next.js dynamic imports
-- **Optimize images** with Next.js Image component
-- **Debounce search inputs** to reduce API calls
-
-### Backend Optimization
-
-- **Cache frequently accessed data** (future: Redis)
-- **Paginate large datasets** - Use `take` and `skip`
-- **Use database indexes** - Check slow query logs
-- **Batch operations** when possible
-
-## 📝 Documentation
-
-### Code Comments
-
-```typescript
-/**
- * Creates a new appointment and sends confirmation email
- *
- * @param data - Appointment details including client, therapist, and time
- * @param userId - ID of the user creating the appointment (for audit log)
- * @returns The created appointment with related client and therapist data
- * @throws NotFoundException if client or therapist doesn't exist
- * @throws ConflictException if time slot is already booked
- */
-async createAppointment(data: CreateAppointmentDto, userId: string): Promise<Appointment> {
-  // Implementation
-}
-```
-
-### README Files
-
-- **Each package** should have a README
-- **Explain purpose** and usage
-- **Provide examples** of common use cases
-
-## ❓ Questions?
-
-- Check `/docs/prd.md` for product requirements
-- Review `README.md` for setup instructions
-- See `SETUP_GUIDE.md` for verification steps
-- Open an issue for discussions
-
----
-
-**Keep building great software!** 🚀
+- Product requirements: `docs/prd/`
+- Task backlog: `docs/pending.md`
+- API reference: `docs/api.md`
+- Deployment: `DEPLOYMENT.md`

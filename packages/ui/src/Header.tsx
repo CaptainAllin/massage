@@ -13,7 +13,7 @@ export function Header({ className, title, actions, userMenu, ...props }: Header
   return (
     <header
       className={cn(
-        'sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-card px-6 shadow-soft',
+        'sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-card pl-14 pr-4 lg:px-6 shadow-soft',
         className
       )}
       {...props}

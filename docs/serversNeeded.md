@@ -93,3 +93,56 @@ You need **3 things running** while developing:
 | API errors in the browser | Make sure Step 3 terminal is still running |
 | Database connection errors | Run `docker ps` — restart with `docker-compose up -d` if postgres isn't listed |
 | Port already in use | Another process is using the port. Run `lsof -i :3000` (or `:3001`, `:5432`) to find and kill it |
+
+---
+
+## Finding what's running on a port
+
+```bash
+lsof -i :3000   # see what's on port 3000
+lsof -i :3001   # see what's on port 3001
+lsof -i :5432   # see what's on port 5432 (postgres)
+```
+
+Look for the **PID** column in the output — that number is the process ID.
+
+---
+
+## Killing a running server
+
+**Kill by port** (easiest):
+```bash
+lsof -ti :3001 | xargs kill -9   # kill whatever is on port 3001
+lsof -ti :3000 | xargs kill -9   # kill whatever is on port 3000
+```
+
+**Kill by PID** (if you already know it from `lsof`):
+```bash
+kill -9 <PID>
+```
+
+**Kill by process name:**
+```bash
+pkill -f "nest start"   # kills backend
+pkill -f "next dev"     # kills frontend
+```
+
+---
+
+## Switching the API port (e.g. 3001 → 3002)
+
+Two places to change:
+
+### 1. Backend — change the port it listens on
+`services/api/src/main.ts` — find `await app.listen(3001)` and change to `3002`.
+
+### 2. Frontend — point it at the new port
+`apps/web/.env.local` — update:
+```
+NEXT_PUBLIC_API_URL=http://localhost:3002
+```
+If that var doesn't exist, find all hardcoded references:
+```bash
+grep -r "localhost:3001" apps/web/
+```
+Update every match to `3002`, then restart both servers.

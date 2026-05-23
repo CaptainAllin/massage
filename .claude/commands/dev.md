@@ -1,0 +1,1 @@
+Kill any processes on ports 3000 and 3001, then start the Next.js dev server by running `npm run dev` from the project root `/Users/amit/Desktop/Apps/massage` in the background. After starting it, tail the output briefly and confirm the server is up and listening. The frontend and API routes are both served by this single Next.js process.

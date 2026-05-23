@@ -68,10 +68,10 @@ export async function middleware(req: NextRequest) {
     userId: session?.user?.id,
   });
 
-  // Public routes - including auth clearing route
-  const publicRoutes = ['/', '/sign-in', '/sign-up', '/auth/callback', '/auth/clear-session', '/api/webhooks'];
+  // Public routes — API routes handle their own auth via Bearer token
+  const publicRoutes = ['/', '/sign-in', '/sign-up', '/auth/callback', '/auth/clear-session', '/api', '/intake', '/forms', '/book'];
   const isPublicRoute = publicRoutes.some((route) =>
-    req.nextUrl.pathname.startsWith(route)
+    route === '/' ? req.nextUrl.pathname === '/' : req.nextUrl.pathname.startsWith(route)
   );
 
   // If there's a session error, clear it and allow access to auth pages

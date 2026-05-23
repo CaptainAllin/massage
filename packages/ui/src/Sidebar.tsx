@@ -19,6 +19,13 @@ import {
   Settings,
   Menu,
   X,
+  Gift,
+  Star,
+  Package,
+  Video,
+  DollarSign,
+  Zap,
+  ShieldCheck,
 } from 'lucide-react';
 
 export interface MenuItem {
@@ -99,6 +106,48 @@ const defaultMenuItems: MenuItem[] = [
     href: '/therapists',
     icon: UserCog,
     allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER'],
+  },
+  {
+    label: 'Gift Cards',
+    href: '/gift-cards',
+    icon: Gift,
+    allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER', 'RECEPTIONIST'],
+  },
+  {
+    label: 'Loyalty',
+    href: '/loyalty',
+    icon: Star,
+    allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER'],
+  },
+  {
+    label: 'Inventory',
+    href: '/inventory',
+    icon: Package,
+    allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER', 'RECEPTIONIST'],
+  },
+  {
+    label: 'Telehealth',
+    href: '/telehealth',
+    icon: Video,
+    allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER', 'THERAPIST'],
+  },
+  {
+    label: 'Payroll',
+    href: '/payroll',
+    icon: DollarSign,
+    allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER'],
+  },
+  {
+    label: 'Automation',
+    href: '/automation',
+    icon: Zap,
+    allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER'],
+  },
+  {
+    label: 'Insurance Claims',
+    href: '/insurance-claims',
+    icon: ShieldCheck,
+    allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER', 'RECEPTIONIST'],
   },
   {
     label: 'Settings',

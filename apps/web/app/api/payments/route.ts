@@ -1,10 +1,11 @@
-import { withAuth, res } from '@/lib/api-auth';
+import { withAuth, requireBusinessAccess, res, logAudit } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
 
-export const GET = withAuth(async (req) => {
+export const GET = withAuth(async (req, user) => {
   const { searchParams } = new URL(req.url);
   const businessId = searchParams.get('businessId');
   if (!businessId) return res.badRequest('businessId is required');
+  await requireBusinessAccess(user, businessId);
 
   const where: any = { businessId };
   const clientId = searchParams.get('clientId');
@@ -47,15 +48,13 @@ export const POST = withAuth(async (req, user) => {
     include: { client: true, invoice: true },
   });
 
-  await prisma.auditLog.create({
-    data: {
-      userId: user.id,
-      businessId,
-      action: 'PAYMENT_CREATED',
-      entityType: 'Payment',
-      entityId: payment.id,
-      metadata: { amount, method: paymentMethod },
-    },
+  await logAudit(req, {
+    userId: user.id,
+    businessId,
+    action: 'PAYMENT_CREATED',
+    entityType: 'Payment',
+    entityId: payment.id,
+    metadata: { amount, method: paymentMethod },
   });
 
   return res.created(payment);

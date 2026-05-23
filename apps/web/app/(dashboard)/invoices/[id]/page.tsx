@@ -1,14 +1,16 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, Button, Skeleton, Badge, Tabs, Tab } from '@massage/ui';
-import { ArrowLeft, Edit, Trash2, DollarSign } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, DollarSign, Download, Send, MessageSquare, ChevronDown } from 'lucide-react';
 import { useBusinessId } from '@/lib/hooks/use-business-id';
 import {
   useInvoice,
   useDeleteInvoice,
   useMarkInvoiceAsPaid,
+  useSendInvoice,
+  useSendInvoiceSms,
 } from '@/lib/hooks/use-invoices';
 import { InvoiceLineItemsTable } from '@/components/invoices/InvoiceLineItemsTable';
 import { InvoiceStatus } from '@massage/types';
@@ -22,9 +24,13 @@ export default function InvoiceDetailPage() {
   const { data: invoice, isLoading } = useInvoice(invoiceId, businessId);
   const deleteMutation = useDeleteInvoice(businessId);
   const markPaidMutation = useMarkInvoiceAsPaid(businessId);
+  const sendMutation = useSendInvoice(businessId);
+  const sendSmsMutation = useSendInvoiceSms(businessId);
 
   const [activeTab, setActiveTab] = useState('details');
   const [isEditing, setIsEditing] = useState(false);
+  const [showSendMenu, setShowSendMenu] = useState(false);
+  const sendMenuRef = useRef<HTMLDivElement>(null);
 
   if (isLoading) {
     return (
@@ -57,6 +63,73 @@ export default function InvoiceDetailPage() {
     }
   };
 
+  const handleSendInvoice = async () => {
+    try {
+      await sendMutation.mutateAsync(invoiceId);
+      alert('Invoice sent via email successfully!');
+    } catch (err: any) {
+      alert(err?.response?.data?.error || 'Failed to send invoice');
+    }
+  };
+
+  const handleSendSms = async (channel: 'SMS' | 'WHATSAPP') => {
+    setShowSendMenu(false);
+    try {
+      await sendSmsMutation.mutateAsync({ invoiceId, channel });
+      alert(`Invoice sent via ${channel === 'WHATSAPP' ? 'WhatsApp' : 'SMS'} successfully!`);
+    } catch (err: any) {
+      alert(err?.response?.data?.error || `Failed to send invoice via ${channel}`);
+    }
+  };
+
+  const handleDownloadPDF = () => {
+    if (!invoice) return;
+    const lineItems = (invoice.lineItems as any[]) ?? [];
+    const lineRows = lineItems
+      .map(
+        (li) =>
+          `<tr><td style="padding:8px 12px;border-bottom:1px solid #f0f0f0">${li.description}</td><td style="padding:8px 12px;border-bottom:1px solid #f0f0f0;text-align:center">${li.quantity}</td><td style="padding:8px 12px;border-bottom:1px solid #f0f0f0;text-align:right">$${li.unitPrice?.toFixed(2)}</td><td style="padding:8px 12px;border-bottom:1px solid #f0f0f0;text-align:right">$${li.total?.toFixed(2)}</td></tr>`,
+      )
+      .join('');
+
+    const dueStr = invoice.dueDate
+      ? new Date(invoice.dueDate).toLocaleDateString()
+      : 'On receipt';
+
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Invoice ${invoice.invoiceNumber}</title><style>
+      body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1a1a1a;margin:40px}
+      h1{font-size:28px;font-weight:700;margin-bottom:4px}
+      .meta{color:#666;font-size:13px;margin-bottom:32px}
+      table{width:100%;border-collapse:collapse;font-size:14px}
+      th{text-align:left;padding:8px 12px;background:#f9f9f9;font-weight:600;border-bottom:2px solid #e5e5e5}
+      th.right{text-align:right}th.center{text-align:center}
+      .totals{margin-top:16px;text-align:right;font-size:14px}
+      .totals p{margin:4px 0}
+      .total-due{font-size:20px;font-weight:700;margin-top:8px}
+      @media print{body{margin:20px}}
+    </style></head><body>
+      <h1>Invoice ${invoice.invoiceNumber}</h1>
+      <p class="meta">Due: ${dueStr}</p>
+      <table>
+        <tr><th>Description</th><th class="center">Qty</th><th class="right">Unit Price</th><th class="right">Total</th></tr>
+        ${lineRows}
+      </table>
+      <div class="totals">
+        ${invoice.taxAmount > 0 ? `<p>Tax: $${invoice.taxAmount.toFixed(2)}</p>` : ''}
+        ${invoice.discountAmount > 0 ? `<p>Discount: -$${invoice.discountAmount.toFixed(2)}</p>` : ''}
+        <p>Total: $${invoice.total.toFixed(2)}</p>
+        <p class="total-due">Amount Due: $${invoice.amountDue.toFixed(2)}</p>
+      </div>
+      <script>window.onload=function(){window.print()}</script>
+    </body></html>`;
+
+    const win = window.open('', '_blank');
+    if (win) {
+      win.document.write(html);
+      win.document.close();
+    }
+  };
+
   const tabs: Tab[] = [
     { id: 'details', label: 'Details' },
     { id: 'timeline', label: 'Timeline' },
@@ -71,7 +144,7 @@ export default function InvoiceDetailPage() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold text-foreground font-display">
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground font-display">
               {invoice.invoiceNumber}
             </h1>
             <p className="text-muted-foreground mt-1">
@@ -87,6 +160,41 @@ export default function InvoiceDetailPage() {
               Mark as Paid
             </Button>
           )}
+          <Button variant="outline" onClick={handleSendInvoice} disabled={sendMutation.isPending}>
+            <Send className="h-4 w-4 mr-2" />
+            {sendMutation.isPending ? 'Sending…' : 'Send Email'}
+          </Button>
+          <div className="relative" ref={sendMenuRef}>
+            <Button
+              variant="outline"
+              onClick={() => setShowSendMenu((v) => !v)}
+              disabled={sendSmsMutation.isPending}
+            >
+              <MessageSquare className="h-4 w-4 mr-2" />
+              {sendSmsMutation.isPending ? 'Sending…' : 'Send SMS'}
+              <ChevronDown className="h-3 w-3 ml-1" />
+            </Button>
+            {showSendMenu && (
+              <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-gray-200 rounded-md shadow-lg z-10">
+                <button
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
+                  onClick={() => handleSendSms('SMS')}
+                >
+                  Send via SMS
+                </button>
+                <button
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
+                  onClick={() => handleSendSms('WHATSAPP')}
+                >
+                  Send via WhatsApp
+                </button>
+              </div>
+            )}
+          </div>
+          <Button variant="outline" onClick={handleDownloadPDF}>
+            <Download className="h-4 w-4 mr-2" />
+            Download PDF
+          </Button>
           <Button variant="outline" onClick={() => setIsEditing(!isEditing)}>
             <Edit className="h-4 w-4 mr-2" />
             {isEditing ? 'Cancel' : 'Edit'}

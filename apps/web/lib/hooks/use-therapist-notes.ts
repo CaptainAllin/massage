@@ -1,9 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { TherapistNote, TherapistNoteFilters, ApiResponse } from '@massage/types';
+import { apiClient } from '@/lib/api-client';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-
-// Fetch all therapist notes (filtered by RBAC on backend)
 export function useTherapistNotes(businessId: string | undefined, filters?: TherapistNoteFilters) {
   return useQuery({
     queryKey: ['therapist-notes', businessId, filters],
@@ -17,42 +15,26 @@ export function useTherapistNotes(businessId: string | undefined, filters?: Ther
         ...(filters?.limit && { limit: String(filters.limit) }),
       });
 
-      const response = await fetch(`${API_URL}/therapist-notes?${params}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-
-      if (!response.ok) throw new Error('Failed to fetch therapist notes');
-      return await response.json();
+      const result = await apiClient.get(`/therapist-notes?${params}`);
+      return result.data;
     },
     enabled: !!businessId,
   });
 }
 
-// Fetch single therapist note
 export function useTherapistNote(noteId: string, businessId: string | undefined) {
   return useQuery({
     queryKey: ['therapist-note', noteId, businessId],
     queryFn: async () => {
-      const response = await fetch(
-        `${API_URL}/therapist-notes/${noteId}?businessId=${businessId}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          },
-        }
+      const result = await apiClient.get<ApiResponse<TherapistNote>>(
+        `/therapist-notes/${noteId}?businessId=${businessId}`
       );
-
-      if (!response.ok) throw new Error('Failed to fetch therapist note');
-      const data: ApiResponse<TherapistNote> = await response.json();
-      return data.data;
+      return result.data.data;
     },
     enabled: !!noteId && !!businessId,
   });
 }
 
-// Create therapist note mutation
 export function useCreateTherapistNote(businessId: string | undefined) {
   const queryClient = useQueryClient();
 
@@ -62,18 +44,11 @@ export function useCreateTherapistNote(businessId: string | undefined) {
       content: string;
       isPinned?: boolean;
     }) => {
-      const response = await fetch(`${API_URL}/therapist-notes`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({ businessId, ...noteData }),
+      const result = await apiClient.post<ApiResponse<TherapistNote>>('/therapist-notes', {
+        businessId,
+        ...noteData,
       });
-
-      if (!response.ok) throw new Error('Failed to create therapist note');
-      const data: ApiResponse<TherapistNote> = await response.json();
-      return data.data;
+      return result.data.data;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['therapist-notes', businessId] });
@@ -84,7 +59,6 @@ export function useCreateTherapistNote(businessId: string | undefined) {
   });
 }
 
-// Update therapist note mutation
 export function useUpdateTherapistNote(noteId: string, businessId: string | undefined) {
   const queryClient = useQueryClient();
 
@@ -93,21 +67,11 @@ export function useUpdateTherapistNote(noteId: string, businessId: string | unde
       content?: string;
       isPinned?: boolean;
     }) => {
-      const response = await fetch(
-        `${API_URL}/therapist-notes/${noteId}?businessId=${businessId}`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          },
-          body: JSON.stringify(noteData),
-        }
+      const result = await apiClient.patch<ApiResponse<TherapistNote>>(
+        `/therapist-notes/${noteId}?businessId=${businessId}`,
+        noteData
       );
-
-      if (!response.ok) throw new Error('Failed to update therapist note');
-      const data: ApiResponse<TherapistNote> = await response.json();
-      return data.data;
+      return result.data.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['therapist-note', noteId, businessId] });
@@ -116,25 +80,16 @@ export function useUpdateTherapistNote(noteId: string, businessId: string | unde
   });
 }
 
-// Toggle pin status mutation
 export function useTogglePinTherapistNote(noteId: string, businessId: string | undefined) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async () => {
-      const response = await fetch(
-        `${API_URL}/therapist-notes/${noteId}/toggle-pin?businessId=${businessId}`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          },
-        }
+      const result = await apiClient.patch<ApiResponse<TherapistNote>>(
+        `/therapist-notes/${noteId}/toggle-pin?businessId=${businessId}`,
+        {}
       );
-
-      if (!response.ok) throw new Error('Failed to toggle pin');
-      const data: ApiResponse<TherapistNote> = await response.json();
-      return data.data;
+      return result.data.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['therapist-note', noteId, businessId] });
@@ -143,25 +98,15 @@ export function useTogglePinTherapistNote(noteId: string, businessId: string | u
   });
 }
 
-// Delete therapist note mutation
 export function useDeleteTherapistNote(businessId: string | undefined) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (noteId: string) => {
-      const response = await fetch(
-        `${API_URL}/therapist-notes/${noteId}?businessId=${businessId}`,
-        {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          },
-        }
+      const result = await apiClient.delete<ApiResponse<TherapistNote>>(
+        `/therapist-notes/${noteId}?businessId=${businessId}`
       );
-
-      if (!response.ok) throw new Error('Failed to delete therapist note');
-      const data: ApiResponse<TherapistNote> = await response.json();
-      return data.data;
+      return result.data.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['therapist-notes', businessId] });

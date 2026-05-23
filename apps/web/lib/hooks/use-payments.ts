@@ -90,7 +90,7 @@ export function useProcessStripePayment(businessId: string | undefined) {
 
   return useMutation({
     mutationFn: async (data: ProcessStripePaymentDto) => {
-      const response = await apiClient.post('/payments/process-stripe', data);
+      const response = await apiClient.post('/payments/process-stripe', { ...data, businessId });
       return response.data;
     },
     onSuccess: () => {
@@ -149,13 +149,128 @@ export function useRefundPayment(businessId: string | undefined) {
     mutationFn: async ({ paymentId, ...refundData }: RefundPaymentDto) => {
       const response = await apiClient.post<ApiResponse<Payment>>(
         `/payments/${paymentId}/refund`,
-        refundData
+        { ...refundData, businessId }
       );
       return response.data.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payments', businessId] });
     },
+  });
+}
+
+/**
+ * Saved payment methods
+ */
+export function useSavedPaymentMethods(businessId: string | undefined, clientId: string | undefined) {
+  return useQuery({
+    queryKey: ['saved-payment-methods', businessId, clientId],
+    queryFn: async () => {
+      const response = await apiClient.get(
+        `/payments/saved-methods?businessId=${businessId}&clientId=${clientId}`
+      );
+      return response.data.data as Array<{
+        id: string;
+        stripePaymentMethodId: string;
+        brand: string | null;
+        last4: string | null;
+        expMonth: number | null;
+        expYear: number | null;
+        isDefault: boolean;
+      }>;
+    },
+    enabled: !!businessId && !!clientId,
+  });
+}
+
+export function useCreateSetupIntent(businessId: string | undefined) {
+  return useMutation({
+    mutationFn: async (clientId: string) => {
+      const response = await apiClient.post('/payments/setup-intent', { businessId, clientId });
+      return response.data.data as { clientSecret: string; customerId: string };
+    },
+  });
+}
+
+export function useSavePaymentMethod(businessId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ clientId, stripePaymentMethodId }: { clientId: string; stripePaymentMethodId: string }) => {
+      const response = await apiClient.post('/payments/saved-methods', {
+        businessId,
+        clientId,
+        stripePaymentMethodId,
+      });
+      return response.data.data;
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['saved-payment-methods', businessId, vars.clientId] });
+    },
+  });
+}
+
+export function useDeleteSavedPaymentMethod(businessId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, clientId }: { id: string; clientId: string }) => {
+      await apiClient.delete(`/payments/saved-methods/${id}?businessId=${businessId}`);
+      return clientId;
+    },
+    onSuccess: (clientId) => {
+      queryClient.invalidateQueries({ queryKey: ['saved-payment-methods', businessId, clientId] });
+    },
+  });
+}
+
+export function useSetDefaultPaymentMethod(businessId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, clientId }: { id: string; clientId: string }) => {
+      await apiClient.patch(`/payments/saved-methods/${id}`, { businessId });
+      return clientId;
+    },
+    onSuccess: (clientId) => {
+      queryClient.invalidateQueries({ queryKey: ['saved-payment-methods', businessId, clientId] });
+    },
+  });
+}
+
+/**
+ * Revenue report
+ */
+export function useRevenueReport(
+  businessId: string | undefined,
+  type: 'daily' | 'monthly' | 'tax',
+  startDate?: string,
+  endDate?: string,
+) {
+  return useQuery({
+    queryKey: ['revenue-report', businessId, type, startDate, endDate],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        businessId: businessId!,
+        type,
+        ...(startDate && { startDate }),
+        ...(endDate && { endDate }),
+      });
+      const response = await apiClient.get(`/payments/revenue-report?${params}`);
+      return response.data.data;
+    },
+    enabled: !!businessId,
+  });
+}
+
+/**
+ * Payment reconciliation
+ */
+export function useReconciliation(businessId: string | undefined) {
+  return useQuery({
+    queryKey: ['reconciliation', businessId],
+    queryFn: async () => {
+      const response = await apiClient.get(`/payments/reconciliation?businessId=${businessId}`);
+      return response.data.data;
+    },
+    enabled: !!businessId,
   });
 }
 
@@ -167,6 +282,7 @@ export function usePaymentStats(businessId: string | undefined, startDate?: stri
     queryKey: ['payment-stats', businessId, startDate, endDate],
     queryFn: async () => {
       const params = new URLSearchParams({
+        businessId: businessId!,
         ...(startDate && { startDate }),
         ...(endDate && { endDate }),
       });

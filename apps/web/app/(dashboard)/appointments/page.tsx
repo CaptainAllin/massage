@@ -65,33 +65,36 @@ export default function AppointmentsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground font-display">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground font-display">
             Appointments
           </h1>
-          <p className="text-muted-foreground mt-2">
+          <p className="text-muted-foreground mt-1 sm:mt-2">
             Manage your appointment schedule and availability
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-2 sm:gap-3">
           <Button
             variant="secondary"
             onClick={() => setIsTimeOffModalOpen(true)}
           >
-            <ClockIcon className="h-5 w-5 mr-2" />
-            Time Off
+            <ClockIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2" />
+            <span className="hidden xs:inline">Time Off</span>
+            <span className="xs:hidden">Off</span>
           </Button>
           <Button
             variant="secondary"
             onClick={() => setIsAvailabilityModalOpen(true)}
           >
-            <UserGroupIcon className="h-5 w-5 mr-2" />
-            Availability
+            <UserGroupIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2" />
+            <span className="hidden sm:inline">Availability</span>
+            <span className="sm:hidden">Avail.</span>
           </Button>
           <Button variant="primary" onClick={() => setIsAddModalOpen(true)}>
-            <CalendarIcon className="h-5 w-5 mr-2" />
-            New Appointment
+            <CalendarIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2" />
+            <span className="hidden sm:inline">New Appointment</span>
+            <span className="sm:hidden">New</span>
           </Button>
         </div>
       </div>
@@ -154,7 +157,8 @@ export default function AppointmentsPage() {
         isOpen={isAvailabilityModalOpen}
         onClose={() => setIsAvailabilityModalOpen(false)}
         businessId={businessId}
-        therapist={null} // TODO: Select therapist from dropdown
+        therapist={null}
+        therapists={therapists || []}
       />
 
       <TimeOffModal

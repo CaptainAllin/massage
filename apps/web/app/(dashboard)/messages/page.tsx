@@ -64,7 +64,7 @@ function MessagesPageContent() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-foreground font-display">Messages</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground font-display">Messages</h1>
           <p className="text-muted-foreground mt-2">Please select a business first</p>
         </div>
       </div>
@@ -74,7 +74,7 @@ function MessagesPageContent() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground font-display">Messages</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground font-display">Messages</h1>
         <p className="text-muted-foreground mt-2">
           Communicate with your clients via SMS, email, and WhatsApp
         </p>

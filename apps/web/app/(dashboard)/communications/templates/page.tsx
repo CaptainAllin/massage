@@ -139,7 +139,7 @@ function TemplatesPageContent() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-foreground font-display">Message Templates</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground font-display">Message Templates</h1>
           <p className="text-muted-foreground mt-2">
             Create reusable templates for common communications
           </p>

@@ -1,11 +1,39 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Therapist, TherapistFilters, ApiResponse } from '@massage/types';
+import { apiClient } from '@/lib/api-client';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+export interface TherapistPerformanceRecord {
+  therapistId: string;
+  therapistName: string;
+  sessionsCompleted: number;
+  revenueGenerated: number;
+  utilizationRate: number;
+  rebookingRate: number;
+}
 
-/**
- * Fetch all therapists
- */
+export function useTherapistPerformance(
+  businessId: string | undefined,
+  params: { startDate: string; endDate: string; therapistId?: string },
+) {
+  return useQuery({
+    queryKey: ['therapist-performance', businessId, params],
+    queryFn: async () => {
+      const searchParams = new URLSearchParams({
+        businessId: businessId!,
+        startDate: params.startDate,
+        endDate: params.endDate,
+        ...(params.therapistId && { therapistId: params.therapistId }),
+      });
+      const response = await apiClient.get<{
+        success: boolean;
+        data: { therapists: TherapistPerformanceRecord[] };
+      }>(`/reports/therapists?${searchParams}`);
+      return response.data.data;
+    },
+    enabled: !!businessId,
+  });
+}
+
 export function useTherapists(businessId: string | undefined, filters?: TherapistFilters) {
   return useQuery({
     queryKey: ['therapists', businessId, filters],
@@ -16,65 +44,35 @@ export function useTherapists(businessId: string | undefined, filters?: Therapis
         ...(filters?.search && { search: filters.search }),
         ...(filters?.specialization && { specialization: filters.specialization }),
       });
-
-      const response = await fetch(`${API_URL}/therapists?${params}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-
-      if (!response.ok) throw new Error('Failed to fetch therapists');
-      const data: ApiResponse<Therapist[]> = await response.json();
-      return data.data;
+      const response = await apiClient.get<ApiResponse<Therapist[]>>(`/therapists?${params}`);
+      return response.data.data;
     },
     enabled: !!businessId,
   });
 }
 
-/**
- * Fetch single therapist
- */
 export function useTherapist(therapistId: string, businessId: string | undefined) {
   return useQuery({
     queryKey: ['therapist', therapistId, businessId],
     queryFn: async () => {
-      const response = await fetch(
-        `${API_URL}/therapists/${therapistId}?businessId=${businessId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        }
+      const response = await apiClient.get<ApiResponse<Therapist>>(
+        `/therapists/${therapistId}?businessId=${businessId}`
       );
-
-      if (!response.ok) throw new Error('Failed to fetch therapist');
-      const data: ApiResponse<Therapist> = await response.json();
-      return data.data;
+      return response.data.data;
     },
     enabled: !!therapistId && !!businessId,
   });
 }
 
-/**
- * Create therapist mutation
- */
 export function useCreateTherapist(businessId: string | undefined) {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async (therapistData: Partial<Therapist>) => {
-      const response = await fetch(`${API_URL}/therapists`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({ businessId, ...therapistData }),
+      const response = await apiClient.post<ApiResponse<Therapist>>('/therapists', {
+        ...therapistData,
+        businessId,
       });
-
-      if (!response.ok) throw new Error('Failed to create therapist');
-      const data: ApiResponse<Therapist> = await response.json();
-      return data.data;
+      return response.data.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['therapists', businessId] });
@@ -82,29 +80,15 @@ export function useCreateTherapist(businessId: string | undefined) {
   });
 }
 
-/**
- * Update therapist mutation
- */
 export function useUpdateTherapist(therapistId: string, businessId: string | undefined) {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async (therapistData: Partial<Therapist>) => {
-      const response = await fetch(
-        `${API_URL}/therapists/${therapistId}?businessId=${businessId}`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-          body: JSON.stringify(therapistData),
-        }
+      const response = await apiClient.patch<ApiResponse<Therapist>>(
+        `/therapists/${therapistId}`,
+        { ...therapistData, businessId }
       );
-
-      if (!response.ok) throw new Error('Failed to update therapist');
-      const data: ApiResponse<Therapist> = await response.json();
-      return data.data;
+      return response.data.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['therapist', therapistId, businessId] });
@@ -113,27 +97,14 @@ export function useUpdateTherapist(therapistId: string, businessId: string | und
   });
 }
 
-/**
- * Delete therapist mutation
- */
 export function useDeleteTherapist(businessId: string | undefined) {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async (therapistId: string) => {
-      const response = await fetch(
-        `${API_URL}/therapists/${therapistId}?businessId=${businessId}`,
-        {
-          method: 'DELETE',
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        }
+      const response = await apiClient.delete<ApiResponse<Therapist>>(
+        `/therapists/${therapistId}?businessId=${businessId}`
       );
-
-      if (!response.ok) throw new Error('Failed to delete therapist');
-      const data: ApiResponse<Therapist> = await response.json();
-      return data.data;
+      return response.data.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['therapists', businessId] });

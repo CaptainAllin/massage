@@ -13,6 +13,7 @@ import type {
 interface ReportViewerProps {
   reportType: ReportType;
   data: any;
+  selectedFields?: string[];
   onExport?: () => void;
   onClose?: () => void;
 }
@@ -45,9 +46,11 @@ function DataTable({ headers, rows }: { headers: string[]; rows: (string | numbe
 export function ReportViewer({
   reportType,
   data,
+  selectedFields,
   onExport,
   onClose,
 }: ReportViewerProps) {
+  const show = (field: string) => !selectedFields || selectedFields.length === 0 || selectedFields.includes(field);
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -88,35 +91,41 @@ export function ReportViewer({
         </Card>
       </div>
 
-      <Card>
-        <CardHeader><CardTitle>Revenue by Therapist</CardTitle></CardHeader>
-        <CardContent>
-          <DataTable
-            headers={['Therapist', 'Appointments', 'Revenue']}
-            rows={reportData.byTherapist.map((t) => [t.therapistName, t.appointmentCount, formatCurrency(t.revenue)])}
-          />
-        </CardContent>
-      </Card>
+      {show('byTherapist') && (
+        <Card>
+          <CardHeader><CardTitle>Revenue by Therapist</CardTitle></CardHeader>
+          <CardContent>
+            <DataTable
+              headers={['Therapist', 'Appointments', 'Revenue']}
+              rows={reportData.byTherapist.map((t) => [t.therapistName, t.appointmentCount, formatCurrency(t.revenue)])}
+            />
+          </CardContent>
+        </Card>
+      )}
 
-      <Card>
-        <CardHeader><CardTitle>Revenue by Service Type</CardTitle></CardHeader>
-        <CardContent>
-          <DataTable
-            headers={['Service Type', 'Count', 'Revenue']}
-            rows={reportData.byServiceType.map((s) => [s.serviceType, s.count, formatCurrency(s.revenue)])}
-          />
-        </CardContent>
-      </Card>
+      {show('byServiceType') && (
+        <Card>
+          <CardHeader><CardTitle>Revenue by Service Type</CardTitle></CardHeader>
+          <CardContent>
+            <DataTable
+              headers={['Service Type', 'Count', 'Revenue']}
+              rows={reportData.byServiceType.map((s) => [s.serviceType, s.count, formatCurrency(s.revenue)])}
+            />
+          </CardContent>
+        </Card>
+      )}
 
-      <Card>
-        <CardHeader><CardTitle>Revenue by Payment Method</CardTitle></CardHeader>
-        <CardContent>
-          <DataTable
-            headers={['Payment Method', 'Transactions', 'Amount']}
-            rows={reportData.byPaymentMethod.map((m) => [m.paymentMethod, m.count, formatCurrency(m.amount)])}
-          />
-        </CardContent>
-      </Card>
+      {show('byPaymentMethod') && (
+        <Card>
+          <CardHeader><CardTitle>Revenue by Payment Method</CardTitle></CardHeader>
+          <CardContent>
+            <DataTable
+              headers={['Payment Method', 'Transactions', 'Amount']}
+              rows={reportData.byPaymentMethod.map((m) => [m.paymentMethod, m.count, formatCurrency(m.amount)])}
+            />
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 
@@ -141,17 +150,19 @@ export function ReportViewer({
         </Card>
       </div>
 
-      <Card>
-        <CardHeader><CardTitle>Top Clients by Revenue</CardTitle></CardHeader>
-        <CardContent>
-          <DataTable
-            headers={['Client', 'Total Spent']}
-            rows={reportData.topClients.map((c) => [c.clientName, formatCurrency(c.totalSpent)])}
-          />
-        </CardContent>
-      </Card>
+      {show('topClients') && (
+        <Card>
+          <CardHeader><CardTitle>Top Clients by Revenue</CardTitle></CardHeader>
+          <CardContent>
+            <DataTable
+              headers={['Client', 'Total Spent']}
+              rows={reportData.topClients.map((c) => [c.clientName, formatCurrency(c.totalSpent)])}
+            />
+          </CardContent>
+        </Card>
+      )}
 
-      {reportData.inactiveClients.length > 0 && (
+      {show('inactiveClients') && reportData.inactiveClients.length > 0 && (
         <Card>
           <CardHeader><CardTitle>Inactive Clients (90+ Days)</CardTitle></CardHeader>
           <CardContent>
@@ -161,6 +172,22 @@ export function ReportViewer({
                 c.clientName,
                 new Date(c.lastVisit).toLocaleDateString(),
                 c.daysSinceLastVisit,
+              ])}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {show('clientLifetimeValue') && reportData.clientLifetimeValue?.length > 0 && (
+        <Card>
+          <CardHeader><CardTitle>Client Lifetime Value</CardTitle></CardHeader>
+          <CardContent>
+            <DataTable
+              headers={['Client', 'Visits', 'Lifetime Spend']}
+              rows={reportData.clientLifetimeValue.slice(0, 10).map((c) => [
+                c.clientName,
+                c.visitCount,
+                formatCurrency(c.totalSpent),
               ])}
             />
           </CardContent>
@@ -210,25 +237,45 @@ export function ReportViewer({
         </Card>
       </div>
 
-      <Card>
-        <CardHeader><CardTitle>Appointments by Status</CardTitle></CardHeader>
-        <CardContent>
-          <DataTable
-            headers={['Status', 'Count', 'Percentage']}
-            rows={reportData.byStatus.map((s) => [s.status, s.count, formatPercent(s.percentage)])}
-          />
-        </CardContent>
-      </Card>
+      {show('byStatus') && (
+        <Card>
+          <CardHeader><CardTitle>Appointments by Status</CardTitle></CardHeader>
+          <CardContent>
+            <DataTable
+              headers={['Status', 'Count', 'Percentage']}
+              rows={reportData.byStatus.map((s) => [s.status, s.count, formatPercent(s.percentage)])}
+            />
+          </CardContent>
+        </Card>
+      )}
 
-      <Card>
-        <CardHeader><CardTitle>Appointments by Service Type</CardTitle></CardHeader>
-        <CardContent>
-          <DataTable
-            headers={['Service Type', 'Count']}
-            rows={reportData.byServiceType.map((s) => [s.serviceType, s.count])}
-          />
-        </CardContent>
-      </Card>
+      {show('byServiceType') && (
+        <Card>
+          <CardHeader><CardTitle>Appointments by Service Type</CardTitle></CardHeader>
+          <CardContent>
+            <DataTable
+              headers={['Service Type', 'Count']}
+              rows={reportData.byServiceType.map((s) => [s.serviceType, s.count])}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {show('peakTimes') && reportData.peakTimes?.length > 0 && (
+        <Card>
+          <CardHeader><CardTitle>Peak Times</CardTitle></CardHeader>
+          <CardContent>
+            <DataTable
+              headers={['Hour', 'Day of Week', 'Appointments']}
+              rows={reportData.peakTimes.slice(0, 10).map((p) => [
+                `${p.hour}:00`,
+                ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][p.dayOfWeek] ?? p.dayOfWeek,
+                p.count,
+              ])}
+            />
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 
@@ -261,15 +308,17 @@ export function ReportViewer({
         </Card>
       </div>
 
-      <Card>
-        <CardHeader><CardTitle>Payment Method Breakdown</CardTitle></CardHeader>
-        <CardContent>
-          <DataTable
-            headers={['Payment Method', 'Amount', 'Percentage']}
-            rows={reportData.paymentMethodBreakdown.map((m) => [m.method, formatCurrency(m.amount), formatPercent(m.percentage)])}
-          />
-        </CardContent>
-      </Card>
+      {show('paymentMethodBreakdown') && (
+        <Card>
+          <CardHeader><CardTitle>Payment Method Breakdown</CardTitle></CardHeader>
+          <CardContent>
+            <DataTable
+              headers={['Payment Method', 'Amount', 'Percentage']}
+              rows={reportData.paymentMethodBreakdown.map((m) => [m.method, formatCurrency(m.amount), formatPercent(m.percentage)])}
+            />
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 

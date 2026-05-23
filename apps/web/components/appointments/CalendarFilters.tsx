@@ -66,9 +66,9 @@ export function CalendarFilters({
   ];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* View Mode and Date Navigation */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Button
             variant={viewMode === 'week' ? 'primary' : 'secondary'}
@@ -86,15 +86,15 @@ export function CalendarFilters({
           </Button>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <Button variant="secondary" onClick={handlePreviousWeek} size="sm">
             <ChevronLeftIcon className="h-4 w-4" />
           </Button>
 
-          <span className="text-sm font-semibold text-gray-900 min-w-[140px] text-center">
+          <span className="text-xs sm:text-sm font-semibold text-gray-900 min-w-[100px] sm:min-w-[140px] text-center">
             {viewMode === 'week'
-              ? `Week of ${format(currentDate, 'MMM d, yyyy')}`
-              : format(currentDate, 'MMMM d, yyyy')}
+              ? `Week of ${format(currentDate, 'MMM d')}`
+              : format(currentDate, 'MMM d, yyyy')}
           </span>
 
           <Button variant="secondary" onClick={handleNextWeek} size="sm">
@@ -108,10 +108,10 @@ export function CalendarFilters({
       </div>
 
       {/* Therapist and Status Filters */}
-      <div className="flex items-center gap-4 flex-wrap">
+      <div className="flex flex-wrap items-start gap-3">
         {/* Therapist Filter */}
         <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-gray-700">Therapist:</label>
+          <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Therapist:</label>
           <Select
             value={selectedTherapist || 'all'}
             onChange={(e) =>
@@ -122,16 +122,16 @@ export function CalendarFilters({
         </div>
 
         {/* Status Filter */}
-        <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-gray-700">Status:</label>
-          <div className="flex gap-2 flex-wrap">
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Status:</label>
+          <div className="flex gap-1.5 flex-wrap">
             {statusOptions.map((option) => {
               const isSelected = selectedStatuses.includes(option.value);
               return (
                 <button
                   key={option.value}
                   onClick={() => handleStatusToggle(option.value)}
-                  className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
+                  className={`px-2 py-0.5 text-xs font-medium rounded-full transition-colors ${
                     isSelected
                       ? 'bg-sage-600 text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'

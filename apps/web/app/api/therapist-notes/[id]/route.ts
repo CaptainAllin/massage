@@ -5,8 +5,11 @@ import { NextRequest } from 'next/server';
 const noteInclude = {
   client: { select: { id: true, firstName: true, lastName: true } },
   therapist: {
-    select: { id: true, userId: true },
-    include: { user: { select: { firstName: true, lastName: true } } },
+    select: {
+      id: true,
+      userId: true,
+      user: { select: { firstName: true, lastName: true } },
+    },
   },
 };
 

@@ -1,21 +1,59 @@
 'use client';
 
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Select } from '@massage/ui';
 import { useCreateTreatmentNote } from '@/lib/hooks';
+import { useAppointments } from '@/lib/hooks/use-appointments';
 import { SOAPNoteEditor, SOAPNoteData } from '@/components/treatment-notes/SOAPNoteEditor';
-
 import { useBusinessId } from '@/lib/hooks/use-business-id';
+import { useAuth } from '@massage/auth';
+
 export default function NewTreatmentNotePage() {
   const router = useRouter();
   const businessId = useBusinessId();
+  const { user } = useAuth();
   const createNote = useCreateTreatmentNote(businessId);
 
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState('');
+
+  const today = new Date();
+  const startOfWeek = new Date(today);
+  startOfWeek.setDate(today.getDate() - 7);
+
+  const { data: appointmentsData } = useAppointments(businessId, {
+    startDate: startOfWeek,
+    endDate: new Date(today.getTime() + 24 * 60 * 60 * 1000),
+    limit: 100,
+  });
+
+  const appointments = (appointmentsData?.data ?? []) as any[];
+
+  const selectedAppointment = appointments.find((a) => a.id === selectedAppointmentId);
+
+  const appointmentOptions = [
+    { value: '', label: 'Select an appointment' },
+    ...appointments.map((a) => {
+      const clientName = a.client
+        ? `${a.client.firstName} ${a.client.lastName}`
+        : a.clientId;
+      const time = new Date(a.startTime).toLocaleString('en-AU', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+      return { value: a.id, label: `${clientName} — ${time}` };
+    }),
+  ];
+
   const handleSave = async (data: SOAPNoteData) => {
+    if (!selectedAppointmentId || !selectedAppointment) return;
     await createNote.mutateAsync({
-      appointmentId: 'temp-appointment-id', // TODO: Select from list
-      clientId: 'temp-client-id', // TODO: Get from appointment
-      therapistId: 'temp-therapist-id', // TODO: Get from current user
+      appointmentId: selectedAppointment.id,
+      clientId: selectedAppointment.clientId,
+      therapistId: selectedAppointment.therapistId,
       ...data,
       sessionDuration: data.sessionDuration ?? undefined,
     });
@@ -25,7 +63,7 @@ export default function NewTreatmentNotePage() {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground font-display">
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground font-display">
           New SOAP Note
         </h1>
         <p className="text-muted-foreground mt-2">
@@ -38,19 +76,25 @@ export default function NewTreatmentNotePage() {
           Appointment *
         </label>
         <Select
-          options={[
-            { value: '', label: 'Select an appointment' },
-            { value: 'appt1', label: 'John Doe - Today 2:00 PM' },
-            { value: 'appt2', label: 'Jane Smith - Today 3:30 PM' },
-          ]}
-          placeholder="Select appointment"
+          value={selectedAppointmentId}
+          options={appointmentOptions}
+          onChange={(e) => setSelectedAppointmentId(e.target.value)}
         />
+        {appointments.length === 0 && (
+          <p className="mt-1 text-sm text-gray-500">
+            No appointments found in the last 7 days. Create an appointment first.
+          </p>
+        )}
       </div>
 
       <SOAPNoteEditor
         onSave={handleSave}
         onCancel={() => router.back()}
         isLoading={createNote.isPending}
+        userId={user?.id}
+        therapistId={selectedAppointment?.therapistId}
+        clientId={selectedAppointment?.clientId}
+        appointmentId={selectedAppointment?.id}
       />
     </div>
   );

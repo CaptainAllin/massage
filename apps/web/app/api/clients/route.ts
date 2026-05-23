@@ -1,14 +1,15 @@
-import { requireAuth, res, AuthError } from '@/lib/api-auth';
+import { requireAuth, requireBusinessAccess, res, AuthError } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
 import { NextRequest } from 'next/server';
 
 export async function GET(req: NextRequest) {
   try {
-    await requireAuth(req);
+    const user = await requireAuth(req);
     const { searchParams } = new URL(req.url);
     const businessId = searchParams.get('businessId');
 
     if (!businessId) return res.badRequest('businessId is required');
+    await requireBusinessAccess(user, businessId);
 
     const isActiveParam = searchParams.get('isActive');
     const search = searchParams.get('search');
@@ -59,6 +60,7 @@ export async function POST(req: NextRequest) {
     const { businessId, ...data } = body;
 
     if (!businessId) return res.badRequest('businessId is required');
+    await requireBusinessAccess(user, businessId);
 
     const client = await prisma.client.create({
       data: { ...data, businessId },

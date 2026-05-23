@@ -62,9 +62,21 @@ model Business {
   communicationSettings      CommunicationSettings?
   conversations              Conversation[]
   exportHistory              ExportHistory[]
+  giftCards                  GiftCard[]
+  giftCardRedemptions        GiftCardRedemption[]
   intakeFormTemplates        IntakeFormTemplate[]
   intakeForms                IntakeForm[]
+  automationLogs             AutomationLog[]
+  automationRules            AutomationRule[]
+  insuranceProviders         InsuranceProvider[]
+  insuranceClaims            InsuranceClaim[]
+  claimReimbursements        ClaimReimbursement[]
+  inventoryAdjustments       InventoryAdjustment[]
   invoices                   Invoice[]
+  locations                  Location[]
+  loyaltyAccounts            LoyaltyAccount[]
+  loyaltySettings            LoyaltySettings?
+  loyaltyTransactions        LoyaltyTransaction[]
   medicalConditions          MedicalCondition[]
   membershipSessions         MembershipSession[]
   memberships                Membership[]
@@ -73,9 +85,14 @@ model Business {
   packagePurchases           PackagePurchase[]
   packageSessions            PackageSession[]
   payments                   Payment[]
+  payrollPeriods             PayrollPeriod[]
+  payrollRecords             PayrollRecord[]
+  products                   Product[]
+  promotions                 Promotion[]
   recurringAppointmentSeries RecurringAppointmentSeries[]
   savedReports               SavedReport[]
   stripeCustomers            StripeCustomer[]
+  savedPaymentMethods        SavedPaymentMethod[]
   therapistAvailability      TherapistAvailability[]
   therapistNotes             TherapistNote[]
   therapistTimeOff           TherapistTimeOff[]
@@ -92,6 +109,7 @@ model Therapist {
   id                         String                       @id @default(cuid())
   userId                     String                       @unique
   businessId                 String
+  locationId                 String?
   specializations            String[]                     @default([])
   bio                        String?
   licenseNumber              String?
@@ -107,13 +125,16 @@ model Therapist {
   therapistNotes             TherapistNote[]
   timeOff                    TherapistTimeOff[]
   business                   Business                     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  location                   Location?                    @relation(fields: [locationId], references: [id])
   user                       User                         @relation(fields: [userId], references: [id], onDelete: Cascade)
   treatmentNotes             TreatmentNote[]
   videoSessions              VideoSession[]
   voiceNotes                 VoiceNote[]
+  payrollRecords             PayrollRecord[]
 
   @@index([userId])
   @@index([businessId])
+  @@index([locationId])
   @@index([isActive])
   @@map("therapists")
 }
@@ -121,6 +142,7 @@ model Therapist {
 model Client {
   id                         String                       @id @default(cuid())
   businessId                 String
+  locationId                 String?
   userId                     String?                      @unique
   firstName                  String
   lastName                   String
@@ -150,29 +172,40 @@ model Client {
   appointments               Appointment[]
   bodyMaps                   BodyMap[]
   business                   Business                     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  location                   Location?                    @relation(fields: [locationId], references: [id])
   preferredTherapist         Therapist?                   @relation("PreferredClients", fields: [preferredTherapistId], references: [id])
   user                       User?                        @relation(fields: [userId], references: [id])
   conversations              Conversation[]
+  giftCardsPurchased         GiftCard[]
   intakeForms                IntakeForm[]
   invoices                   Invoice[]
+  loyaltyAccounts            LoyaltyAccount[]
   medicalConditions          MedicalCondition[]
   memberships                Membership[]
   packagePurchases           PackagePurchase[]
   payments                   Payment[]
+  promotionRecipients        PromotionRecipient[]
   recurringAppointmentSeries RecurringAppointmentSeries[]
   stripeCustomers            StripeCustomer[]
+  savedPaymentMethods        SavedPaymentMethod[]
   therapistNotes             TherapistNote[]
   treatmentNotes             TreatmentNote[]
   videoSessions              VideoSession[]
   voiceNotes                 VoiceNote[]
+  insuranceClaims            InsuranceClaim[]
 
   @@index([businessId])
+  @@index([locationId])
   @@index([userId])
   @@index([email])
   @@index([phoneNumber])
   @@index([isActive])
   @@index([preferredTherapistId])
   @@index([lastVisitDate])
+  @@index([createdAt])
+  @@index([businessId, createdAt])
+  @@index([businessId, isActive])
+  @@index([businessId, lastVisitDate])
   @@map("clients")
 }
 
@@ -181,6 +214,7 @@ model Appointment {
   businessId        String
   clientId          String
   therapistId       String
+  locationId        String?
   startTime         DateTime
   endTime           DateTime
   status            AppointmentStatus           @default(SCHEDULED)
@@ -196,6 +230,7 @@ model Appointment {
   reminders         AppointmentReminder[]
   business          Business                    @relation(fields: [businessId], references: [id], onDelete: Cascade)
   client            Client                      @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  location          Location?                   @relation(fields: [locationId], references: [id])
   recurringSeries   RecurringAppointmentSeries? @relation(fields: [recurringSeriesId], references: [id])
   therapist         Therapist                   @relation(fields: [therapistId], references: [id], onDelete: Cascade)
   bodyMaps          BodyMap[]
@@ -205,13 +240,18 @@ model Appointment {
   treatmentNotes    TreatmentNote[]
   videoSession      VideoSession?
   voiceNotes        VoiceNote[]
+  insuranceClaims   InsuranceClaim[]
 
   @@index([businessId])
   @@index([clientId])
   @@index([therapistId])
+  @@index([locationId])
   @@index([recurringSeriesId])
   @@index([startTime])
   @@index([status])
+  @@index([businessId, startTime])
+  @@index([businessId, status])
+  @@index([businessId, therapistId, startTime])
   @@map("appointments")
 }
 
@@ -264,6 +304,8 @@ model TreatmentNote {
   @@index([clientId])
   @@index([therapistId])
   @@index([followUpDate])
+  @@index([businessId, createdAt])
+  @@index([businessId, therapistId])
   @@map("treatment_notes")
 }
 
@@ -485,6 +527,7 @@ model AppointmentReminder {
   @@index([appointmentId])
   @@index([scheduledFor])
   @@index([status])
+  @@index([businessId, status, scheduledFor])
   @@map("appointment_reminders")
 }
 
@@ -611,6 +654,27 @@ model StripeCustomer {
   @@map("stripe_customers")
 }
 
+model SavedPaymentMethod {
+  id                    String   @id @default(cuid())
+  businessId            String
+  clientId              String
+  stripePaymentMethodId String   @unique
+  stripeCustomerId      String
+  brand                 String?
+  last4                 String?
+  expMonth              Int?
+  expYear               Int?
+  isDefault             Boolean  @default(false)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  business              Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  client                Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+  @@index([clientId])
+  @@map("saved_payment_methods")
+}
+
 model Payment {
   id                    String           @id @default(cuid())
   businessId            String
@@ -619,6 +683,7 @@ model Payment {
   appointmentId         String?
   membershipId          String?
   packagePurchaseId     String?
+  locationId            String?
   amount                Float
   currency              String           @default("USD")
   paymentMethod         PaymentMethod
@@ -639,6 +704,7 @@ model Payment {
   business              Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
   client                Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
   invoice               Invoice?         @relation(fields: [invoiceId], references: [id])
+  location              Location?        @relation(fields: [locationId], references: [id])
   membership            Membership?      @relation(fields: [membershipId], references: [id])
   packagePurchase       PackagePurchase? @relation(fields: [packagePurchaseId], references: [id])
 
@@ -648,10 +714,14 @@ model Payment {
   @@index([appointmentId])
   @@index([membershipId])
   @@index([packagePurchaseId])
+  @@index([locationId])
   @@index([status])
   @@index([paymentMethod])
   @@index([createdAt])
   @@index([paidAt])
+  @@index([businessId, paidAt])
+  @@index([businessId, status])
+  @@index([businessId, paymentMethod])
   @@map("payments")
 }
 
@@ -685,6 +755,9 @@ model Invoice {
   @@index([status])
   @@index([dueDate])
   @@index([createdAt])
+  @@index([businessId, status])
+  @@index([businessId, dueDate])
+  @@index([businessId, issuedAt])
   @@map("invoices")
 }
 
@@ -723,6 +796,8 @@ model Membership {
   @@index([status])
   @@index([nextBillingDate])
   @@index([createdAt])
+  @@index([businessId, status])
+  @@index([businessId, nextBillingDate])
   @@map("memberships")
 }
 
@@ -804,6 +879,7 @@ model AnalyticsSnapshot {
   @@index([businessId])
   @@index([date])
   @@index([type])
+  @@index([businessId, type, date])
   @@map("analytics_snapshots")
 }
 
@@ -880,6 +956,8 @@ model AIUsage {
   @@index([provider])
   @@index([feature])
   @@index([createdAt])
+  @@index([businessId, createdAt])
+  @@index([businessId, feature])
   @@map("ai_usage")
 }
 
@@ -972,6 +1050,240 @@ model VideoSession {
   @@index([clientId])
   @@index([status])
   @@map("video_sessions")
+}
+
+model Promotion {
+  id              String               @id @default(cuid())
+  businessId      String
+  name            String
+  description     String?
+  channel         PromotionChannel     @default(EMAIL)
+  status          PromotionStatus      @default(DRAFT)
+  subject         String?
+  body            String
+  recipientFilter Json
+  scheduledFor    DateTime?
+  sentAt          DateTime?
+  totalSent       Int                  @default(0)
+  totalOpened     Int                  @default(0)
+  totalClicked    Int                  @default(0)
+  totalConverted  Int                  @default(0)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  business        Business             @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  recipients      PromotionRecipient[]
+
+  @@index([businessId])
+  @@index([status])
+  @@index([channel])
+  @@index([scheduledFor])
+  @@index([businessId, scheduledFor])
+  @@map("promotions")
+}
+
+model PromotionRecipient {
+  id            String    @id @default(cuid())
+  promotionId   String
+  clientId      String
+  status        String    @default("PENDING")
+  sentAt        DateTime?
+  openedAt      DateTime?
+  clickedAt     DateTime?
+  convertedAt   DateTime?
+  failureReason String?
+  createdAt     DateTime  @default(now())
+  promotion     Promotion @relation(fields: [promotionId], references: [id], onDelete: Cascade)
+  client        Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([promotionId, clientId])
+  @@index([promotionId])
+  @@index([clientId])
+  @@index([status])
+  @@map("promotion_recipients")
+}
+
+model Location {
+  id           String        @id @default(cuid())
+  businessId   String
+  name         String
+  address      String?
+  city         String?
+  state        String?
+  postalCode   String?
+  phoneNumber  String?
+  email        String?
+  isActive     Boolean       @default(true)
+  isPrimary    Boolean       @default(false)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  business     Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  appointments Appointment[]
+  clients      Client[]
+  payments     Payment[]
+  therapists   Therapist[]
+
+  @@index([businessId])
+  @@index([isActive])
+  @@map("locations")
+}
+
+model GiftCard {
+  id             String               @id @default(cuid())
+  businessId     String
+  code           String               @unique
+  originalAmount Float
+  balance        Float
+  currency       String               @default("USD")
+  purchasedById  String?
+  recipientEmail String?
+  recipientName  String?
+  note           String?
+  expiresAt      DateTime?
+  isActive       Boolean              @default(true)
+  sentAt         DateTime?
+  purchasedAt    DateTime             @default(now())
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  business       Business             @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  purchasedBy    Client?              @relation(fields: [purchasedById], references: [id])
+  redemptions    GiftCardRedemption[]
+
+  @@index([businessId])
+  @@index([code])
+  @@index([purchasedById])
+  @@index([isActive])
+  @@map("gift_cards")
+}
+
+model GiftCardRedemption {
+  id         String   @id @default(cuid())
+  giftCardId String
+  businessId String
+  amount     Float
+  invoiceId  String?
+  paymentId  String?
+  redeemedAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  giftCard   GiftCard @relation(fields: [giftCardId], references: [id], onDelete: Cascade)
+
+  @@index([giftCardId])
+  @@index([businessId])
+  @@map("gift_card_redemptions")
+}
+
+model LoyaltySettings {
+  id              String   @id @default(cuid())
+  businessId      String   @unique
+  pointsPerDollar Float    @default(1.0)
+  dollarPerPoint  Float    @default(0.01)
+  bronzeMinPoints Int      @default(0)
+  silverMinPoints Int      @default(500)
+  goldMinPoints   Int      @default(1500)
+  isActive        Boolean  @default(true)
+  expiryDays      Int?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  business        Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@map("loyalty_settings")
+}
+
+model LoyaltyAccount {
+  id             String               @id @default(cuid())
+  businessId     String
+  clientId       String
+  points         Int                  @default(0)
+  lifetimePoints Int                  @default(0)
+  tier           String               @default("BRONZE")
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  business       Business             @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  client         Client               @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  transactions   LoyaltyTransaction[]
+
+  @@unique([businessId, clientId])
+  @@index([businessId])
+  @@index([clientId])
+  @@map("loyalty_accounts")
+}
+
+model LoyaltyTransaction {
+  id               String         @id @default(cuid())
+  loyaltyAccountId String
+  businessId       String
+  type             String
+  points           Int
+  description      String?
+  referenceId      String?
+  referenceType    String?
+  createdAt        DateTime       @default(now())
+  account          LoyaltyAccount @relation(fields: [loyaltyAccountId], references: [id], onDelete: Cascade)
+  business         Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([loyaltyAccountId])
+  @@index([businessId])
+  @@index([createdAt])
+  @@map("loyalty_transactions")
+}
+
+model Product {
+  id                String                @id @default(cuid())
+  businessId        String
+  name              String
+  description       String?
+  sku               String?
+  category          String?
+  unitPrice         Float
+  currentStock      Int                   @default(0)
+  lowStockThreshold Int?                  @default(5)
+  unit              String?
+  isActive          Boolean               @default(true)
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  adjustments       InventoryAdjustment[]
+  business          Business              @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, sku])
+  @@index([businessId])
+  @@index([isActive])
+  @@index([category])
+  @@map("products")
+}
+
+model InventoryAdjustment {
+  id            String   @id @default(cuid())
+  productId     String
+  businessId    String
+  type          String
+  quantity      Int
+  previousStock Int
+  newStock      Int
+  notes         String?
+  referenceId   String?
+  adjustedById  String
+  createdAt     DateTime @default(now())
+  business      Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([businessId])
+  @@index([createdAt])
+  @@map("inventory_adjustments")
+}
+
+enum PromotionChannel {
+  EMAIL
+  SMS
+  WHATSAPP
+}
+
+enum PromotionStatus {
+  DRAFT
+  SCHEDULED
+  SENDING
+  SENT
+  CANCELLED
 }
 
 enum UserRole {
@@ -1094,4 +1406,210 @@ enum VideoSessionStatus {
   ACTIVE
   ENDED
   CANCELLED
+}
+
+model PayrollPeriod {
+  id          String          @id @default(cuid())
+  businessId  String
+  startDate   DateTime
+  endDate     DateTime
+  status      PayrollStatus   @default(DRAFT)
+  totalAmount Float           @default(0)
+  paidAt      DateTime?
+  notes       String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  business    Business        @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  records     PayrollRecord[]
+
+  @@index([businessId])
+  @@index([status])
+  @@index([startDate, endDate])
+  @@map("payroll_periods")
+}
+
+model PayrollRecord {
+  id                String        @id @default(cuid())
+  payrollPeriodId   String
+  businessId        String
+  therapistId       String
+  hoursWorked       Float         @default(0)
+  sessionsCompleted Int           @default(0)
+  baseRate          Float         @default(0)
+  commissionRate    Float         @default(0)
+  commissionAmount  Float         @default(0)
+  bonusAmount       Float         @default(0)
+  deductions        Float         @default(0)
+  totalAmount       Float         @default(0)
+  notes             String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  business          Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  payrollPeriod     PayrollPeriod @relation(fields: [payrollPeriodId], references: [id], onDelete: Cascade)
+  therapist         Therapist     @relation(fields: [therapistId], references: [id], onDelete: Cascade)
+
+  @@unique([payrollPeriodId, therapistId])
+  @@index([payrollPeriodId])
+  @@index([businessId])
+  @@index([therapistId])
+  @@map("payroll_records")
+}
+
+model AutomationRule {
+  id          String          @id @default(cuid())
+  businessId  String
+  name        String
+  description String?
+  isActive    Boolean         @default(true)
+  trigger     String
+  conditions  Json            @default("{}")
+  actions     Json
+  lastRunAt   DateTime?
+  runCount    Int             @default(0)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  business    Business        @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  logs        AutomationLog[]
+
+  @@index([businessId])
+  @@index([isActive])
+  @@index([trigger])
+  @@map("automation_rules")
+}
+
+model AutomationLog {
+  id               String         @id @default(cuid())
+  automationRuleId String
+  businessId       String
+  status           String
+  triggerData      Json?
+  result           Json?
+  errorMessage     String?
+  executedAt       DateTime       @default(now())
+  business         Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  rule             AutomationRule @relation(fields: [automationRuleId], references: [id], onDelete: Cascade)
+
+  @@index([automationRuleId])
+  @@index([businessId])
+  @@index([executedAt])
+  @@map("automation_logs")
+}
+
+enum PayrollStatus {
+  DRAFT
+  PROCESSING
+  PAID
+  CANCELLED
+}
+
+model InsuranceProvider {
+  id          String           @id @default(cuid())
+  businessId  String
+  name        String
+  payerId     String?
+  address     String?
+  city        String?
+  state       String?
+  postalCode  String?
+  phone       String?
+  fax         String?
+  portalUrl   String?
+  claimsEmail String?
+  notes       String?
+  isActive    Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  business    Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  claims      InsuranceClaim[]
+
+  @@index([businessId])
+  @@index([isActive])
+  @@map("insurance_providers")
+}
+
+model InsuranceClaim {
+  id                       String                  @id @default(cuid())
+  businessId               String
+  clientId                 String
+  appointmentId            String?
+  insuranceProviderId      String
+  claimNumber              String
+  status                   InsuranceClaimStatus    @default(DRAFT)
+  submittedAt              DateTime?
+  subscriberName           String?
+  subscriberDOB            DateTime?
+  subscriberPolicyNumber   String?
+  groupNumber              String?
+  relationshipToSubscriber String?                 @default("SELF")
+  diagnosisCodes           Json                    @default("[]")
+  procedureCodes           Json                    @default("[]")
+  renderingProviderName    String?
+  renderingProviderNPI     String?
+  billingProviderName      String?
+  billingProviderNPI       String?
+  billingProviderTaxId     String?
+  totalCharge              Float                   @default(0)
+  claimedAmount            Float                   @default(0)
+  submissionMethod         String?                 @default("ELECTRONIC")
+  notes                    String?
+  createdAt                DateTime                @default(now())
+  updatedAt                DateTime                @updatedAt
+  business                 Business                @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  client                   Client                  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  appointment              Appointment?            @relation(fields: [appointmentId], references: [id])
+  insuranceProvider        InsuranceProvider       @relation(fields: [insuranceProviderId], references: [id])
+  reimbursements           ClaimReimbursement[]
+
+  @@unique([businessId, claimNumber])
+  @@index([businessId])
+  @@index([clientId])
+  @@index([appointmentId])
+  @@index([insuranceProviderId])
+  @@index([status])
+  @@index([submittedAt])
+  @@index([businessId, status])
+  @@map("insurance_claims")
+}
+
+model ClaimReimbursement {
+  id                  String                      @id @default(cuid())
+  businessId          String
+  claimId             String
+  checkNumber         String?
+  eobNumber           String?
+  paymentDate         DateTime?
+  amountBilled        Float                       @default(0)
+  amountAllowed       Float                       @default(0)
+  amountPaid          Float                       @default(0)
+  patientResponsibility Float                     @default(0)
+  adjustmentReasons   Json                        @default("[]")
+  status              ReimbursementStatus         @default(PENDING)
+  notes               String?
+  createdAt           DateTime                    @default(now())
+  updatedAt           DateTime                    @updatedAt
+  business            Business                    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  claim               InsuranceClaim              @relation(fields: [claimId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+  @@index([claimId])
+  @@index([status])
+  @@index([paymentDate])
+  @@map("claim_reimbursements")
+}
+
+enum InsuranceClaimStatus {
+  DRAFT
+  SUBMITTED
+  PENDING
+  APPROVED
+  DENIED
+  APPEALING
+  PAID
+  VOID
+}
+
+enum ReimbursementStatus {
+  PENDING
+  RECEIVED
+  RECONCILED
 }

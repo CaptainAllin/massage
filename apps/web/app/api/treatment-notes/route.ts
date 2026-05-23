@@ -1,4 +1,4 @@
-import { requireAuth, res, AuthError } from '@/lib/api-auth';
+import { requireAuth, requireBusinessAccess, res, AuthError } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
 import { NextRequest } from 'next/server';
 
@@ -7,8 +7,9 @@ const noteInclude = {
     select: { id: true, firstName: true, lastName: true },
   },
   therapist: {
-    select: { id: true, userId: true },
-    include: {
+    select: {
+      id: true,
+      userId: true,
       user: { select: { firstName: true, lastName: true } },
     },
   },
@@ -20,11 +21,12 @@ const noteInclude = {
 
 export async function GET(req: NextRequest) {
   try {
-    await requireAuth(req);
+    const user = await requireAuth(req);
     const { searchParams } = new URL(req.url);
     const businessId = searchParams.get('businessId');
 
     if (!businessId) return res.badRequest('businessId is required');
+    await requireBusinessAccess(user, businessId);
 
     const clientId = searchParams.get('clientId');
     const therapistId = searchParams.get('therapistId');
@@ -73,6 +75,7 @@ export async function POST(req: NextRequest) {
     const { businessId, appointmentId, clientId, therapistId, ...rest } = body;
 
     if (!businessId) return res.badRequest('businessId is required');
+    await requireBusinessAccess(user, businessId);
     if (!clientId) return res.badRequest('clientId is required');
     if (!therapistId) return res.badRequest('therapistId is required');
     if (!appointmentId) return res.badRequest('appointmentId is required');
@@ -95,8 +98,11 @@ export async function POST(req: NextRequest) {
       include: {
         client: { select: { id: true, firstName: true, lastName: true } },
         therapist: {
-          select: { id: true, userId: true },
-          include: { user: { select: { firstName: true, lastName: true } } },
+          select: {
+            id: true,
+            userId: true,
+            user: { select: { firstName: true, lastName: true } },
+          },
         },
         appointment: true,
       },

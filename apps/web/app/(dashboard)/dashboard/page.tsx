@@ -38,7 +38,7 @@ export default function DashboardPage() {
     <div className="space-y-6">
       {/* Welcome Section */}
       <div>
-        <h1 className="text-3xl font-bold text-foreground font-display mb-2">
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground font-display mb-2">
           Welcome back, {user?.user_metadata?.first_name || 'there'}!
         </h1>
         <p className="text-muted-foreground">
@@ -55,7 +55,7 @@ export default function DashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-foreground font-display">
+            <div className="text-2xl sm:text-3xl font-bold text-foreground font-display">
               {isLoading ? '...' : todaysAppointments}
             </div>
             <p className="text-sm text-muted-foreground mt-1">
@@ -71,7 +71,7 @@ export default function DashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-foreground font-display">
+            <div className="text-2xl sm:text-3xl font-bold text-foreground font-display">
               {isLoading ? '...' : totalClients}
             </div>
             <p className="text-sm text-muted-foreground mt-1">
@@ -87,7 +87,7 @@ export default function DashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-foreground font-display">$0</div>
+            <div className="text-2xl sm:text-3xl font-bold text-foreground font-display">$0</div>
             <p className="text-sm text-muted-foreground mt-1">
               Coming soon
             </p>
@@ -101,7 +101,7 @@ export default function DashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-foreground font-display">0</div>
+            <div className="text-2xl sm:text-3xl font-bold text-foreground font-display">0</div>
             <p className="text-sm text-muted-foreground mt-1">
               Coming soon
             </p>

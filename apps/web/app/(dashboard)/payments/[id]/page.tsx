@@ -44,24 +44,24 @@ export default function PaymentDetailPage() {
   const canRefund = payment.status === PaymentStatus.COMPLETED && payment.amount > 0;
 
   const handleRefund = async (data: { paymentId: string; amount?: number; reason?: string }) => {
-    await refundMutation.mutateAsync(data);
+    await refundMutation.mutateAsync({ ...data, businessId } as any);
     setIsRefundModalOpen(false);
   };
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center gap-3">
           <Button variant="ghost" onClick={() => router.back()}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold text-foreground font-display">
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground font-display">
               Payment Details
             </h1>
-            <p className="text-muted-foreground mt-1">
-              Payment ID: {payment.id}
+            <p className="text-muted-foreground mt-1 text-xs sm:text-sm truncate max-w-[200px] sm:max-w-none">
+              ID: {payment.id}
             </p>
           </div>
         </div>
@@ -82,7 +82,7 @@ export default function PaymentDetailPage() {
           <Card>
             <CardContent className="p-6">
               <h3 className="text-lg font-semibold mb-4">Payment Information</h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <InfoRow label="Amount" value={`$${payment.amount.toFixed(2)} ${payment.currency}`} />
                 <InfoRow label="Status" value={<StatusBadge status={payment.status as PaymentStatus} />} />
                 <InfoRow label="Payment Method" value={<MethodBadge method={payment.paymentMethod as PaymentMethod} />} />
@@ -126,10 +126,10 @@ export default function PaymentDetailPage() {
                   title="Payment Created"
                   date={new Date(payment.createdAt)}
                 />
-                {(payment as any).processedAt && (
+                {(payment as any).paidAt && (
                   <TimelineItem
-                    title="Payment Processed"
-                    date={new Date((payment as any).processedAt)}
+                    title="Payment Completed"
+                    date={new Date((payment as any).paidAt)}
                   />
                 )}
                 {(payment as any).refundedAt && (
@@ -151,7 +151,7 @@ export default function PaymentDetailPage() {
           onClose={() => setIsRefundModalOpen(false)}
           onRefund={handleRefund}
           paymentId={payment.id}
-          maxAmount={payment.amount}
+          maxAmount={payment.amount - ((payment as any).refundedAmount || 0)}
           currency={payment.currency}
         />
       )}

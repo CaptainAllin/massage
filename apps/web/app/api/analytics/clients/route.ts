@@ -1,14 +1,15 @@
-import { requireAuth, res, AuthError } from '@/lib/api-auth';
+import { requireAuth, requireBusinessAccess, res, AuthError } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
 import { NextRequest } from 'next/server';
 
 export async function GET(req: NextRequest) {
   try {
-    await requireAuth(req);
+    const user = await requireAuth(req);
     const { searchParams } = new URL(req.url);
     const businessId = searchParams.get('businessId');
 
     if (!businessId) return res.badRequest('businessId is required');
+    await requireBusinessAccess(user, businessId);
 
     const startDateParam = searchParams.get('startDate');
     const endDateParam = searchParams.get('endDate');
@@ -41,7 +42,7 @@ export async function GET(req: NextRequest) {
     const clientRetention = await prisma.$queryRaw<Array<{ one_time: number; returning: number; rate: number }>>`
       WITH client_appointments AS (
         SELECT "clientId", COUNT(*) as total_appointments
-        FROM "Appointment"
+        FROM appointments
         WHERE "businessId" = ${businessId} AND status = 'COMPLETED'
         GROUP BY "clientId"
       )
@@ -59,10 +60,10 @@ export async function GET(req: NextRequest) {
       SELECT COALESCE(AVG(client_revenue), 0)::float as avg_ltv
       FROM (
         SELECT c.id, COALESCE(SUM(p.amount), 0) as client_revenue
-        FROM "Client" c
-        LEFT JOIN "Appointment" a ON a."clientId" = c.id AND a.status = 'COMPLETED'
-        LEFT JOIN "Payment" p ON p."appointmentId" = a.id AND p.status = 'COMPLETED'
-        WHERE c."businessId" = ${businessId} AND c."deletedAt" IS NULL
+        FROM clients c
+        LEFT JOIN appointments a ON a."clientId" = c.id AND a.status = 'COMPLETED'
+        LEFT JOIN payments p ON p."appointmentId" = a.id AND p.status = 'COMPLETED'
+        WHERE c."businessId" = ${businessId}
         GROUP BY c.id
       ) as client_revenues
     `;

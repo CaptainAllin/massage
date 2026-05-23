@@ -2,6 +2,33 @@ import { NextRequest } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 
+/** Create an audit log entry, automatically capturing IP and user-agent from the request. */
+export async function logAudit(
+  req: NextRequest,
+  data: {
+    userId: string;
+    businessId?: string | null;
+    action: string;
+    entityType?: string;
+    entityId?: string;
+    metadata?: Record<string, unknown>;
+  }
+): Promise<void> {
+  const ipAddress =
+    req.headers.get('x-forwarded-for')?.split(',')[0].trim() ??
+    req.headers.get('x-real-ip') ??
+    null;
+  const userAgent = req.headers.get('user-agent') ?? null;
+
+  await prisma.auditLog.create({
+    data: {
+      ...data,
+      ipAddress,
+      userAgent,
+    } as any,
+  });
+}
+
 export type AuthUser = {
   id: string;
   authUserId: string;
@@ -38,6 +65,14 @@ export async function requireAuth(req: NextRequest): Promise<AuthUser> {
         role: (meta.role as any) || 'CLIENT',
       },
     });
+    // Log first-time registration so auth events are traceable
+    await logAudit(req, {
+      userId: user.id,
+      action: 'USER_REGISTERED',
+      entityType: 'User',
+      entityId: user.id,
+      metadata: { email: user.email, role: user.role },
+    });
   }
 
   return {
@@ -46,6 +81,23 @@ export async function requireAuth(req: NextRequest): Promise<AuthUser> {
     email: user.email,
     role: user.role,
   };
+}
+
+/** Verify the authenticated user belongs to the given business (owner or therapist). */
+export async function requireBusinessAccess(user: AuthUser, businessId: string): Promise<void> {
+  const isOwner = await prisma.business.findFirst({
+    where: { id: businessId, ownerId: user.id },
+    select: { id: true },
+  });
+  if (isOwner) return;
+
+  const isTherapist = await prisma.therapist.findFirst({
+    where: { businessId, userId: user.id },
+    select: { id: true },
+  });
+  if (isTherapist) return;
+
+  throw new AuthError('You do not have access to this business');
 }
 
 export class AuthError extends Error {

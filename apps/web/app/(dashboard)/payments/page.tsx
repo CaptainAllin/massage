@@ -1,37 +1,59 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button, Card, CardContent } from '@massage/ui';
-import { Plus, TrendingUp, DollarSign, RefreshCw } from 'lucide-react';
+import { Plus, TrendingUp, DollarSign, RefreshCw, BarChart2, Scale } from 'lucide-react';
 import { PaymentsList } from '@/components/payments/PaymentsList';
+import { CreatePaymentModal } from '@/components/payments/CreatePaymentModal';
 import { usePayments, usePaymentStats } from '@/lib/hooks/use-payments';
 import { PaymentFilters, PaymentStatus } from '@massage/types';
 
 import { useBusinessId } from '@/lib/hooks/use-business-id';
 export default function PaymentsPage() {
+  const router = useRouter();
   const businessId = useBusinessId();
   const [filters, setFilters] = useState<PaymentFilters>({});
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  const { data: paymentsData, isLoading } = usePayments(businessId, filters);
-  const { data: stats } = usePaymentStats(businessId);
+  const { data: paymentsData, isLoading, refetch } = usePayments(businessId, filters);
+  const { data: stats, refetch: refetchStats } = usePaymentStats(businessId);
 
   const handleFilterChange = (newFilters: PaymentFilters) => {
     setFilters(newFilters);
   };
 
+  const handlePaymentSuccess = () => {
+    refetch();
+    refetchStats();
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground font-display">Payments</h1>
-          <p className="text-muted-foreground mt-2">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground font-display">Payments</h1>
+          <p className="text-muted-foreground mt-1 sm:mt-2">
             Manage payments, invoices, and track revenue
           </p>
         </div>
-        <Button variant="primary">
-          <Plus className="h-4 w-4 mr-2" />
-          Process Payment
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => router.push('/payments/revenue-report')}>
+            <BarChart2 className="h-4 w-4 mr-1.5" />
+            <span className="hidden sm:inline">Revenue Reports</span>
+            <span className="sm:hidden">Revenue</span>
+          </Button>
+          <Button variant="outline" onClick={() => router.push('/payments/reconciliation')}>
+            <Scale className="h-4 w-4 mr-1.5" />
+            <span className="hidden sm:inline">Reconciliation</span>
+            <span className="sm:hidden">Reconcile</span>
+          </Button>
+          <Button variant="primary" onClick={() => setIsCreateModalOpen(true)}>
+            <Plus className="h-4 w-4 mr-1.5" />
+            <span className="hidden sm:inline">Process Payment</span>
+            <span className="sm:hidden">Process</span>
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -103,6 +125,15 @@ export default function PaymentsPage() {
           />
         </CardContent>
       </Card>
+
+      {businessId && (
+        <CreatePaymentModal
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+          businessId={businessId}
+          onSuccess={handlePaymentSuccess}
+        />
+      )}
     </div>
   );
 }

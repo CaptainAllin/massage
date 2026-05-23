@@ -100,6 +100,42 @@ export function useCreateIntakeFormTemplate(businessId: string | undefined) {
   });
 }
 
+// Update intake form mutation
+export function useUpdateIntakeForm(formId: string, businessId: string | undefined) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (formData: any) => {
+      const response = await apiClient.patch<ApiResponse<IntakeForm>>(
+        `/intake-forms/${formId}?businessId=${businessId}`,
+        { businessId, formData }
+      );
+      return response.data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['intake-forms', businessId] });
+      queryClient.invalidateQueries({ queryKey: ['intake-form', formId, businessId] });
+    },
+  });
+}
+
+// Delete intake form mutation
+export function useDeleteIntakeForm(businessId: string | undefined) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (formId: string) => {
+      const response = await apiClient.delete<ApiResponse<IntakeForm>>(
+        `/intake-forms/${formId}?businessId=${businessId}`
+      );
+      return response.data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['intake-forms', businessId] });
+    },
+  });
+}
+
 // Update intake form template mutation
 export function useUpdateIntakeFormTemplate(templateId: string, businessId: string | undefined) {
   const queryClient = useQueryClient();

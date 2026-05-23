@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { sendPaymentConfirmationSms } from '@/lib/sms';
 
 // Public route — Stripe verifies via signature, no user auth needed
 export async function POST(req: NextRequest) {
@@ -82,6 +83,11 @@ async function updateInvoicePaymentStatus(invoiceId: string) {
 async function handlePaymentIntentSucceeded(paymentIntent: any) {
   const payment = await prisma.payment.findFirst({
     where: { stripePaymentIntentId: paymentIntent.id } as any,
+    include: {
+      client: { select: { firstName: true, phoneNumber: true } },
+      business: { select: { name: true } },
+      invoice: { select: { invoiceNumber: true } },
+    } as any,
   });
   if (!payment) return;
 
@@ -92,6 +98,23 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
   });
 
   if (payment.invoiceId) await updateInvoicePaymentStatus(payment.invoiceId);
+
+  const client = (payment as any).client;
+  const business = (payment as any).business;
+  const invoice = (payment as any).invoice;
+  if (client?.phoneNumber && business?.name) {
+    try {
+      await sendPaymentConfirmationSms({
+        to: client.phoneNumber,
+        channel: 'SMS',
+        businessName: business.name,
+        client: { firstName: client.firstName },
+        payment: { amount: payment.amount, invoiceNumber: invoice?.invoiceNumber },
+      });
+    } catch (err: any) {
+      console.error('[PaymentConfirmationSms]', err.message);
+    }
+  }
 }
 
 async function handlePaymentIntentFailed(paymentIntent: any) {

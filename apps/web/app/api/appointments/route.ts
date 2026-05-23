@@ -1,4 +1,3 @@
-import { NextRequest } from 'next/server';
 import { withAuth, res } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
 import { AppointmentStatus } from '@prisma/client';

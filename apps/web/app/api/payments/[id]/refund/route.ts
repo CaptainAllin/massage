@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { requireAuth, res, AuthError } from '@/lib/api-auth';
+import { requireAuth, res, AuthError, logAudit } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
 
 async function updateInvoicePaymentStatus(invoiceId: string) {
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     });
 
     if (payment.invoiceId) await updateInvoicePaymentStatus(payment.invoiceId);
-    await prisma.auditLog.create({ data: { userId: user.id, businessId, action: 'PAYMENT_REFUNDED', entityType: 'Payment', entityId: params.id, metadata: { refundAmount, reason } } });
+    await logAudit(req, { userId: user.id, businessId, action: 'PAYMENT_REFUNDED', entityType: 'Payment', entityId: params.id, metadata: { refundAmount, reason } });
 
     return res.ok(updated, 'Payment refunded');
   } catch (err) {

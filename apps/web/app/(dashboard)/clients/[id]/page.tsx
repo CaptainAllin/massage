@@ -10,9 +10,12 @@ import { usePackages } from '@/lib/hooks/use-packages';
 import { ClientHeader } from '@/components/clients/ClientHeader';
 import { ClientStats } from '@/components/clients/ClientStats';
 import { ClientMedicalHistory } from '@/components/clients/ClientMedicalHistory';
+import { ClientIntakeForms } from '@/components/clients/ClientIntakeForms';
 import { PaymentsList } from '@/components/payments/PaymentsList';
+import { SavedPaymentMethods } from '@/components/payments/SavedPaymentMethods';
 import { MembershipList } from '@/components/memberships/MembershipList';
 import { PackageList } from '@/components/packages/PackageList';
+import { TreatmentSuggestionsPanel } from '@/components/ai';
 
 import { useBusinessId } from '@/lib/hooks/use-business-id';
 export default function ClientProfilePage() {
@@ -46,6 +49,7 @@ export default function ClientProfilePage() {
   const tabs: Tab[] = [
     { id: 'overview', label: 'Overview' },
     { id: 'medical', label: 'Medical History' },
+    { id: 'ai', label: 'AI Suggestions' },
     { id: 'payments', label: 'Payments' },
     { id: 'memberships', label: 'Memberships' },
     { id: 'packages', label: 'Packages' },
@@ -58,12 +62,14 @@ export default function ClientProfilePage() {
     <div className="space-y-6">
       <ClientHeader client={client} />
 
-      <div className="px-6">
+      <div className="px-3 sm:px-6">
         <ClientStats client={client} />
       </div>
 
-      <div className="px-6">
-        <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+      <div className="px-3 sm:px-6">
+        <div className="overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
+          <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+        </div>
 
         <div className="mt-6">
           {activeTab === 'overview' && (
@@ -118,7 +124,7 @@ export default function ClientProfilePage() {
               <Card className="lg:col-span-2">
                 <CardContent className="p-6">
                   <h3 className="text-lg font-semibold mb-4">Medications & Allergies</h3>
-                  <div className="grid grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div>
                       <h4 className="text-sm font-medium text-gray-700 mb-2">Medications</h4>
                       {client.medications && client.medications.length > 0 ? (
@@ -157,17 +163,29 @@ export default function ClientProfilePage() {
             <ClientMedicalHistory clientId={clientId} businessId={businessId} />
           )}
 
+          {activeTab === 'ai' && (
+            <TreatmentSuggestionsPanel
+              clientId={clientId}
+              clientName={`${client.firstName} ${client.lastName}`}
+            />
+          )}
+
           {activeTab === 'payments' && (
-            <Card>
-              <CardContent className="p-6">
-                <h3 className="text-lg font-semibold mb-4">Payment History</h3>
-                <PaymentsList
-                  payments={paymentsData?.data || []}
-                  isLoading={false}
-                  onFilterChange={() => {}}
-                />
-              </CardContent>
-            </Card>
+            <div className="space-y-6">
+              {businessId && (
+                <SavedPaymentMethods businessId={businessId} clientId={clientId} />
+              )}
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="text-lg font-semibold mb-4">Payment History</h3>
+                  <PaymentsList
+                    payments={paymentsData?.data || []}
+                    isLoading={false}
+                    onFilterChange={() => {}}
+                  />
+                </CardContent>
+              </Card>
+            </div>
           )}
 
           {activeTab === 'memberships' && (
@@ -217,11 +235,11 @@ export default function ClientProfilePage() {
           )}
 
           {activeTab === 'forms' && (
-            <Card>
-              <CardContent className="p-6 text-center text-gray-500">
-                Intake forms feature coming soon
-              </CardContent>
-            </Card>
+            <ClientIntakeForms
+              clientId={clientId}
+              clientName={`${client.firstName} ${client.lastName}`}
+              businessId={businessId}
+            />
           )}
 
           {activeTab === 'notes' && (

@@ -131,6 +131,34 @@ export function useMarkInvoiceAsPaid(businessId: string | undefined) {
   });
 }
 
+export function useSendInvoice(businessId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (invoiceId: string) => {
+      const response = await apiClient.post(`/invoices/${invoiceId}/send`, { businessId });
+      return response.data;
+    },
+    onSuccess: (_, invoiceId) => {
+      queryClient.invalidateQueries({ queryKey: ['invoices', businessId] });
+      queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId, businessId] });
+    },
+  });
+}
+
+export function useSendInvoiceSms(businessId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ invoiceId, channel }: { invoiceId: string; channel: 'SMS' | 'WHATSAPP' }) => {
+      const response = await apiClient.post(`/invoices/${invoiceId}/send-sms`, { businessId, channel });
+      return response.data;
+    },
+    onSuccess: (_, { invoiceId }) => {
+      queryClient.invalidateQueries({ queryKey: ['invoices', businessId] });
+      queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId, businessId] });
+    },
+  });
+}
+
 export function useInvoiceStats(businessId: string | undefined) {
   return useQuery({
     queryKey: ['invoice-stats', businessId],

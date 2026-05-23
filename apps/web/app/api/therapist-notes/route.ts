@@ -1,12 +1,15 @@
-import { requireAuth, res, AuthError } from '@/lib/api-auth';
+import { requireAuth, requireBusinessAccess, res, AuthError } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
 import { NextRequest } from 'next/server';
 
 const noteInclude = {
   client: { select: { id: true, firstName: true, lastName: true } },
   therapist: {
-    select: { id: true, userId: true },
-    include: { user: { select: { firstName: true, lastName: true } } },
+    select: {
+      id: true,
+      userId: true,
+      user: { select: { firstName: true, lastName: true } },
+    },
   },
 };
 
@@ -17,6 +20,7 @@ export async function GET(req: NextRequest) {
     const businessId = searchParams.get('businessId');
 
     if (!businessId) return res.badRequest('businessId is required');
+    await requireBusinessAccess(user, businessId);
 
     const clientId = searchParams.get('clientId');
     const isPinnedParam = searchParams.get('isPinned');
@@ -65,6 +69,7 @@ export async function POST(req: NextRequest) {
     const { businessId, clientId, therapistId, content, isPinned } = body;
 
     if (!businessId) return res.badRequest('businessId is required');
+    await requireBusinessAccess(user, businessId);
     if (!clientId) return res.badRequest('clientId is required');
     if (!therapistId) return res.badRequest('therapistId is required');
     if (!content) return res.badRequest('content is required');

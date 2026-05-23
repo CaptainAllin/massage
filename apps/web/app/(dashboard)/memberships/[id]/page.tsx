@@ -82,7 +82,7 @@ export default function MembershipDetailPage() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold text-foreground font-display">
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground font-display">
               {membership.name}
             </h1>
             <p className="text-muted-foreground mt-1">

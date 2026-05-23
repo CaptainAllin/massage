@@ -1,357 +1,271 @@
 # Wellness CRM Platform
 
-A complete practice management platform designed for massage therapists, chiropractors, physiotherapists, and wellness clinics. Built with modern technologies to provide a seamless experience for managing appointments, clients, intake forms, and treatment notes.
+A complete practice management platform for massage therapists, chiropractors, physiotherapists, and wellness clinics. Manage appointments, clients, intake forms, treatment notes, payments, and analytics — all in one place.
 
-## 🚀 Current Status: Stage 1 (Foundation)
+## Stack
 
-This is the **Stage 1 Foundation** release. It includes:
+- **Frontend**: Next.js 14 (App Router), React, TypeScript, TailwindCSS
+- **Auth**: Supabase Auth (email/password, JWT, RLS)
+- **Database**: Supabase PostgreSQL + Prisma ORM
+- **Payments**: Stripe (subscriptions, saved methods, webhooks)
+- **Messaging**: Twilio SMS, SendGrid email, WhatsApp Business
+- **AI**: Anthropic Claude (SOAP assist, treatment suggestions, note summaries)
+- **Telehealth**: Twilio Video
+- **Storage**: Supabase Storage (4 buckets with RLS)
+- **Monitoring**: Sentry, Supabase built-in logs
 
-- ✅ Monorepo structure (Turborepo)
-- ✅ Authentication system (Clerk)
-- ✅ Role-based access control (RBAC)
-- ✅ PostgreSQL database with Prisma ORM
-- ✅ Next.js 14 frontend with wellness-focused design
-- ✅ NestJS backend API
-- ✅ Core navigation and empty state pages
-- ✅ Local development environment
+## Prerequisites
 
-**What's NOT included yet** (coming in later stages):
-- Appointment booking and calendar
-- Intake form builder
-- Body mapping
-- Messaging (SMS/Email)
-- Payment processing
-- Analytics dashboards
-- AI features
+- **Node.js** >= 20.0.0
+- **npm** >= 10.0.0
+- **Supabase account** — [supabase.com](https://supabase.com)
+- **Stripe account** (for payments)
+- **Twilio account** (for SMS/WhatsApp/Video)
+- **SendGrid account** (for email)
+- **Anthropic API key** (for AI features)
 
-See `/docs/prd.md` for the complete product roadmap.
+## Setup
 
-## 📋 Prerequisites
-
-- **Node.js**: >= 20.0.0
-- **npm**: >= 10.0.0
-- **Docker**: Latest (for PostgreSQL)
-- **Clerk Account**: Sign up at [clerk.com](https://clerk.com)
-
-## 🛠️ Installation
-
-### 1. Clone and Install Dependencies
+### 1. Install dependencies
 
 ```bash
-# Navigate to project directory
-cd /Users/amit/Desktop/Apps/massage
-
-# Install all dependencies
 npm install
 ```
 
-### 2. Setup Environment Variables
+### 2. Create a Supabase project
 
-Copy the example environment file and fill in your values:
+1. Go to [supabase.com](https://supabase.com) → New project
+2. Note your **Project URL**, **anon key**, and **service role key** from Project Settings → API
+3. Note your **JWT secret** from Project Settings → API → JWT Settings
+4. Note your **database connection string** from Project Settings → Database
+
+### 3. Configure environment variables
+
+Copy the example file and fill in your values:
 
 ```bash
-cp .env.example .env
+cp .env.example apps/web/.env.local
 ```
 
-Required environment variables:
+Required variables in `apps/web/.env.local`:
 
 ```env
-# Database
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/wellness_crm_dev?schema=public"
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+SUPABASE_JWT_SECRET=your-jwt-secret
 
-# Clerk Authentication
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_your_key_here
-CLERK_SECRET_KEY=sk_test_your_key_here
-CLERK_WEBHOOK_SECRET=whsec_your_webhook_secret_here
+# Database (Supabase connection string)
+DATABASE_URL=postgresql://postgres:your-password@db.your-project.supabase.co:5432/postgres
 
-# API URLs
-NEXT_PUBLIC_API_URL=http://localhost:3001/api/v1
-FRONTEND_URL=http://localhost:3000
+# Stripe
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_PUBLISHABLE_KEY=pk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
 
-# JWT Secret (generate a random 32+ character string)
-JWT_SECRET=your_jwt_secret_min_32_characters
+# Twilio (SMS + WhatsApp + Video)
+TWILIO_ACCOUNT_SID=AC...
+TWILIO_AUTH_TOKEN=...
+TWILIO_PHONE_NUMBER=+1...
+TWILIO_WHATSAPP_FROM=whatsapp:+1...
+
+# SendGrid (email)
+SENDGRID_API_KEY=SG...
+SENDGRID_FROM_EMAIL=noreply@yourdomain.com
+
+# Anthropic (AI features)
+ANTHROPIC_API_KEY=sk-ant-...
+
+# Encryption (32-byte hex key for field-level encryption)
+ENCRYPTION_KEY=your-32-byte-hex-key
+
+# App
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+NEXT_PUBLIC_API_URL=/api
 ```
 
-**Getting Clerk Keys:**
-1. Sign up at [clerk.com](https://clerk.com)
-2. Create a new application
-3. Go to **API Keys** to find your publishable and secret keys
-4. Go to **Webhooks** → Create Endpoint → Use `http://localhost:3001/api/v1/webhooks/clerk`
-5. Subscribe to events: `user.created`, `user.updated`, `user.deleted`
-6. Copy the webhook signing secret
+See `.env.example` for the full list of optional variables.
 
-### 3. Start PostgreSQL
+### 4. Run database migrations
 
 ```bash
-# Start PostgreSQL with Docker Compose
-docker-compose up -d
-
-# Verify it's running
-docker ps
+cd packages/database
+npx prisma migrate deploy
+npx prisma generate
 ```
 
-### 4. Initialize Database
+### 5. Apply Supabase security setup
+
+Run these SQL files **in order** in the Supabase SQL Editor (Dashboard → SQL Editor):
+
+1. `supabase-triggers.sql` — Auth→public.users sync triggers
+2. `docs/supabase-rls.sql` — Row Level Security helper functions and policies
+3. `docs/supabase-storage.sql` — Storage buckets and access policies
+
+### 6. (Optional) Seed sample data
 
 ```bash
-# Generate Prisma Client
-npm run db:generate
-
-# Run migrations
-npm run db:migrate
-
-# (Optional) Seed database with sample data
-npm run db:seed
+cd packages/database
+npx prisma db seed
 ```
 
-### 5. Start Development Servers
+### 7. Start the development server
 
 ```bash
-# Start both web and API servers
 npm run dev
 ```
 
-This will start:
-- **Frontend (Next.js)**: http://localhost:3000
-- **API (NestJS)**: http://localhost:3001/api/v1
-- **API Docs (Swagger)**: http://localhost:3001/api/docs
+App runs at **http://localhost:3000**
 
-## 📁 Project Structure
+## Authentication
+
+This project uses **Supabase Auth** with email/password sign-in.
+
+- Sign up at `/sign-up` — creates a Supabase auth user and a business record
+- Sign in at `/sign-in`
+- Sessions are cookie-based, managed by `@supabase/ssr` middleware
+- API routes authenticate via `Authorization: Bearer <jwt>` headers
+- `apps/web/middleware.ts` protects all non-public routes
+
+**User roles:** `BUSINESS_OWNER`, `THERAPIST`, `RECEPTIONIST`, `CLIENT`
+
+Auth helper functions in `apps/web/lib/api-auth.ts`:
+- `requireAuth(req)` — validates JWT, auto-creates `public.users` row on first login
+- `requireBusinessAccess(user, businessId)` — verifies the user belongs to the business
+
+## Project Structure
 
 ```
-/Users/amit/Desktop/Apps/massage/
+/
 ├── apps/
-│   └── web/                 # Next.js 14 frontend
+│   └── web/                    # Next.js 14 app
 │       ├── app/
-│       │   ├── (auth)/      # Sign in/up pages
-│       │   ├── (dashboard)/ # Protected dashboard routes
-│       │   └── (public)/    # Landing page
-│       ├── components/      # React components
-│       └── lib/             # Utilities and API client
-├── services/
-│   └── api/                 # NestJS backend
-│       └── src/
-│           ├── auth/        # JWT strategy, guards, webhooks
-│           ├── users/       # User management endpoints
-│           ├── businesses/  # Business CRUD endpoints
-│           ├── clients/     # Client management endpoints
-│           └── therapists/  # Therapist management endpoints
+│       │   ├── (auth)/         # /sign-in, /sign-up
+│       │   ├── (dashboard)/    # Protected dashboard pages
+│       │   ├── (public)/       # Public-facing pages (landing, booking)
+│       │   └── api/            # API route handlers (~100 endpoints)
+│       ├── components/         # React components
+│       └── lib/
+│           ├── api-auth.ts     # Server-side auth helpers
+│           ├── api-client.ts   # Axios client with JWT interceptor
+│           ├── encryption.ts   # AES-256-GCM field encryption
+│           ├── storage.ts      # Supabase Storage utilities
+│           └── supabase/       # Supabase client factories (browser + server)
 ├── packages/
-│   ├── database/            # Prisma schema and migrations
-│   ├── ui/                  # Shared React components
-│   ├── auth/                # Auth utilities (useRole hook)
-│   ├── types/               # Shared TypeScript types
-│   ├── config-tailwind/     # TailwindCSS wellness theme
-│   ├── config-eslint/       # ESLint configs
-│   └── config-typescript/   # TypeScript configs
+│   ├── database/               # Prisma schema + migrations
+│   ├── auth/                   # AuthProvider React context
+│   ├── ui/                     # Shared UI components
+│   ├── types/                  # Shared TypeScript types
+│   └── config-*/               # ESLint, TypeScript, Tailwind configs
 ├── docs/
-│   └── prd.md              # Product Requirements Document
-├── docker-compose.yml       # PostgreSQL setup
-├── turbo.json              # Turborepo configuration
-└── package.json            # Root workspace config
+│   ├── api.md                  # API reference (all endpoints)
+│   ├── pending.md              # Task backlog
+│   ├── supabase-rls.sql        # RLS policies
+│   └── supabase-storage.sql    # Storage bucket setup
+├── supabase-triggers.sql       # Auth sync triggers
+├── DEPLOYMENT.md               # Production deployment guide
+└── CONTRIBUTING.md             # Development guidelines
 ```
 
-## 🎨 Design System
+## API
 
-The platform uses a wellness-focused color palette:
+All endpoints are Next.js Route Handlers under `apps/web/app/api/`. See `docs/api.md` for the full reference.
 
-- **Sage Green** (#A8C3A0) - Primary actions
-- **Warm Sand** (#E7D8C9) - Secondary backgrounds
-- **Calm Cream** (#F7F4EE) - Page backgrounds
-- **Dusty Eucalyptus** (#7C9A92) - Accents
-- **Deep Charcoal** (#2F3437) - Text
-- **Soft Lavender** (#C9BEDD) - Highlights
-- **Muted Teal** (#6FA7A1) - Links
+Authentication: `Authorization: Bearer <supabase-jwt>` header on all protected endpoints.
 
-Typography:
-- **Display/Headings**: Poppins
-- **Body Text**: Inter
+## Design System
 
-## 🔐 Authentication & Roles
+Wellness-focused color palette defined in `packages/config-tailwind`:
 
-The platform uses Clerk for authentication with 5 user roles:
+| Token | Hex | Use |
+|-------|-----|-----|
+| Sage Green | `#A8C3A0` | Primary actions |
+| Warm Sand | `#E7D8C9` | Secondary backgrounds |
+| Calm Cream | `#F7F4EE` | Page backgrounds |
+| Dusty Eucalyptus | `#7C9A92` | Accents |
+| Deep Charcoal | `#2F3437` | Text |
+| Soft Lavender | `#C9BEDD` | Highlights |
+| Muted Teal | `#6FA7A1` | Links |
 
-1. **SUPER_ADMIN** - Platform administrators
-2. **BUSINESS_OWNER** - Clinic owners (full access to their business)
-3. **RECEPTIONIST** - Front desk staff (scheduling, clients, messages)
-4. **THERAPIST** - Practitioners (appointments, clients, treatment notes)
-5. **CLIENT** - Patients (view appointments, complete intake forms)
+Typography: **Poppins** (headings) · **Inter** (body)
 
-### Setting User Roles in Clerk
-
-After a user signs up, set their role in Clerk:
-1. Go to Clerk Dashboard → Users
-2. Select the user
-3. Edit **Public metadata**
-4. Add: `{ "role": "BUSINESS_OWNER" }`
-
-## 📚 API Documentation
-
-Once the API server is running, visit:
-- **Swagger UI**: http://localhost:3001/api/docs
-
-### Core Endpoints
-
-**Users**
-- `GET /api/v1/users/me` - Get current user profile
-- `PATCH /api/v1/users/me` - Update profile
-
-**Businesses**
-- `POST /api/v1/businesses` - Create business (BUSINESS_OWNER only)
-- `GET /api/v1/businesses` - List businesses
-- `GET /api/v1/businesses/:id` - Get business details
-- `PATCH /api/v1/businesses/:id` - Update business
-
-**Clients**
-- `POST /api/v1/clients` - Create client
-- `GET /api/v1/clients` - List clients
-- `GET /api/v1/clients/:id` - Get client details
-- `PATCH /api/v1/clients/:id` - Update client
-- `DELETE /api/v1/clients/:id` - Soft delete client
-
-**Therapists**
-- `POST /api/v1/therapists` - Create therapist (BUSINESS_OWNER only)
-- `GET /api/v1/therapists` - List therapists
-- `GET /api/v1/therapists/:id` - Get therapist details
-- `PATCH /api/v1/therapists/:id` - Update therapist
-
-All endpoints require JWT authentication via `Authorization: Bearer <token>` header.
-
-## 🧪 Testing
+## Development Commands
 
 ```bash
-# Run all tests
-npm run test
-
-# Run tests in watch mode
-npm run test:watch
-
-# Run tests with coverage
-npm run test:cov
-```
-
-## 🔨 Development Commands
-
-```bash
-# Install dependencies
-npm install
-
-# Start development servers (web + api)
+# Start dev server
 npm run dev
 
 # Build all packages
 npm run build
 
-# Run linter
+# Lint
 npm run lint
 
-# Run type check
+# Type check
 npm run type-check
 
-# Format code
+# Format
 npm run format
 
-# Database commands
-npm run db:generate    # Generate Prisma Client
-npm run db:migrate     # Run migrations
-npm run db:studio      # Open Prisma Studio
-npm run db:push        # Push schema changes (dev only)
-npm run db:seed        # Seed database
-
-# Clean all build artifacts
-npm run clean
+# Database
+cd packages/database
+npx prisma migrate dev     # Create and apply migration
+npx prisma migrate deploy  # Apply pending migrations
+npx prisma generate        # Regenerate Prisma Client
+npx prisma studio          # Open Prisma Studio
+npx prisma db seed         # Seed database
 ```
 
-## 🐳 Docker Commands
+## Testing
 
 ```bash
-# Start PostgreSQL
-docker-compose up -d
+# Unit + integration tests (Jest)
+npm run test
 
-# Stop PostgreSQL
-docker-compose down
+# E2E tests (Playwright)
+npx playwright test
 
-# View logs
-docker-compose logs -f postgres
-
-# Reset database (WARNING: deletes all data)
-docker-compose down -v
-docker-compose up -d
-npm run db:migrate
+# Load tests (k6 — requires k6 installed)
+k6 run __tests__/load/analytics-load.js
 ```
 
-## 🚢 Deployment
+Test files:
+- `__tests__/integration/` — Auth, appointments, payments (real DB)
+- `__tests__/security/` — SQL injection, XSS, IDOR, RBAC bypass
+- `e2e/` — Playwright: auth, booking, payments (desktop + mobile)
+- `__tests__/load/` — k6 analytics load test
 
-Deployment instructions will be added in a future stage. For now, the platform is designed for local development.
+## Deployment
 
-## 🤝 Contributing
+See `DEPLOYMENT.md` for full production deployment instructions (Vercel + Supabase).
 
-This is a private project. For the full product roadmap, see `/docs/prd.md`.
+## Troubleshooting
 
-### Code Style
+**Prisma Client errors**
+```bash
+cd packages/database && npx prisma generate
+```
 
-- **TypeScript**: Strict mode enabled
-- **ESLint**: Configured with recommended rules
-- **Prettier**: Automatic code formatting
-- **Commit Messages**: Use conventional commits format
+**Auth not working / session lost**
+- Check that `SUPABASE_JWT_SECRET` matches your project's JWT secret
+- Verify Supabase triggers are applied (`supabase-triggers.sql`)
+- Check `apps/web/middleware.ts` — public routes must be listed in `publicRoutes`
 
-### Branching Strategy
+**Port already in use**
+```bash
+lsof -ti:3000 | xargs kill -9
+```
 
-- `main` - Production-ready code
-- `develop` - Integration branch
-- `feature/*` - Feature branches
-- `fix/*` - Bug fix branches
+**Stripe webhooks not received locally**
+```bash
+stripe listen --forward-to localhost:3000/api/stripe/webhook
+```
 
-## 📝 License
+## Contributing
+
+See `CONTRIBUTING.md` for coding standards, git workflow, and PR process.
+
+## License
 
 Private project. All rights reserved.
-
-## 🆘 Troubleshooting
-
-### PostgreSQL connection errors
-
-```bash
-# Check if PostgreSQL is running
-docker ps
-
-# Restart PostgreSQL
-docker-compose restart postgres
-
-# Check logs
-docker-compose logs postgres
-```
-
-### Prisma Client errors
-
-```bash
-# Regenerate Prisma Client
-npm run db:generate
-
-# If migrations are out of sync
-npm run db:push
-```
-
-### Port already in use
-
-```bash
-# Kill process on port 3000 (frontend)
-lsof -ti:3000 | xargs kill -9
-
-# Kill process on port 3001 (API)
-lsof -ti:3001 | xargs kill -9
-```
-
-### Clerk webhook not receiving events
-
-1. Make sure your API server is running on port 3001
-2. For local development, use a tool like [ngrok](https://ngrok.com) or [localtunnel](https://localtunnel.github.io/www/) to expose your local server
-3. Update the webhook URL in Clerk Dashboard with the public URL
-
-## 📞 Support
-
-For questions or issues, refer to the PRD at `/docs/prd.md` or check the inline code documentation.
-
----
-
-**Stage 1 Foundation Complete** ✅
-
-Next up: **Stage 2A - Client Profiles + Intake Forms** 🎯
