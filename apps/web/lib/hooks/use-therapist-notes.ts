@@ -4,12 +4,12 @@ import { TherapistNote, TherapistNoteFilters, ApiResponse } from '@massage/types
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 // Fetch all therapist notes (filtered by RBAC on backend)
-export function useTherapistNotes(businessId: string, filters?: TherapistNoteFilters) {
+export function useTherapistNotes(businessId: string | undefined, filters?: TherapistNoteFilters) {
   return useQuery({
     queryKey: ['therapist-notes', businessId, filters],
     queryFn: async () => {
       const params = new URLSearchParams({
-        businessId,
+        businessId: businessId!,
         ...(filters?.clientId && { clientId: filters.clientId }),
         ...(filters?.therapistId && { therapistId: filters.therapistId }),
         ...(filters?.isPinned !== undefined && { isPinned: String(filters.isPinned) }),
@@ -31,7 +31,7 @@ export function useTherapistNotes(businessId: string, filters?: TherapistNoteFil
 }
 
 // Fetch single therapist note
-export function useTherapistNote(noteId: string, businessId: string) {
+export function useTherapistNote(noteId: string, businessId: string | undefined) {
   return useQuery({
     queryKey: ['therapist-note', noteId, businessId],
     queryFn: async () => {
@@ -53,7 +53,7 @@ export function useTherapistNote(noteId: string, businessId: string) {
 }
 
 // Create therapist note mutation
-export function useCreateTherapistNote(businessId: string) {
+export function useCreateTherapistNote(businessId: string | undefined) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -85,7 +85,7 @@ export function useCreateTherapistNote(businessId: string) {
 }
 
 // Update therapist note mutation
-export function useUpdateTherapistNote(noteId: string, businessId: string) {
+export function useUpdateTherapistNote(noteId: string, businessId: string | undefined) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -117,7 +117,7 @@ export function useUpdateTherapistNote(noteId: string, businessId: string) {
 }
 
 // Toggle pin status mutation
-export function useTogglePinTherapistNote(noteId: string, businessId: string) {
+export function useTogglePinTherapistNote(noteId: string, businessId: string | undefined) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -144,7 +144,7 @@ export function useTogglePinTherapistNote(noteId: string, businessId: string) {
 }
 
 // Delete therapist note mutation
-export function useDeleteTherapistNote(businessId: string) {
+export function useDeleteTherapistNote(businessId: string | undefined) {
   const queryClient = useQueryClient();
 
   return useMutation({

@@ -9,7 +9,7 @@ import { format } from 'date-fns';
 interface AddAppointmentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  businessId: string;
+  businessId: string | undefined;
   clients: Client[];
   therapists: Therapist[];
   initialDate?: Date;
@@ -37,6 +37,7 @@ export function AddAppointmentModal({
   const [serviceType, setServiceType] = useState('');
   const [price, setPrice] = useState('');
   const [notes, setNotes] = useState('');
+  const [isVirtual, setIsVirtual] = useState(false);
 
   const createAppointment = useCreateAppointment(businessId);
 
@@ -59,14 +60,14 @@ export function AddAppointmentModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!clientId || !therapistId || !date || !time || !duration) {
+    if (!businessId || !clientId || !therapistId || !date || !time || !duration) {
       alert('Please fill in all required fields');
       return;
     }
 
     try {
       await createAppointment.mutateAsync({
-        businessId,
+        businessId: businessId!,
         clientId,
         therapistId,
         startTime: `${date}T${time}`,
@@ -74,6 +75,7 @@ export function AddAppointmentModal({
         serviceType: serviceType || undefined,
         price: price ? parseFloat(price) : undefined,
         notes: notes || undefined,
+        isVirtual,
       });
 
       onClose();
@@ -92,6 +94,7 @@ export function AddAppointmentModal({
     setServiceType('');
     setPrice('');
     setNotes('');
+    setIsVirtual(false);
   };
 
   useEffect(() => {
@@ -99,6 +102,31 @@ export function AddAppointmentModal({
       resetForm();
     }
   }, [isOpen]);
+
+  const clientOptions = [
+    { value: '', label: 'Select a client' },
+    ...clients.map((client) => ({
+      value: client.id,
+      label: `${client.firstName} ${client.lastName}`,
+    })),
+  ];
+
+  const therapistOptions = [
+    { value: '', label: 'Select a therapist' },
+    ...therapists.map((therapist: any) => ({
+      value: therapist.id,
+      label: therapist.user
+        ? `${therapist.user.firstName || ''} ${therapist.user.lastName || ''}`
+        : 'Unknown',
+    })),
+  ];
+
+  const durationOptions = [
+    { value: '30', label: '30 minutes' },
+    { value: '60', label: '60 minutes' },
+    { value: '90', label: '90 minutes' },
+    { value: '120', label: '120 minutes' },
+  ];
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Schedule Appointment" size="lg">
@@ -112,14 +140,8 @@ export function AddAppointmentModal({
             value={clientId}
             onChange={(e) => setClientId(e.target.value)}
             required
-          >
-            <option value="">Select a client</option>
-            {clients.map((client) => (
-              <option key={client.id} value={client.id}>
-                {client.firstName} {client.lastName}
-              </option>
-            ))}
-          </Select>
+            options={clientOptions}
+          />
         </div>
 
         {/* Therapist Select */}
@@ -131,16 +153,8 @@ export function AddAppointmentModal({
             value={therapistId}
             onChange={(e) => setTherapistId(e.target.value)}
             required
-          >
-            <option value="">Select a therapist</option>
-            {therapists.map((therapist) => (
-              <option key={therapist.id} value={therapist.id}>
-                {therapist.user
-                  ? `${therapist.user.firstName || ''} ${therapist.user.lastName || ''}`
-                  : 'Unknown'}
-              </option>
-            ))}
-          </Select>
+            options={therapistOptions}
+          />
         </div>
 
         {/* Date and Time */}
@@ -178,12 +192,8 @@ export function AddAppointmentModal({
             value={duration}
             onChange={(e) => setDuration(e.target.value)}
             required
-          >
-            <option value="30">30 minutes</option>
-            <option value="60">60 minutes</option>
-            <option value="90">90 minutes</option>
-            <option value="120">120 minutes</option>
-          </Select>
+            options={durationOptions}
+          />
         </div>
 
         {/* Conflict Warning */}
@@ -238,6 +248,25 @@ export function AddAppointmentModal({
             onChange={(e) => setNotes(e.target.value)}
             rows={3}
           />
+        </div>
+
+        {/* Virtual Appointment Toggle */}
+        <div className="space-y-2">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isVirtual}
+              onChange={(e) => setIsVirtual(e.target.checked)}
+              className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
+            />
+            <span className="text-sm font-medium text-gray-700">Virtual Appointment (Video Call)</span>
+          </label>
+
+          {isVirtual && (
+            <p className="text-sm text-blue-600 bg-blue-50 p-2 rounded">
+              A secure video consultation link will be created for this appointment.
+            </p>
+          )}
         </div>
 
         {/* Actions */}

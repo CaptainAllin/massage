@@ -9,7 +9,7 @@ import { format } from 'date-fns';
 interface TimeOffModalProps {
   isOpen: boolean;
   onClose: () => void;
-  businessId: string;
+  businessId: string | undefined;
   therapists: Therapist[];
   initialTherapistId?: string;
 }
@@ -44,7 +44,7 @@ export function TimeOffModal({
 
     try {
       await createTimeOff.mutateAsync({
-        businessId,
+        businessId: businessId!,
         therapistId,
         startDate,
         endDate,
@@ -67,6 +67,16 @@ export function TimeOffModal({
     setIsAllDay(true);
   };
 
+  const therapistOptions = [
+    { value: '', label: 'Select a therapist' },
+    ...therapists.map((therapist: any) => ({
+      value: therapist.id,
+      label: therapist.user
+        ? `${therapist.user.firstName || ''} ${therapist.user.lastName || ''}`
+        : 'Unknown',
+    })),
+  ];
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Add Time Off" size="md">
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -79,16 +89,8 @@ export function TimeOffModal({
             value={therapistId}
             onChange={(e) => setTherapistId(e.target.value)}
             required
-          >
-            <option value="">Select a therapist</option>
-            {therapists.map((therapist) => (
-              <option key={therapist.id} value={therapist.id}>
-                {therapist.user
-                  ? `${therapist.user.firstName || ''} ${therapist.user.lastName || ''}`
-                  : 'Unknown'}
-              </option>
-            ))}
-          </Select>
+            options={therapistOptions}
+          />
         </div>
 
         {/* Date Range */}

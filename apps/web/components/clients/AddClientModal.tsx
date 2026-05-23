@@ -7,7 +7,7 @@ import { useCreateClient } from '@/lib/hooks';
 export interface AddClientModalProps {
   isOpen: boolean;
   onClose: () => void;
-  businessId: string;
+  businessId: string | undefined;
 }
 
 export const AddClientModal: React.FC<AddClientModalProps> = ({

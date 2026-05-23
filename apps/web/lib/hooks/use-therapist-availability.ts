@@ -10,35 +10,29 @@ import {
   TherapistAvailabilityFilters,
   TherapistTimeOffFilters,
 } from '@massage/types';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+import { apiClient } from '@/lib/api-client';
 
 /**
  * Fetch all therapist availability records
  */
 export function useTherapistAvailability(
-  businessId: string,
+  businessId: string | undefined,
   filters?: TherapistAvailabilityFilters
 ) {
   return useQuery({
     queryKey: ['therapist-availability', businessId, filters],
     queryFn: async () => {
       const params = new URLSearchParams({
-        businessId,
+        businessId: businessId!,
         ...(filters?.therapistId && { therapistId: filters.therapistId }),
         ...(filters?.dayOfWeek !== undefined && { dayOfWeek: String(filters.dayOfWeek) }),
         ...(filters?.isActive !== undefined && { isActive: String(filters.isActive) }),
       });
 
-      const response = await fetch(`${API_URL}/therapist-availability?${params}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-
-      if (!response.ok) throw new Error('Failed to fetch therapist availability');
-      const data: ApiResponse<TherapistAvailability[]> = await response.json();
-      return data.data;
+      const response = await apiClient.get<ApiResponse<TherapistAvailability[]>>(
+        `/therapist-availability?${params}`
+      );
+      return response.data.data;
     },
     enabled: !!businessId,
   });
@@ -47,22 +41,14 @@ export function useTherapistAvailability(
 /**
  * Fetch single availability record by ID
  */
-export function useAvailabilityById(id: string, businessId: string) {
+export function useAvailabilityById(id: string, businessId: string | undefined) {
   return useQuery({
     queryKey: ['therapist-availability', id, businessId],
     queryFn: async () => {
-      const response = await fetch(
-        `${API_URL}/therapist-availability/${id}?businessId=${businessId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        }
+      const response = await apiClient.get<ApiResponse<TherapistAvailability>>(
+        `/therapist-availability/${id}?businessId=${businessId}`
       );
-
-      if (!response.ok) throw new Error('Failed to fetch availability');
-      const data: ApiResponse<TherapistAvailability> = await response.json();
-      return data.data;
+      return response.data.data;
     },
     enabled: !!id && !!businessId,
   });
@@ -71,26 +57,16 @@ export function useAvailabilityById(id: string, businessId: string) {
 /**
  * Create or update therapist availability
  */
-export function useCreateAvailability(businessId: string) {
+export function useCreateAvailability(businessId: string | undefined) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (availabilityData: CreateAvailabilityDto) => {
-      const response = await fetch(`${API_URL}/therapist-availability`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({ businessId, ...availabilityData }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to create availability');
-      }
-      const data: ApiResponse<TherapistAvailability> = await response.json();
-      return data.data;
+      const response = await apiClient.post<ApiResponse<TherapistAvailability>>(
+        '/therapist-availability',
+        availabilityData
+      );
+      return response.data.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['therapist-availability', businessId] });
@@ -101,29 +77,16 @@ export function useCreateAvailability(businessId: string) {
 /**
  * Update therapist availability
  */
-export function useUpdateAvailability(id: string, businessId: string) {
+export function useUpdateAvailability(id: string, businessId: string | undefined) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (availabilityData: UpdateAvailabilityDto) => {
-      const response = await fetch(
-        `${API_URL}/therapist-availability/${id}?businessId=${businessId}`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-          body: JSON.stringify(availabilityData),
-        }
+      const response = await apiClient.patch<ApiResponse<TherapistAvailability>>(
+        `/therapist-availability/${id}?businessId=${businessId}`,
+        availabilityData
       );
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to update availability');
-      }
-      const data: ApiResponse<TherapistAvailability> = await response.json();
-      return data.data;
+      return response.data.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['therapist-availability', id, businessId] });
@@ -135,27 +98,15 @@ export function useUpdateAvailability(id: string, businessId: string) {
 /**
  * Delete therapist availability
  */
-export function useDeleteAvailability(businessId: string) {
+export function useDeleteAvailability(businessId: string | undefined) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (availabilityId: string) => {
-      const response = await fetch(
-        `${API_URL}/therapist-availability/${availabilityId}?businessId=${businessId}`,
-        {
-          method: 'DELETE',
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        }
+      const response = await apiClient.delete<ApiResponse<TherapistAvailability>>(
+        `/therapist-availability/${availabilityId}?businessId=${businessId}`
       );
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to delete availability');
-      }
-      const data: ApiResponse<TherapistAvailability> = await response.json();
-      return data.data;
+      return response.data.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['therapist-availability', businessId] });
@@ -167,31 +118,23 @@ export function useDeleteAvailability(businessId: string) {
  * Fetch all therapist time off records
  */
 export function useTherapistTimeOff(
-  businessId: string,
+  businessId: string | undefined,
   filters?: TherapistTimeOffFilters
 ) {
   return useQuery({
     queryKey: ['therapist-time-off', businessId, filters],
     queryFn: async () => {
       const params = new URLSearchParams({
-        businessId,
+        businessId: businessId!,
         ...(filters?.therapistId && { therapistId: filters.therapistId }),
         ...(filters?.startDate && { startDate: filters.startDate.toString() }),
         ...(filters?.endDate && { endDate: filters.endDate.toString() }),
       });
 
-      const response = await fetch(
-        `${API_URL}/therapist-availability/time-off?${params}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        }
+      const response = await apiClient.get<ApiResponse<TherapistTimeOff[]>>(
+        `/therapist-availability/time-off?${params}`
       );
-
-      if (!response.ok) throw new Error('Failed to fetch therapist time off');
-      const data: ApiResponse<TherapistTimeOff[]> = await response.json();
-      return data.data;
+      return response.data.data;
     },
     enabled: !!businessId,
   });
@@ -200,26 +143,16 @@ export function useTherapistTimeOff(
 /**
  * Create time off period
  */
-export function useCreateTimeOff(businessId: string) {
+export function useCreateTimeOff(businessId: string | undefined) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (timeOffData: CreateTimeOffDto) => {
-      const response = await fetch(`${API_URL}/therapist-availability/time-off`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({ businessId, ...timeOffData }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to create time off');
-      }
-      const data: ApiResponse<TherapistTimeOff> = await response.json();
-      return data.data;
+      const response = await apiClient.post<ApiResponse<TherapistTimeOff>>(
+        '/therapist-availability/time-off',
+        timeOffData
+      );
+      return response.data.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['therapist-time-off', businessId] });
@@ -231,27 +164,15 @@ export function useCreateTimeOff(businessId: string) {
 /**
  * Delete time off period
  */
-export function useDeleteTimeOff(businessId: string) {
+export function useDeleteTimeOff(businessId: string | undefined) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (timeOffId: string) => {
-      const response = await fetch(
-        `${API_URL}/therapist-availability/time-off/${timeOffId}?businessId=${businessId}`,
-        {
-          method: 'DELETE',
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        }
+      const response = await apiClient.delete<ApiResponse<TherapistTimeOff>>(
+        `/therapist-availability/time-off/${timeOffId}?businessId=${businessId}`
       );
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to delete time off');
-      }
-      const data: ApiResponse<TherapistTimeOff> = await response.json();
-      return data.data;
+      return response.data.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['therapist-time-off', businessId] });
@@ -279,18 +200,10 @@ export function useAvailableSlots(
         ...(duration && { duration: String(duration) }),
       });
 
-      const response = await fetch(
-        `${API_URL}/therapist-availability/slots?${params}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        }
+      const response = await apiClient.get<ApiResponse<TimeSlot[]>>(
+        `/therapist-availability/slots?${params}`
       );
-
-      if (!response.ok) throw new Error('Failed to fetch available slots');
-      const data: ApiResponse<TimeSlot[]> = await response.json();
-      return data.data;
+      return response.data.data;
     },
     enabled: !!therapistId && !!date,
     staleTime: 60000, // Keep fresh for 1 minute

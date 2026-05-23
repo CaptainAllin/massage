@@ -1,6 +1,7 @@
 'use client';
 
-import { Modal, Button } from '@massage/ui';
+import { useState } from 'react';
+import { Modal, Button, Badge } from '@massage/ui';
 import { AppointmentWithRelations, AppointmentStatus } from '@massage/types';
 import { StatusBadge } from './StatusBadge';
 import { format } from 'date-fns';
@@ -10,13 +11,18 @@ import {
   useCompleteAppointment,
   useMarkNoShowAppointment,
 } from '@/lib/hooks/use-appointments';
+import { useCreateInvoice } from '@/lib/hooks/use-invoices';
+import { useVideoSession, useCreateVideoSession } from '@/lib/hooks/use-video-sessions';
+import { VideoSessionModal } from '../video/VideoSessionModal';
+import { FileText, CreditCard, Video } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 interface AppointmentDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   appointment: AppointmentWithRelations | null;
-  businessId: string;
+  businessId: string | undefined;
   onEdit: () => void;
   onCancel: () => void;
 }
@@ -29,10 +35,17 @@ export function AppointmentDetailModal({
   onEdit,
   onCancel,
 }: AppointmentDetailModalProps) {
+  const router = useRouter();
   const confirmMutation = useConfirmAppointment(businessId);
   const startMutation = useStartAppointment(businessId);
   const completeMutation = useCompleteAppointment(businessId);
   const noShowMutation = useMarkNoShowAppointment(businessId);
+  const createInvoiceMutation = useCreateInvoice(businessId);
+  const { data: videoSession } = useVideoSession(appointment?.id || '');
+  const createVideoSession = useCreateVideoSession();
+
+  const [isCreatingInvoice, setIsCreatingInvoice] = useState(false);
+  const [showVideoModal, setShowVideoModal] = useState(false);
 
   if (!appointment) return null;
 
@@ -84,9 +97,42 @@ export function AppointmentDetailModal({
     }
   };
 
+  const handleCreateInvoice = async () => {
+    if (!appointment.client || !appointment.price) {
+      alert('Cannot create invoice: missing client or price information');
+      return;
+    }
+
+    setIsCreatingInvoice(true);
+    try {
+      const invoice = await createInvoiceMutation.mutateAsync({
+        clientId: appointment.clientId,
+        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        lineItems: [
+          {
+            description: `${appointment.serviceType || 'Massage'} - ${appointment.duration} minutes`,
+            quantity: 1,
+            unitPrice: appointment.price ?? 0,
+            total: appointment.price ?? 0,
+            appointmentId: appointment.id,
+          },
+        ],
+      });
+
+      if (invoice?.id) router.push(`/invoices/${invoice.id}`);
+      onClose();
+    } catch (error: any) {
+      alert(error.message || 'Failed to create invoice');
+    } finally {
+      setIsCreatingInvoice(false);
+    }
+  };
+
   const isCompleted = appointment.status === AppointmentStatus.COMPLETED;
   const isCancelled = appointment.status === AppointmentStatus.CANCELLED;
   const isNoShow = appointment.status === AppointmentStatus.NO_SHOW;
+  const hasInvoice = !!appointment.invoiceId;
+  const hasPayment = !!appointment.paymentId;
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Appointment Details" size="lg">
@@ -173,6 +219,82 @@ export function AppointmentDetailModal({
           </div>
         )}
 
+        {/* Virtual Appointment */}
+        {appointment.isVirtual && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h3 className="text-sm font-semibold text-blue-800 mb-2 flex items-center gap-2">
+              <Video className="h-4 w-4" />
+              Virtual Appointment
+            </h3>
+            {!videoSession ? (
+              <div className="space-y-2">
+                <p className="text-sm text-blue-700">
+                  This is a virtual appointment. Create a video session to enable the video call.
+                </p>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => createVideoSession.mutate(appointment.id)}
+                  disabled={createVideoSession.isPending}
+                >
+                  {createVideoSession.isPending ? 'Creating...' : 'Create Video Session'}
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-sm text-blue-700">
+                  Video session is ready. Click the button below to join the call.
+                </p>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => setShowVideoModal(true)}
+                  disabled={appointment.status === AppointmentStatus.CANCELLED || appointment.status === AppointmentStatus.NO_SHOW}
+                >
+                  <Video className="h-4 w-4 mr-2" />
+                  Join Video Call
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Payment Status */}
+        {isCompleted && (
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+            <h3 className="text-sm font-semibold text-blue-800 dark:text-blue-200 mb-2">
+              Payment Status
+            </h3>
+            <div className="flex items-center gap-4">
+              {hasPayment && (
+                <div className="flex items-center gap-2">
+                  <Badge variant="success">Paid</Badge>
+                  <Link
+                    href={`/payments/${appointment.paymentId}`}
+                    className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    View Payment →
+                  </Link>
+                </div>
+              )}
+              {hasInvoice && !hasPayment && (
+                <div className="flex items-center gap-2">
+                  <Badge variant="warning">Invoiced</Badge>
+                  <Link
+                    href={`/invoices/${appointment.invoiceId}`}
+                    className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    View Invoice →
+                  </Link>
+                </div>
+              )}
+              {!hasInvoice && !hasPayment && (
+                <Badge variant="default">Unpaid</Badge>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Cancellation Info */}
         {appointment.cancellation && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -226,12 +348,39 @@ export function AppointmentDetailModal({
           )}
 
           {isCompleted && (
-            <Link href={`/treatment-notes?appointmentId=${appointment.id}`}>
-              <Button variant="primary">Add Treatment Note</Button>
-            </Link>
+            <>
+              <Link href={`/treatment-notes?appointmentId=${appointment.id}`}>
+                <Button variant="secondary">Add Treatment Note</Button>
+              </Link>
+              {!hasInvoice && (
+                <Button
+                  variant="secondary"
+                  onClick={handleCreateInvoice}
+                  disabled={isCreatingInvoice}
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  {isCreatingInvoice ? 'Creating...' : 'Create Invoice'}
+                </Button>
+              )}
+              {!hasPayment && (
+                <Button variant="primary">
+                  <CreditCard className="h-4 w-4 mr-2" />
+                  Process Payment
+                </Button>
+              )}
+            </>
           )}
         </div>
       </div>
+
+      {/* Video Session Modal */}
+      {showVideoModal && videoSession && (
+        <VideoSessionModal
+          isOpen={showVideoModal}
+          onClose={() => setShowVideoModal(false)}
+          sessionId={videoSession.id}
+        />
+      )}
     </Modal>
   );
 }

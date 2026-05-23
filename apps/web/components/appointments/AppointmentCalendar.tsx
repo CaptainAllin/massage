@@ -6,11 +6,11 @@ import { CalendarFilters } from './CalendarFilters';
 import { WeekView } from './WeekView';
 import { DayView } from './DayView';
 import { useAppointments } from '@/lib/hooks/use-appointments';
-import { format, startOfWeek, endOfWeek, startOfDay, endOfDay } from 'date-fns';
+import { startOfWeek, endOfWeek, startOfDay, endOfDay } from 'date-fns';
 import { EmptyState } from '@massage/ui';
 
 interface AppointmentCalendarProps {
-  businessId: string;
+  businessId: string | undefined;
   therapists: Therapist[];
   onAppointmentClick: (appointment: AppointmentWithRelations) => void;
   onSlotClick: (date: Date, therapistId?: string) => void;
@@ -56,7 +56,7 @@ export function AppointmentCalendar({
 
   const appointments = appointmentsResponse?.data || [];
 
-  const handleSlotClick = (date: Date, hour: number) => {
+  const handleSlotClick = (date: Date, _hour: number) => {
     onSlotClick(date, selectedTherapist || undefined);
   };
 

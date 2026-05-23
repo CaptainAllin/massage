@@ -1,0 +1,40 @@
+import { withAuth, res } from '@/lib/api-auth';
+
+export const POST = withAuth(async (req) => {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return res.badRequest('AI features are not configured');
+  }
+
+  const body = await req.json();
+  const { context, section } = body;
+  if (!context || !section) return res.badRequest('context and section are required');
+
+  try {
+    const Anthropic = (await import('@anthropic-ai/sdk')).default;
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+    const message = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 150,
+      system: `You are an AI assistant helping massage therapists write SOAP notes. Provide intelligent autocomplete suggestions based on the context. Keep suggestions professional, concise, and relevant to massage therapy. Use proper medical terminology.`,
+      messages: [
+        {
+          role: 'user',
+          content: `Complete this ${section} section of a SOAP note. Context: "${context}"\n\nProvide only the completion text, no explanation.`,
+        },
+      ],
+    });
+
+    const text = message.content[0].type === 'text' ? message.content[0].text : '';
+
+    return res.ok({
+      text: text.trim(),
+      provider: 'claude',
+      model: message.model,
+      usage: { tokens: message.usage.input_tokens + message.usage.output_tokens, cost: 0 },
+    });
+  } catch (err: any) {
+    console.error('[SOAP AI]', err.message);
+    return res.error('AI request failed');
+  }
+});

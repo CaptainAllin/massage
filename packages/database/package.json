@@ -11,6 +11,7 @@
     "push": "prisma db push",
     "studio": "prisma studio",
     "seed": "tsx prisma/seed.ts",
+    "link-user": "tsx prisma/link-user.ts",
     "clean": "rm -rf .turbo node_modules"
   },
   "dependencies": {

@@ -42,7 +42,7 @@ const Timeline: React.FC<TimelineProps> = ({ items, className }) => {
 
       {/* Timeline items */}
       <div className="space-y-6">
-        {items.map((item, index) => (
+        {items.map((item) => (
           <div key={item.id} className="relative flex gap-4">
             {/* Icon/Dot */}
             <div

@@ -4,16 +4,26 @@ import React, { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { Tabs, Tab, Card, CardContent, Skeleton } from '@massage/ui';
 import { useClient } from '@/lib/hooks';
+import { usePayments } from '@/lib/hooks/use-payments';
+import { useMemberships } from '@/lib/hooks/use-memberships';
+import { usePackages } from '@/lib/hooks/use-packages';
 import { ClientHeader } from '@/components/clients/ClientHeader';
 import { ClientStats } from '@/components/clients/ClientStats';
 import { ClientMedicalHistory } from '@/components/clients/ClientMedicalHistory';
+import { PaymentsList } from '@/components/payments/PaymentsList';
+import { MembershipList } from '@/components/memberships/MembershipList';
+import { PackageList } from '@/components/packages/PackageList';
 
+import { useBusinessId } from '@/lib/hooks/use-business-id';
 export default function ClientProfilePage() {
   const params = useParams();
   const clientId = params.id as string;
-  const businessId = 'temp-business-id'; // TODO: Get from auth context
+  const businessId = useBusinessId();
 
   const { data: client, isLoading } = useClient(clientId, businessId);
+  const { data: paymentsData } = usePayments(businessId, { clientId });
+  const { data: membershipsData } = useMemberships(businessId, { clientId });
+  const { data: packagesData } = usePackages(businessId, { clientId });
   const [activeTab, setActiveTab] = useState('overview');
 
   if (isLoading) {
@@ -36,6 +46,9 @@ export default function ClientProfilePage() {
   const tabs: Tab[] = [
     { id: 'overview', label: 'Overview' },
     { id: 'medical', label: 'Medical History' },
+    { id: 'payments', label: 'Payments' },
+    { id: 'memberships', label: 'Memberships' },
+    { id: 'packages', label: 'Packages' },
     { id: 'timeline', label: 'Timeline' },
     { id: 'forms', label: 'Intake Forms' },
     { id: 'notes', label: 'Notes' },
@@ -142,6 +155,57 @@ export default function ClientProfilePage() {
 
           {activeTab === 'medical' && (
             <ClientMedicalHistory clientId={clientId} businessId={businessId} />
+          )}
+
+          {activeTab === 'payments' && (
+            <Card>
+              <CardContent className="p-6">
+                <h3 className="text-lg font-semibold mb-4">Payment History</h3>
+                <PaymentsList
+                  payments={paymentsData?.data || []}
+                  isLoading={false}
+                  onFilterChange={() => {}}
+                />
+              </CardContent>
+            </Card>
+          )}
+
+          {activeTab === 'memberships' && (
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Memberships</h3>
+              {membershipsData?.data && membershipsData.data.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <MembershipList
+                    memberships={membershipsData.data}
+                  />
+                </div>
+              ) : (
+                <Card>
+                  <CardContent className="p-6 text-center text-gray-500">
+                    No active memberships
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'packages' && (
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Session Packages</h3>
+              {packagesData?.data && packagesData.data.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <PackageList
+                    packages={packagesData.data}
+                  />
+                </div>
+              ) : (
+                <Card>
+                  <CardContent className="p-6 text-center text-gray-500">
+                    No active packages
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           )}
 
           {activeTab === 'timeline' && (

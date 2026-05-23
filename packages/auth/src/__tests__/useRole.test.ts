@@ -2,25 +2,26 @@ import { renderHook } from '@testing-library/react';
 import { useRole } from '../useRole';
 import { UserRole } from '@massage/types';
 
-// Mock Clerk's useUser hook
-jest.mock('@clerk/nextjs', () => ({
-  useUser: jest.fn(),
+// Mock our useAuth hook
+jest.mock('../AuthProvider', () => ({
+  useAuth: jest.fn(),
 }));
 
-import { useUser } from '@clerk/nextjs';
+import { useAuth } from '../AuthProvider';
 
 describe('useRole', () => {
-  const mockUseUser = useUser as jest.MockedFunction<typeof useUser>;
+  const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
 
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   it('should return null role when user is not loaded', () => {
-    mockUseUser.mockReturnValue({
-      isLoaded: false,
+    mockUseAuth.mockReturnValue({
+      loading: true,
       user: null,
-    } as any);
+      signOut: jest.fn(),
+    });
 
     const { result } = renderHook(() => useRole());
 
@@ -29,14 +30,15 @@ describe('useRole', () => {
   });
 
   it('should return role from user metadata', () => {
-    mockUseUser.mockReturnValue({
-      isLoaded: true,
+    mockUseAuth.mockReturnValue({
+      loading: false,
       user: {
-        publicMetadata: {
+        user_metadata: {
           role: UserRole.BUSINESS_OWNER,
         },
-      },
-    } as any);
+      } as any,
+      signOut: jest.fn(),
+    });
 
     const { result } = renderHook(() => useRole());
 
@@ -47,14 +49,15 @@ describe('useRole', () => {
   });
 
   it('should correctly check role permissions with can()', () => {
-    mockUseUser.mockReturnValue({
-      isLoaded: true,
+    mockUseAuth.mockReturnValue({
+      loading: false,
       user: {
-        publicMetadata: {
+        user_metadata: {
           role: UserRole.THERAPIST,
         },
-      },
-    } as any);
+      } as any,
+      signOut: jest.fn(),
+    });
 
     const { result } = renderHook(() => useRole());
 
@@ -63,12 +66,13 @@ describe('useRole', () => {
   });
 
   it('should return false for can() when no role', () => {
-    mockUseUser.mockReturnValue({
-      isLoaded: true,
+    mockUseAuth.mockReturnValue({
+      loading: false,
       user: {
-        publicMetadata: {},
-      },
-    } as any);
+        user_metadata: {},
+      } as any,
+      signOut: jest.fn(),
+    });
 
     const { result } = renderHook(() => useRole());
 

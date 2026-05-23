@@ -1,7 +1,7 @@
 import axios from 'axios';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/lib/supabase/client';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 export const apiClient = axios.create({
   baseURL: API_URL,
@@ -15,7 +15,7 @@ apiClient.interceptors.request.use(
   async (config) => {
     // Get Supabase session token
     if (typeof window !== 'undefined') {
-      const supabase = createClientComponentClient();
+      const supabase = createClient();
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -35,14 +35,13 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error.response?.status === 401) {
-      // Sign out and redirect to sign in
-      if (typeof window !== 'undefined') {
-        const supabase = createClientComponentClient();
-        await supabase.auth.signOut();
-        window.location.href = '/sign-in';
-      }
-    }
+    // Don't auto-signout on 401 - just let the error bubble up
+    // The middleware will handle redirecting if the session is actually invalid
+    console.error('[API CLIENT] Request failed:', {
+      status: error.response?.status,
+      url: error.config?.url,
+      message: error.message
+    });
     return Promise.reject(error);
   }
 );

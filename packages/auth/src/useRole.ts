@@ -1,4 +1,4 @@
-import { useUser } from '@clerk/nextjs';
+import { useAuth } from './AuthProvider';
 import { UserRole } from '@massage/types';
 
 export interface UseRoleReturn {
@@ -14,7 +14,7 @@ export interface UseRoleReturn {
 
 /**
  * React hook for role-based access control
- * Uses Clerk's useUser hook to get user data and role from public metadata
+ * Uses Supabase Auth context to get user data and role from user_metadata
  *
  * @example
  * ```tsx
@@ -26,10 +26,10 @@ export interface UseRoleReturn {
  * ```
  */
 export function useRole(): UseRoleReturn {
-  const { user, isLoaded } = useUser();
+  const { user, loading } = useAuth();
 
-  // Get role from Clerk's public metadata
-  const role = (user?.publicMetadata?.role as UserRole) || null;
+  // Get role from Supabase user's user_metadata
+  const role = (user?.user_metadata?.role as UserRole) || null;
 
   return {
     role,
@@ -42,6 +42,6 @@ export function useRole(): UseRoleReturn {
       if (!role) return false;
       return allowedRoles.includes(role);
     },
-    isLoading: !isLoaded,
+    isLoading: loading,
   };
 }

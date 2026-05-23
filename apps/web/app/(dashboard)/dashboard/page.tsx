@@ -1,19 +1,45 @@
 'use client';
 
 import { Card, CardHeader, CardTitle, CardContent } from '@massage/ui';
-import { useUser } from '@clerk/nextjs';
-import { useRole } from '@massage/auth';
+import { useAuth } from '@massage/auth';
+import { useAppointments } from '@/lib/hooks/use-appointments';
+import { useClients } from '@/lib/hooks/use-clients';
+import { useBusinessId } from '@/lib/hooks/use-business-id';
 
 export default function DashboardPage() {
-  const { user } = useUser();
-  const { role } = useRole();
+  const { user } = useAuth();
+  const businessId = useBusinessId();
+
+  // Fetch data - get today's appointments
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const { data: appointmentsData, isLoading: appointmentsLoading } = useAppointments(
+    businessId || '',
+    {
+      startDate: today,
+      endDate: tomorrow,
+    }
+  );
+
+  const { data: clientsData, isLoading: clientsLoading } = useClients(
+    businessId || '',
+    { isActive: true }
+  );
+
+  // Calculate stats
+  const todaysAppointments = appointmentsData?.data?.length || 0;
+  const totalClients = clientsData?.length || 0;
+  const isLoading = appointmentsLoading || clientsLoading;
 
   return (
     <div className="space-y-6">
       {/* Welcome Section */}
       <div>
         <h1 className="text-3xl font-bold text-foreground font-display mb-2">
-          Welcome back, {user?.firstName || 'there'}!
+          Welcome back, {user?.user_metadata?.first_name || 'there'}!
         </h1>
         <p className="text-muted-foreground">
           Here's an overview of your practice
@@ -29,9 +55,11 @@ export default function DashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-foreground font-display">0</div>
+            <div className="text-3xl font-bold text-foreground font-display">
+              {isLoading ? '...' : todaysAppointments}
+            </div>
             <p className="text-sm text-muted-foreground mt-1">
-              No appointments scheduled
+              {todaysAppointments === 0 ? 'No appointments scheduled' : `${todaysAppointments} scheduled today`}
             </p>
           </CardContent>
         </Card>
@@ -43,9 +71,11 @@ export default function DashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-foreground font-display">0</div>
+            <div className="text-3xl font-bold text-foreground font-display">
+              {isLoading ? '...' : totalClients}
+            </div>
             <p className="text-sm text-muted-foreground mt-1">
-              Start adding clients
+              {totalClients === 0 ? 'Start adding clients' : `${totalClients} active clients`}
             </p>
           </CardContent>
         </Card>
@@ -59,7 +89,7 @@ export default function DashboardPage() {
           <CardContent>
             <div className="text-3xl font-bold text-foreground font-display">$0</div>
             <p className="text-sm text-muted-foreground mt-1">
-              No revenue yet
+              Coming soon
             </p>
           </CardContent>
         </Card>
@@ -73,7 +103,7 @@ export default function DashboardPage() {
           <CardContent>
             <div className="text-3xl font-bold text-foreground font-display">0</div>
             <p className="text-sm text-muted-foreground mt-1">
-              All caught up
+              Coming soon
             </p>
           </CardContent>
         </Card>
@@ -110,19 +140,6 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
-      {/* User Info (for development) */}
-      {role && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Your Role: {role}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              This is a Stage 1 foundation build. Features will be added in subsequent stages.
-            </p>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }

@@ -55,6 +55,16 @@ export function CalendarFilters({
     }
   };
 
+  const therapistOptions = [
+    { value: 'all', label: 'All Therapists' },
+    ...therapists.map((therapist: any) => ({
+      value: therapist.id,
+      label: therapist.user
+        ? `${therapist.user.firstName || ''} ${therapist.user.lastName || ''}`
+        : 'Unknown',
+    })),
+  ];
+
   return (
     <div className="space-y-4">
       {/* View Mode and Date Navigation */}
@@ -107,16 +117,8 @@ export function CalendarFilters({
             onChange={(e) =>
               onTherapistChange(e.target.value === 'all' ? null : e.target.value)
             }
-          >
-            <option value="all">All Therapists</option>
-            {therapists.map((therapist) => (
-              <option key={therapist.id} value={therapist.id}>
-                {therapist.user
-                  ? `${therapist.user.firstName || ''} ${therapist.user.lastName || ''}`
-                  : 'Unknown'}
-              </option>
-            ))}
-          </Select>
+            options={therapistOptions}
+          />
         </div>
 
         {/* Status Filter */}

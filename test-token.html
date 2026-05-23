@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Get Supabase Token</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <h1>Supabase Token Getter</h1>
+    <button onclick="getToken()">Get Current Token</button>
+    <pre id="output"></pre>
+    
+    <script>
+        const supabase = window.supabase.createClient(
+            'https://cuflcxidcnwzlqdwdexr.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN1ZmxjeGlkY253emxxZHdkZXhyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyNjE5MzQsImV4cCI6MjA5NDgzNzkzNH0.A37CJQ4lDQ5_tw_0o_YLAYKu3_Y2sYqOrKRwtiHJ3l0'
+        );
+        
+        async function getToken() {
+            const { data, error } = await supabase.auth.getSession();
+            if (error) {
+                document.getElementById('output').textContent = 'Error: ' + error.message;
+            } else {
+                document.getElementById('output').textContent = JSON.stringify(data.session, null, 2);
+            }
+        }
+        
+        // Auto-run on page load
+        getToken();
+    </script>
+</body>
+</html>

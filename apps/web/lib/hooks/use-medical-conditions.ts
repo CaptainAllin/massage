@@ -4,12 +4,12 @@ import { MedicalCondition, MedicalConditionFilters, ApiResponse } from '@massage
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 // Fetch all medical conditions
-export function useMedicalConditions(businessId: string, filters?: MedicalConditionFilters) {
+export function useMedicalConditions(businessId: string | undefined, filters?: MedicalConditionFilters) {
   return useQuery({
     queryKey: ['medical-conditions', businessId, filters],
     queryFn: async () => {
       const params = new URLSearchParams({
-        businessId,
+        businessId: businessId!,
         ...(filters?.clientId && { clientId: filters.clientId }),
         ...(filters?.status && { status: filters.status }),
         ...(filters?.page && { page: String(filters.page) }),
@@ -30,7 +30,7 @@ export function useMedicalConditions(businessId: string, filters?: MedicalCondit
 }
 
 // Fetch single medical condition
-export function useMedicalCondition(conditionId: string, businessId: string) {
+export function useMedicalCondition(conditionId: string, businessId: string | undefined) {
   return useQuery({
     queryKey: ['medical-condition', conditionId, businessId],
     queryFn: async () => {
@@ -52,7 +52,7 @@ export function useMedicalCondition(conditionId: string, businessId: string) {
 }
 
 // Create medical condition mutation
-export function useCreateMedicalCondition(businessId: string) {
+export function useCreateMedicalCondition(businessId: string | undefined) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -88,7 +88,7 @@ export function useCreateMedicalCondition(businessId: string) {
 }
 
 // Update medical condition mutation
-export function useUpdateMedicalCondition(conditionId: string, businessId: string) {
+export function useUpdateMedicalCondition(conditionId: string, businessId: string | undefined) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -117,7 +117,7 @@ export function useUpdateMedicalCondition(conditionId: string, businessId: strin
 }
 
 // Delete medical condition mutation
-export function useDeleteMedicalCondition(businessId: string) {
+export function useDeleteMedicalCondition(businessId: string | undefined) {
   const queryClient = useQueryClient();
 
   return useMutation({

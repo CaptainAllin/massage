@@ -5,9 +5,10 @@ import { Select } from '@massage/ui';
 import { useCreateTreatmentNote } from '@/lib/hooks';
 import { SOAPNoteEditor, SOAPNoteData } from '@/components/treatment-notes/SOAPNoteEditor';
 
+import { useBusinessId } from '@/lib/hooks/use-business-id';
 export default function NewTreatmentNotePage() {
   const router = useRouter();
-  const businessId = 'temp-business-id'; // TODO: Get from auth context
+  const businessId = useBusinessId();
   const createNote = useCreateTreatmentNote(businessId);
 
   const handleSave = async (data: SOAPNoteData) => {
@@ -16,6 +17,7 @@ export default function NewTreatmentNotePage() {
       clientId: 'temp-client-id', // TODO: Get from appointment
       therapistId: 'temp-therapist-id', // TODO: Get from current user
       ...data,
+      sessionDuration: data.sessionDuration ?? undefined,
     });
     router.push('/treatment-notes');
   };

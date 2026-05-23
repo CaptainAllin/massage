@@ -4,12 +4,14 @@ import { useParams, useRouter } from 'next/navigation';
 import { Button, Card, CardHeader, CardTitle, CardContent, Skeleton } from '@massage/ui';
 import { useTreatmentNote } from '@/lib/hooks';
 import { BodyMapViewer } from '@/components/body-map';
+import { AISummarySection } from '@/components/ai';
 
+import { useBusinessId } from '@/lib/hooks/use-business-id';
 export default function TreatmentNoteDetailPage() {
   const params = useParams();
   const router = useRouter();
   const noteId = params.id as string;
-  const businessId = 'temp-business-id'; // TODO: Get from auth context
+  const businessId = useBusinessId();
 
   const { data: note, isLoading } = useTreatmentNote(noteId, businessId);
 
@@ -46,6 +48,13 @@ export default function TreatmentNoteDetailPage() {
           <Button variant="primary">Edit</Button>
         </div>
       </div>
+
+      {/* AI Summary Section */}
+      <AISummarySection
+        noteId={noteId}
+        businessId={businessId}
+        currentSummary={noteData.aiSummary || undefined}
+      />
 
       {/* Subjective */}
       <Card>

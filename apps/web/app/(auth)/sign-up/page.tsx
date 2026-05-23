@@ -1,24 +1,22 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/lib/supabase/client';
 
 export default function SignUpPage() {
-  const router = useRouter();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     confirmPassword: '',
     firstName: '',
     lastName: '',
-    role: 'CLIENT',
+    role: 'BUSINESS_OWNER',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,7 +29,7 @@ export default function SignUpPage() {
       return;
     }
 
-    const { error } = await supabase.auth.signUp({
+    const { data: signUpData, error } = await supabase.auth.signUp({
       email: formData.email,
       password: formData.password,
       options: {
@@ -46,10 +44,39 @@ export default function SignUpPage() {
     if (error) {
       setError(error.message);
       setLoading(false);
-    } else {
-      router.push('/dashboard');
-      router.refresh();
+      return;
     }
+
+    // If we have a session immediately (email confirmation disabled), set up business
+    const session = signUpData.session;
+    if (session && formData.role === 'BUSINESS_OWNER') {
+      try {
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+        const res = await fetch(`${API_URL}/businesses`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            name: `${formData.firstName}'s Practice`,
+            email: formData.email,
+          }),
+        });
+
+        if (res.ok) {
+          const json = await res.json();
+          const businessId = json.data?.id;
+          if (businessId) {
+            await supabase.auth.updateUser({ data: { businessId } });
+          }
+        }
+      } catch (setupErr) {
+        // Non-fatal — user can still log in, businessId can be resolved later
+        console.warn('[SIGN-UP] Business setup failed:', setupErr);
+      }
+    }
+    // Let AuthProvider's onStateChange trigger navigation
   };
 
   return (
@@ -141,10 +168,10 @@ export default function SignUpPage() {
                   setFormData({ ...formData, role: e.target.value })
                 }
               >
-                <option value="CLIENT">Client</option>
+                <option value="BUSINESS_OWNER">Business Owner</option>
                 <option value="THERAPIST">Therapist</option>
                 <option value="RECEPTIONIST">Receptionist</option>
-                <option value="BUSINESS_OWNER">Business Owner</option>
+                <option value="CLIENT">Client</option>
               </select>
             </div>
 

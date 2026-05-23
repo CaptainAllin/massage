@@ -9,18 +9,17 @@ import {
   CancelAppointmentDto,
   AvailabilityCheck,
 } from '@massage/types';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+import { apiClient } from '@/lib/api-client';
 
 /**
  * Fetch all appointments with filters
  */
-export function useAppointments(businessId: string, filters?: AppointmentFilters) {
+export function useAppointments(businessId: string | undefined, filters?: AppointmentFilters) {
   return useQuery({
     queryKey: ['appointments', businessId, filters],
     queryFn: async () => {
       const params = new URLSearchParams({
-        businessId,
+        businessId: businessId!,
         ...(filters?.status && {
           status: Array.isArray(filters.status) ? filters.status.join(',') : filters.status,
         }),
@@ -34,15 +33,10 @@ export function useAppointments(businessId: string, filters?: AppointmentFilters
         ...(filters?.sortOrder && { sortOrder: filters.sortOrder }),
       });
 
-      const response = await fetch(`${API_URL}/appointments?${params}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-
-      if (!response.ok) throw new Error('Failed to fetch appointments');
-      const result: PaginatedResponse<Appointment> = await response.json();
-      return result;
+      const response = await apiClient.get<PaginatedResponse<Appointment>>(
+        `/appointments?${params}`
+      );
+      return response.data;
     },
     enabled: !!businessId,
   });
@@ -51,22 +45,14 @@ export function useAppointments(businessId: string, filters?: AppointmentFilters
 /**
  * Fetch single appointment by ID
  */
-export function useAppointment(id: string, businessId: string) {
+export function useAppointment(id: string, businessId: string | undefined) {
   return useQuery({
     queryKey: ['appointment', id, businessId],
     queryFn: async () => {
-      const response = await fetch(
-        `${API_URL}/appointments/${id}?businessId=${businessId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        }
+      const response = await apiClient.get<ApiResponse<Appointment>>(
+        `/appointments/${id}?businessId=${businessId}`
       );
-
-      if (!response.ok) throw new Error('Failed to fetch appointment');
-      const data: ApiResponse<Appointment> = await response.json();
-      return data.data;
+      return response.data.data;
     },
     enabled: !!id && !!businessId,
   });
@@ -75,26 +61,16 @@ export function useAppointment(id: string, businessId: string) {
 /**
  * Create appointment mutation
  */
-export function useCreateAppointment(businessId: string) {
+export function useCreateAppointment(businessId: string | undefined) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (appointmentData: CreateAppointmentDto) => {
-      const response = await fetch(`${API_URL}/appointments`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({ businessId, ...appointmentData }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to create appointment');
-      }
-      const data: ApiResponse<Appointment> = await response.json();
-      return data.data;
+      const response = await apiClient.post<ApiResponse<Appointment>>(
+        '/appointments',
+        appointmentData
+      );
+      return response.data.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['appointments', businessId] });
@@ -105,29 +81,16 @@ export function useCreateAppointment(businessId: string) {
 /**
  * Update appointment mutation
  */
-export function useUpdateAppointment(id: string, businessId: string) {
+export function useUpdateAppointment(id: string, businessId: string | undefined) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (appointmentData: UpdateAppointmentDto) => {
-      const response = await fetch(
-        `${API_URL}/appointments/${id}?businessId=${businessId}`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-          body: JSON.stringify(appointmentData),
-        }
+      const response = await apiClient.patch<ApiResponse<Appointment>>(
+        `/appointments/${id}?businessId=${businessId}`,
+        appointmentData
       );
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to update appointment');
-      }
-      const data: ApiResponse<Appointment> = await response.json();
-      return data.data;
+      return response.data.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['appointment', id, businessId] });
@@ -139,27 +102,15 @@ export function useUpdateAppointment(id: string, businessId: string) {
 /**
  * Confirm appointment mutation (SCHEDULED -> CONFIRMED)
  */
-export function useConfirmAppointment(businessId: string) {
+export function useConfirmAppointment(businessId: string | undefined) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (appointmentId: string) => {
-      const response = await fetch(
-        `${API_URL}/appointments/${appointmentId}/confirm?businessId=${businessId}`,
-        {
-          method: 'PATCH',
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        }
+      const response = await apiClient.patch<ApiResponse<Appointment>>(
+        `/appointments/${appointmentId}/confirm?businessId=${businessId}`
       );
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to confirm appointment');
-      }
-      const data: ApiResponse<Appointment> = await response.json();
-      return data.data;
+      return response.data.data;
     },
     onSuccess: (_, appointmentId) => {
       queryClient.invalidateQueries({ queryKey: ['appointment', appointmentId, businessId] });
@@ -171,27 +122,15 @@ export function useConfirmAppointment(businessId: string) {
 /**
  * Start appointment mutation (CONFIRMED -> IN_PROGRESS)
  */
-export function useStartAppointment(businessId: string) {
+export function useStartAppointment(businessId: string | undefined) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (appointmentId: string) => {
-      const response = await fetch(
-        `${API_URL}/appointments/${appointmentId}/start?businessId=${businessId}`,
-        {
-          method: 'PATCH',
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        }
+      const response = await apiClient.patch<ApiResponse<Appointment>>(
+        `/appointments/${appointmentId}/start?businessId=${businessId}`
       );
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to start appointment');
-      }
-      const data: ApiResponse<Appointment> = await response.json();
-      return data.data;
+      return response.data.data;
     },
     onSuccess: (_, appointmentId) => {
       queryClient.invalidateQueries({ queryKey: ['appointment', appointmentId, businessId] });
@@ -203,27 +142,15 @@ export function useStartAppointment(businessId: string) {
 /**
  * Complete appointment mutation (IN_PROGRESS -> COMPLETED)
  */
-export function useCompleteAppointment(businessId: string) {
+export function useCompleteAppointment(businessId: string | undefined) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (appointmentId: string) => {
-      const response = await fetch(
-        `${API_URL}/appointments/${appointmentId}/complete?businessId=${businessId}`,
-        {
-          method: 'PATCH',
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        }
+      const response = await apiClient.patch<ApiResponse<Appointment>>(
+        `/appointments/${appointmentId}/complete?businessId=${businessId}`
       );
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to complete appointment');
-      }
-      const data: ApiResponse<Appointment> = await response.json();
-      return data.data;
+      return response.data.data;
     },
     onSuccess: (_, appointmentId) => {
       queryClient.invalidateQueries({ queryKey: ['appointment', appointmentId, businessId] });
@@ -235,27 +162,15 @@ export function useCompleteAppointment(businessId: string) {
 /**
  * Mark appointment as no-show mutation
  */
-export function useMarkNoShowAppointment(businessId: string) {
+export function useMarkNoShowAppointment(businessId: string | undefined) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (appointmentId: string) => {
-      const response = await fetch(
-        `${API_URL}/appointments/${appointmentId}/no-show?businessId=${businessId}`,
-        {
-          method: 'PATCH',
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        }
+      const response = await apiClient.patch<ApiResponse<Appointment>>(
+        `/appointments/${appointmentId}/no-show?businessId=${businessId}`
       );
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to mark appointment as no-show');
-      }
-      const data: ApiResponse<Appointment> = await response.json();
-      return data.data;
+      return response.data.data;
     },
     onSuccess: (_, appointmentId) => {
       queryClient.invalidateQueries({ queryKey: ['appointment', appointmentId, businessId] });
@@ -267,7 +182,7 @@ export function useMarkNoShowAppointment(businessId: string) {
 /**
  * Cancel appointment mutation
  */
-export function useCancelAppointment(businessId: string) {
+export function useCancelAppointment(businessId: string | undefined) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -278,24 +193,11 @@ export function useCancelAppointment(businessId: string) {
       appointmentId: string;
       cancellationData: CancelAppointmentDto;
     }) => {
-      const response = await fetch(
-        `${API_URL}/appointments/${appointmentId}/cancel?businessId=${businessId}`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-          body: JSON.stringify(cancellationData),
-        }
+      const response = await apiClient.patch<ApiResponse<Appointment>>(
+        `/appointments/${appointmentId}/cancel?businessId=${businessId}`,
+        cancellationData
       );
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to cancel appointment');
-      }
-      const data: ApiResponse<Appointment> = await response.json();
-      return data.data;
+      return response.data.data;
     },
     onSuccess: (_, { appointmentId }) => {
       queryClient.invalidateQueries({ queryKey: ['appointment', appointmentId, businessId] });
@@ -327,18 +229,10 @@ export function useCheckAvailability(
         ...(excludeAppointmentId && { excludeAppointmentId }),
       });
 
-      const response = await fetch(
-        `${API_URL}/appointments/availability/check?${params}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        }
+      const response = await apiClient.get<ApiResponse<AvailabilityCheck>>(
+        `/appointments/availability/check?${params}`
       );
-
-      if (!response.ok) throw new Error('Failed to check availability');
-      const data: ApiResponse<AvailabilityCheck> = await response.json();
-      return data.data;
+      return response.data.data;
     },
     enabled: !!therapistId && !!startTime && !!endTime,
     staleTime: 1000, // Keep fresh for 1 second

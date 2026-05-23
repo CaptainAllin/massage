@@ -33,7 +33,9 @@
   },
   "packageManager": "npm@10.2.4",
   "dependencies": {
+    "@prisma/client": "^5.22.0",
     "@supabase/auth-helpers-nextjs": "^0.15.0",
-    "@supabase/supabase-js": "^2.106.0"
+    "@supabase/supabase-js": "^2.106.0",
+    "openai": "^6.38.0"
   }
 }

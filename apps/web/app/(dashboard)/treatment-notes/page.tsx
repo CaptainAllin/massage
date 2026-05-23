@@ -2,13 +2,14 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button, SearchInput, Table, Column, Badge, Skeleton } from '@massage/ui';
+import { Button, SearchInput, Table, Column, Skeleton } from '@massage/ui';
 import { useTreatmentNotes } from '@/lib/hooks';
 import { TreatmentNote } from '@massage/types';
 
+import { useBusinessId } from '@/lib/hooks/use-business-id';
 export default function TreatmentNotesPage() {
   const router = useRouter();
-  const businessId = 'temp-business-id'; // TODO: Get from auth context
+  const businessId = useBusinessId();
   const [search, setSearch] = useState('');
 
   const { data: notesData, isLoading } = useTreatmentNotes(businessId);

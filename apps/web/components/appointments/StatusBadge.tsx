@@ -1,4 +1,3 @@
-import { Badge } from '@massage/ui';
 import { AppointmentStatus } from '@massage/types';
 
 interface StatusBadgeProps {
@@ -42,7 +41,7 @@ const statusConfig: Record<
   },
 };
 
-export function StatusBadge({ status, size = 'md' }: StatusBadgeProps) {
+export function StatusBadge({ status, size: _size = 'md' }: StatusBadgeProps) {
   const config = statusConfig[status];
 
   return (

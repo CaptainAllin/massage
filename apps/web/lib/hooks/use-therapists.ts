@@ -6,12 +6,12 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1
 /**
  * Fetch all therapists
  */
-export function useTherapists(businessId: string, filters?: TherapistFilters) {
+export function useTherapists(businessId: string | undefined, filters?: TherapistFilters) {
   return useQuery({
     queryKey: ['therapists', businessId, filters],
     queryFn: async () => {
       const params = new URLSearchParams({
-        businessId,
+        businessId: businessId!,
         ...(filters?.isActive !== undefined && { isActive: String(filters.isActive) }),
         ...(filters?.search && { search: filters.search }),
         ...(filters?.specialization && { specialization: filters.specialization }),
@@ -34,7 +34,7 @@ export function useTherapists(businessId: string, filters?: TherapistFilters) {
 /**
  * Fetch single therapist
  */
-export function useTherapist(therapistId: string, businessId: string) {
+export function useTherapist(therapistId: string, businessId: string | undefined) {
   return useQuery({
     queryKey: ['therapist', therapistId, businessId],
     queryFn: async () => {
@@ -58,7 +58,7 @@ export function useTherapist(therapistId: string, businessId: string) {
 /**
  * Create therapist mutation
  */
-export function useCreateTherapist(businessId: string) {
+export function useCreateTherapist(businessId: string | undefined) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -85,7 +85,7 @@ export function useCreateTherapist(businessId: string) {
 /**
  * Update therapist mutation
  */
-export function useUpdateTherapist(therapistId: string, businessId: string) {
+export function useUpdateTherapist(therapistId: string, businessId: string | undefined) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -116,7 +116,7 @@ export function useUpdateTherapist(therapistId: string, businessId: string) {
 /**
  * Delete therapist mutation
  */
-export function useDeleteTherapist(businessId: string) {
+export function useDeleteTherapist(businessId: string | undefined) {
   const queryClient = useQueryClient();
 
   return useMutation({

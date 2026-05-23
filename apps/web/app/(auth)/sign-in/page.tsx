@@ -1,40 +1,40 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState, Suspense } from 'react';
 import Link from 'next/link';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { Button } from '@massage/ui';
+import { createClient } from '@/lib/supabase/client';
 
-export default function SignInPage() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const redirectTo = searchParams.get('redirectTo') || '/dashboard';
-
+function SignInForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
-    const { error } = await supabase.auth.signInWithPassword({
+    console.log('[SIGN-IN] Attempting sign in...');
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
+    });
+
+    console.log('[SIGN-IN] Result:', {
+      success: !error,
+      hasSession: !!data.session,
+      userId: data.session?.user?.id,
+      error: error?.message
     });
 
     if (error) {
       setError(error.message);
       setLoading(false);
-    } else {
-      router.push(redirectTo);
-      router.refresh();
     }
+    // Success - let AuthProvider's onStateChange trigger navigation
   };
 
   return (
@@ -106,5 +106,17 @@ export default function SignInPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="text-center text-sm text-gray-500">Loading...</div>
+      </div>
+    }>
+      <SignInForm />
+    </Suspense>
   );
 }

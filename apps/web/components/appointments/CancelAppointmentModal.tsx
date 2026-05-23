@@ -9,7 +9,7 @@ interface CancelAppointmentModalProps {
   isOpen: boolean;
   onClose: () => void;
   appointmentId: string;
-  businessId: string;
+  businessId: string | undefined;
 }
 
 export function CancelAppointmentModal({
@@ -45,6 +45,12 @@ export function CancelAppointmentModal({
     }
   };
 
+  const cancellationOptions = [
+    { value: CancellationType.CLIENT, label: 'Client cancelled' },
+    { value: CancellationType.THERAPIST, label: 'Therapist cancelled' },
+    { value: CancellationType.BUSINESS, label: 'Business/Admin cancelled' },
+  ];
+
   return (
     <Modal
       isOpen={isOpen}
@@ -64,29 +70,12 @@ export function CancelAppointmentModal({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Who is cancelling? <span className="text-red-500">*</span>
           </label>
-          <div className="space-y-2">
-            <Radio
-              name="cancellationType"
-              value={CancellationType.CLIENT}
-              checked={cancellationType === CancellationType.CLIENT}
-              onChange={(e) => setCancellationType(e.target.value as CancellationType)}
-              label="Client cancelled"
-            />
-            <Radio
-              name="cancellationType"
-              value={CancellationType.THERAPIST}
-              checked={cancellationType === CancellationType.THERAPIST}
-              onChange={(e) => setCancellationType(e.target.value as CancellationType)}
-              label="Therapist cancelled"
-            />
-            <Radio
-              name="cancellationType"
-              value={CancellationType.BUSINESS}
-              checked={cancellationType === CancellationType.BUSINESS}
-              onChange={(e) => setCancellationType(e.target.value as CancellationType)}
-              label="Business/Admin cancelled"
-            />
-          </div>
+          <Radio
+            name="cancellationType"
+            options={cancellationOptions}
+            value={cancellationType}
+            onChange={(val) => setCancellationType(val as CancellationType)}
+          />
         </div>
 
         {/* Cancellation Reason */}

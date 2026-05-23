@@ -1,0 +1,11 @@
+## Error: Failed to create user in Supabase (Database error creating new user)
+**Date:** 2026-05-20
+**Description:** When trying to manually create a user via the Supabase UI or programmatically via the API, a `Database error saving new user` occurred.
+**Cause:** The Postgres trigger `on_auth_user_created` attempts to insert the newly created user into the `public.users` table. The Prisma schema defines the `id` column for `public.users` as `String @id @default(cuid())`. Since Prisma handles the generation of `cuid()` values entirely in the application layer, it does not assign a database-level default for the `id` column. When the raw SQL trigger executed without specifying the `id` field, PostgreSQL threw a "null value in column 'id' violates not-null constraint" error, crashing the entire user creation transaction.
+**Solution:** Updated the SQL trigger in `fix-supabase-v2.sql` and `fix-supabase-user-creation.sql` to explicitly pass `gen_random_uuid()::text` for the `id` field when inserting into `public.users`. Also added `SECURITY DEFINER SET search_path = public`, explicitly casted variables (`NEW.id::text`, `NEW.email::text`), and added an `EXCEPTION WHEN OTHERS THEN RETURN NEW;` block to gracefully fail without crashing the Supabase Auth flow. (The fix was applied directly to the database via script).
+
+## Error: Cannot delete users or view users in Supabase Dashboard (Database error finding users)
+**Date:** 2026-05-20
+**Description:** When trying to delete or view users from the Supabase Dashboard, an "Unexpected failure" or "Database error finding users" occurred.
+**Cause:** During debugging of the trigger, a test user was inserted into `auth.users` using raw SQL with a dummy string (`fake_password`) for the `encrypted_password` field instead of a valid bcrypt hash. Supabase's internal auth service (GoTrue) strictly expects valid formatting for its internal columns. When it tried to fetch the user list to display or modify it on the dashboard, it crashed trying to parse the corrupted data of that single test user, breaking the entire Users tab functionality.
+**Solution:** Deleted the corrupted test user directly via a raw SQL `DELETE FROM auth.users WHERE encrypted_password = 'fake_password'` query. This immediately restored full functionality to the Supabase Dashboard.

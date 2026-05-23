@@ -11,13 +11,13 @@ export interface ClientHeaderProps {
 
 export const ClientHeader: React.FC<ClientHeaderProps> = ({ client, onEdit }) => {
   const fullName = `${client.firstName} ${client.lastName}`;
-  const initials = `${client.firstName[0]}${client.lastName[0]}`.toUpperCase();
+  const initials = `${client.firstName[0] || ''}${client.lastName[0] || ''}`.toUpperCase();
 
   return (
     <div className="bg-white border-b border-gray-200 px-6 py-6">
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-4">
-          <Avatar size="lg" name={fullName} />
+          <Avatar size="lg" alt={fullName} fallback={initials} />
 
           <div>
             <div className="flex items-center gap-3">

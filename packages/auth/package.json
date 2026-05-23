@@ -15,9 +15,9 @@
     "@massage/types": "*"
   },
   "devDependencies": {
-    "@clerk/nextjs": "^4.29.3",
     "@massage/config-eslint": "*",
     "@massage/config-typescript": "*",
+    "@supabase/supabase-js": "^2.106.0",
     "@testing-library/react": "^14.1.2",
     "@types/jest": "^29.5.11",
     "@types/react": "^18.2.48",
@@ -29,7 +29,7 @@
     "typescript": "^5.3.3"
   },
   "peerDependencies": {
-    "@clerk/nextjs": "^4.29.3",
+    "@supabase/supabase-js": "^2.106.0",
     "react": "^18.2.0"
   }
 }

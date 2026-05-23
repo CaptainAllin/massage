@@ -9,7 +9,7 @@ import { format } from 'date-fns';
 interface EditAppointmentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  businessId: string;
+  businessId: string | undefined;
   appointment: AppointmentWithRelations | null;
   clients: Client[];
   therapists: Therapist[];
@@ -96,6 +96,31 @@ export function EditAppointmentModal({
 
   if (!appointment) return null;
 
+  const clientOptions = [
+    { value: '', label: 'Select a client' },
+    ...clients.map((client) => ({
+      value: client.id,
+      label: `${client.firstName} ${client.lastName}`,
+    })),
+  ];
+
+  const therapistOptions = [
+    { value: '', label: 'Select a therapist' },
+    ...therapists.map((therapist: any) => ({
+      value: therapist.id,
+      label: therapist.user
+        ? `${therapist.user.firstName || ''} ${therapist.user.lastName || ''}`
+        : 'Unknown',
+    })),
+  ];
+
+  const durationOptions = [
+    { value: '30', label: '30 minutes' },
+    { value: '60', label: '60 minutes' },
+    { value: '90', label: '90 minutes' },
+    { value: '120', label: '120 minutes' },
+  ];
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Edit Appointment" size="lg">
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -108,14 +133,8 @@ export function EditAppointmentModal({
             value={clientId}
             onChange={(e) => setClientId(e.target.value)}
             required
-          >
-            <option value="">Select a client</option>
-            {clients.map((client) => (
-              <option key={client.id} value={client.id}>
-                {client.firstName} {client.lastName}
-              </option>
-            ))}
-          </Select>
+            options={clientOptions}
+          />
         </div>
 
         {/* Therapist Select */}
@@ -127,16 +146,8 @@ export function EditAppointmentModal({
             value={therapistId}
             onChange={(e) => setTherapistId(e.target.value)}
             required
-          >
-            <option value="">Select a therapist</option>
-            {therapists.map((therapist) => (
-              <option key={therapist.id} value={therapist.id}>
-                {therapist.user
-                  ? `${therapist.user.firstName || ''} ${therapist.user.lastName || ''}`
-                  : 'Unknown'}
-              </option>
-            ))}
-          </Select>
+            options={therapistOptions}
+          />
         </div>
 
         {/* Date and Time */}
@@ -174,12 +185,8 @@ export function EditAppointmentModal({
             value={duration}
             onChange={(e) => setDuration(e.target.value)}
             required
-          >
-            <option value="30">30 minutes</option>
-            <option value="60">60 minutes</option>
-            <option value="90">90 minutes</option>
-            <option value="120">120 minutes</option>
-          </Select>
+            options={durationOptions}
+          />
         </div>
 
         {/* Conflict Warning */}

@@ -1,15 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { TreatmentNote, TreatmentNoteFilters, ApiResponse } from '@massage/types';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+import { apiClient } from '@/lib/api-client';
 
 // Fetch all treatment notes
-export function useTreatmentNotes(businessId: string, filters?: TreatmentNoteFilters) {
+export function useTreatmentNotes(businessId: string | undefined, filters?: TreatmentNoteFilters) {
   return useQuery({
     queryKey: ['treatment-notes', businessId, filters],
     queryFn: async () => {
       const params = new URLSearchParams({
-        businessId,
+        businessId: businessId!,
         ...(filters?.clientId && { clientId: filters.clientId }),
         ...(filters?.therapistId && { therapistId: filters.therapistId }),
         ...(filters?.startDate && { startDate: filters.startDate.toISOString() }),
@@ -18,43 +17,29 @@ export function useTreatmentNotes(businessId: string, filters?: TreatmentNoteFil
         ...(filters?.limit && { limit: String(filters.limit) }),
       });
 
-      const response = await fetch(`${API_URL}/treatment-notes?${params}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-
-      if (!response.ok) throw new Error('Failed to fetch treatment notes');
-      return await response.json();
+      const response = await apiClient.get(`/treatment-notes?${params}`);
+      return response.data;
     },
     enabled: !!businessId,
   });
 }
 
 // Fetch single treatment note
-export function useTreatmentNote(noteId: string, businessId: string) {
+export function useTreatmentNote(noteId: string, businessId: string | undefined) {
   return useQuery({
     queryKey: ['treatment-note', noteId, businessId],
     queryFn: async () => {
-      const response = await fetch(
-        `${API_URL}/treatment-notes/${noteId}?businessId=${businessId}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          },
-        }
+      const response = await apiClient.get<ApiResponse<TreatmentNote>>(
+        `/treatment-notes/${noteId}?businessId=${businessId}`
       );
-
-      if (!response.ok) throw new Error('Failed to fetch treatment note');
-      const data: ApiResponse<TreatmentNote> = await response.json();
-      return data.data;
+      return response.data.data;
     },
     enabled: !!noteId && !!businessId,
   });
 }
 
 // Create treatment note mutation
-export function useCreateTreatmentNote(businessId: string) {
+export function useCreateTreatmentNote(businessId: string | undefined) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -71,18 +56,11 @@ export function useCreateTreatmentNote(businessId: string) {
       sessionDuration?: number;
       followUpDate?: string;
     }) => {
-      const response = await fetch(`${API_URL}/treatment-notes`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({ businessId, ...noteData }),
+      const response = await apiClient.post<ApiResponse<TreatmentNote>>('/treatment-notes', {
+        businessId,
+        ...noteData,
       });
-
-      if (!response.ok) throw new Error('Failed to create treatment note');
-      const data: ApiResponse<TreatmentNote> = await response.json();
-      return data.data;
+      return response.data.data;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['treatment-notes', businessId] });
@@ -94,26 +72,16 @@ export function useCreateTreatmentNote(businessId: string) {
 }
 
 // Update treatment note mutation
-export function useUpdateTreatmentNote(noteId: string, businessId: string) {
+export function useUpdateTreatmentNote(noteId: string, businessId: string | undefined) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (noteData: Partial<TreatmentNote>) => {
-      const response = await fetch(
-        `${API_URL}/treatment-notes/${noteId}?businessId=${businessId}`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          },
-          body: JSON.stringify(noteData),
-        }
+      const response = await apiClient.patch<ApiResponse<TreatmentNote>>(
+        `/treatment-notes/${noteId}?businessId=${businessId}`,
+        noteData
       );
-
-      if (!response.ok) throw new Error('Failed to update treatment note');
-      const data: ApiResponse<TreatmentNote> = await response.json();
-      return data.data;
+      return response.data.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['treatment-note', noteId, businessId] });
@@ -123,27 +91,70 @@ export function useUpdateTreatmentNote(noteId: string, businessId: string) {
 }
 
 // Delete treatment note mutation
-export function useDeleteTreatmentNote(businessId: string) {
+export function useDeleteTreatmentNote(businessId: string | undefined) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (noteId: string) => {
-      const response = await fetch(
-        `${API_URL}/treatment-notes/${noteId}?businessId=${businessId}`,
-        {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          },
-        }
+      const response = await apiClient.delete<ApiResponse<TreatmentNote>>(
+        `/treatment-notes/${noteId}?businessId=${businessId}`
       );
-
-      if (!response.ok) throw new Error('Failed to delete treatment note');
-      const data: ApiResponse<TreatmentNote> = await response.json();
-      return data.data;
+      return response.data.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['treatment-notes', businessId] });
+    },
+  });
+}
+
+// Generate AI summary for treatment note
+export function useGenerateAISummary(noteId: string, businessId: string | undefined) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const response = await apiClient.post(
+        `/treatment-notes/${noteId}/ai-summary?businessId=${businessId}`
+      );
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['treatment-note', noteId, businessId] });
+    },
+  });
+}
+
+// Regenerate AI summary for treatment note
+export function useRegenerateAISummary(noteId: string, businessId: string | undefined) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const response = await apiClient.post(
+        `/treatment-notes/${noteId}/ai-summary/regenerate?businessId=${businessId}`
+      );
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['treatment-note', noteId, businessId] });
+    },
+  });
+}
+
+// Update AI summary manually
+export function useUpdateAISummary(noteId: string, businessId: string | undefined) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (summary: string) => {
+      const response = await apiClient.patch<ApiResponse<TreatmentNote>>(
+        `/treatment-notes/${noteId}/ai-summary?businessId=${businessId}`,
+        { summary }
+      );
+      return response.data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['treatment-note', noteId, businessId] });
     },
   });
 }

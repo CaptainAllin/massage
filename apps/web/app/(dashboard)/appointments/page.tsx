@@ -14,8 +14,9 @@ import { useClients } from '@/lib/hooks/use-clients';
 import { useTherapists } from '@/lib/hooks/use-therapists';
 import { CalendarIcon, ClockIcon, UserGroupIcon } from '@heroicons/react/24/outline';
 
+import { useBusinessId } from '@/lib/hooks/use-business-id';
 export default function AppointmentsPage() {
-  const businessId = 'temp-business-id'; // TODO: Get from auth context
+  const businessId = useBusinessId();
 
   // Modal states
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);

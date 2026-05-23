@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Modal, Button, Input, Select, Checkbox } from '@massage/ui';
-import { Therapist, TherapistAvailability } from '@massage/types';
+import { Modal, Button, Input, Checkbox } from '@massage/ui';
+import { Therapist } from '@massage/types';
 import {
   useTherapistAvailability,
   useCreateAvailability,
@@ -12,7 +12,7 @@ import {
 interface TherapistAvailabilityModalProps {
   isOpen: boolean;
   onClose: () => void;
-  businessId: string;
+  businessId: string | undefined;
   therapist: Therapist | null;
 }
 
@@ -97,7 +97,7 @@ export function TherapistAvailabilityModal({
         if (day.isActive) {
           // Create or update availability
           await createAvailability.mutateAsync({
-            businessId,
+            businessId: businessId!,
             therapistId: therapist.id,
             dayOfWeek: day.dayOfWeek,
             startTime: day.startTime,
@@ -117,8 +117,8 @@ export function TherapistAvailabilityModal({
 
   if (!therapist) return null;
 
-  const therapistName = therapist.user
-    ? `${therapist.user.firstName || ''} ${therapist.user.lastName || ''}`
+  const therapistName = (therapist as any).user
+    ? `${(therapist as any).user.firstName || ''} ${(therapist as any).user.lastName || ''}`
     : 'Unknown';
 
   return (

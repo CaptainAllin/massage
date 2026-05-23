@@ -1,62 +1,42 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import React from 'react';
 import { useRouter } from 'next/navigation';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import type { User } from '@supabase/supabase-js';
+import { createClient } from '@/lib/supabase/client';
+import { AuthProvider as SharedAuthProvider } from '@massage/auth';
 
-interface AuthContextType {
-  user: User | null;
-  loading: boolean;
-  signOut: () => Promise<void>;
-}
-
-const AuthContext = createContext<AuthContextType>({
-  user: null,
-  loading: true,
-  signOut: async () => {},
-});
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
-  }
-  return context;
-};
+export { useAuth } from '@massage/auth';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
   const router = useRouter();
-  const supabase = createClientComponentClient();
-
-  useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      router.refresh();
-    });
-
-    return () => subscription.unsubscribe();
-  }, [router, supabase]);
-
-  const signOut = async () => {
-    await supabase.auth.signOut();
-    router.push('/sign-in');
-  };
+  const supabase = createClient();
 
   return (
-    <AuthContext.Provider value={{ user, loading, signOut }}>
+    <SharedAuthProvider
+      supabaseClient={supabase}
+      onStateChange={(event, session) => {
+        console.log('[AUTH PROVIDER] State change:', {
+          event,
+          hasSession: !!session,
+          userId: session?.user?.id
+        });
+
+        // On sign-in, navigate to dashboard (client-side navigation with cookies)
+        if (event === 'SIGNED_IN') {
+          console.log('[AUTH PROVIDER] Navigating to dashboard...');
+          router.push('/dashboard');
+        }
+        // On sign-out, navigate to sign-in page
+        if (event === 'SIGNED_OUT') {
+          console.log('[AUTH PROVIDER] Navigating to sign-in...');
+          router.push('/sign-in');
+        }
+      }}
+      onSignOut={() => {
+        router.push('/sign-in');
+      }}
+    >
       {children}
-    </AuthContext.Provider>
+    </SharedAuthProvider>
   );
 }

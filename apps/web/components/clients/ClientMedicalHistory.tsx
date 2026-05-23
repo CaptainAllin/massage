@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Button, Card, CardHeader, CardTitle, CardContent, Badge, Modal, Input, Textarea, Select } from '@massage/ui';
-import { useMedicalConditions, useCreateMedicalCondition, useUpdateMedicalCondition } from '@/lib/hooks';
-import { MedicalCondition, MedicalConditionStatus, MedicalConditionSeverity } from '@massage/types';
+import { Button, Card, CardContent, Badge, Modal, Input, Textarea, Select } from '@massage/ui';
+import { useMedicalConditions, useCreateMedicalCondition } from '@/lib/hooks';
+import { MedicalCondition } from '@massage/types';
 
 export interface ClientMedicalHistoryProps {
   clientId: string;
-  businessId: string;
+  businessId: string | undefined;
 }
 
 export const ClientMedicalHistory: React.FC<ClientMedicalHistoryProps> = ({

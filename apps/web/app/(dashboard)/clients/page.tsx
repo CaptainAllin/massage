@@ -6,8 +6,9 @@ import { useClients } from '@/lib/hooks';
 import { ClientsTable } from '@/components/clients/ClientsTable';
 import { AddClientModal } from '@/components/clients/AddClientModal';
 
+import { useBusinessId } from '@/lib/hooks/use-business-id';
 export default function ClientsPage() {
-  const businessId = 'temp-business-id'; // TODO: Get from auth context
+  const businessId = useBusinessId();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
