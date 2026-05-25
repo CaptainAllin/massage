@@ -466,12 +466,13 @@ export default function AutomationPage() {
         <AutomationRuleModal businessId={businessId} onClose={() => setShowModal(false)} />
       )}
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Automation</h1>
-          <p className="text-muted-foreground text-sm mt-1">If–then rules that run automatically</p>
+          <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: '#5D4AA8', letterSpacing: '1.4px' }}>Communications</p>
+          <h1 className="text-2xl font-semibold font-display" style={{ color: '#1E1830', letterSpacing: '-0.4px' }}>Automation</h1>
+          <p className="text-sm mt-0.5" style={{ color: '#7A7090' }}>If–then rules that run automatically</p>
         </div>
-        <Button onClick={() => setShowModal(true)} className="[background:linear-gradient(135deg,#5D4AA8,#3F2F87)] hover:opacity-90 text-white">
+        <Button onClick={() => setShowModal(true)} size="sm" className="[background:linear-gradient(135deg,#5D4AA8,#3F2F87)] hover:opacity-90 text-white">
           <Plus className="w-4 h-4 mr-2" />
           New Rule
         </Button>

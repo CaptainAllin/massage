@@ -1,14 +1,17 @@
-import { AppointmentWithRelations } from '@massage/types';
+import { AppointmentStatus, AppointmentWithRelations } from '@massage/types';
 import { AppointmentCard } from './AppointmentCard';
 import { format, setHours, setMinutes, isSameDay } from 'date-fns';
-import { useMemo } from 'react';
+import { useMemo, useRef, useState } from 'react';
 
 interface DayViewProps {
   currentDate: Date;
   appointments: AppointmentWithRelations[];
   onAppointmentClick: (appointment: AppointmentWithRelations) => void;
   onSlotClick: (date: Date, hour: number) => void;
+  onAppointmentDrop?: (appointmentId: string, newStartTime: Date) => void;
 }
+
+const DRAGGABLE_STATUSES = new Set([AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED]);
 
 const HOURS = Array.from({ length: 14 }, (_, i) => i + 7); // 7am to 8pm
 
@@ -17,7 +20,10 @@ export function DayView({
   appointments,
   onAppointmentClick,
   onSlotClick,
+  onAppointmentDrop,
 }: DayViewProps) {
+  const [dragOverHour, setDragOverHour] = useState<number | null>(null);
+  const draggingRef = useRef<{ id: string; originalStart: Date } | null>(null);
   // Filter appointments for the current day and group by hour
   const appointmentsByHour = useMemo(() => {
     const grouped: Record<number, AppointmentWithRelations[]> = {};
@@ -78,22 +84,61 @@ export function DayView({
 
               {/* Appointment Slot */}
               <div
-                className="p-4 hover:bg-gray-50 cursor-pointer transition-colors"
+                className="p-4 cursor-pointer transition-colors"
+                style={{
+                  background: dragOverHour === hour ? '#EDE5F4' : undefined,
+                  outline: dragOverHour === hour ? '2px solid #5D4AA8' : 'none',
+                  outlineOffset: '-2px',
+                }}
                 onClick={() => onSlotClick(slotDateTime, hour)}
+                onDragOver={(e) => {
+                  if (!onAppointmentDrop) return;
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = 'move';
+                  setDragOverHour(hour);
+                }}
+                onDragLeave={(e) => {
+                  if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+                  setDragOverHour(null);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragOverHour(null);
+                  if (!onAppointmentDrop || !draggingRef.current) return;
+                  const { id, originalStart } = draggingRef.current;
+                  const newStart = setMinutes(setHours(currentDate, hour), originalStart.getMinutes());
+                  if (newStart.getHours() === originalStart.getHours() && isSameDay(newStart, originalStart)) return;
+                  onAppointmentDrop(id, newStart);
+                }}
               >
                 {appointmentsInHour.length > 0 ? (
                   <div className="space-y-2">
-                    {appointmentsInHour.map((appointment) => (
-                      <div
-                        key={appointment.id}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onAppointmentClick(appointment);
-                        }}
-                      >
-                        <AppointmentCard appointment={appointment} />
-                      </div>
-                    ))}
+                    {appointmentsInHour.map((appointment) => {
+                      const canDrag = DRAGGABLE_STATUSES.has(appointment.status);
+                      return (
+                        <div
+                          key={appointment.id}
+                          draggable={canDrag}
+                          style={{ cursor: canDrag ? 'grab' : 'default' }}
+                          onDragStart={(e) => {
+                            if (!canDrag) { e.preventDefault(); return; }
+                            draggingRef.current = { id: appointment.id, originalStart: new Date(appointment.startTime) };
+                            e.dataTransfer.effectAllowed = 'move';
+                            e.dataTransfer.setData('text/plain', appointment.id);
+                          }}
+                          onDragEnd={() => {
+                            draggingRef.current = null;
+                            setDragOverHour(null);
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onAppointmentClick(appointment);
+                          }}
+                        >
+                          <AppointmentCard appointment={appointment} />
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="text-sm text-gray-400 italic">Click to schedule</div>

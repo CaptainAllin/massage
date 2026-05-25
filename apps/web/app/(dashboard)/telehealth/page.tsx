@@ -249,10 +249,11 @@ export default function TelehealthPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Telehealth</h1>
-          <p className="text-muted-foreground text-sm mt-1">HIPAA-compliant video consultations</p>
+          <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: '#5D4AA8', letterSpacing: '1.4px' }}>Practice</p>
+          <h1 className="text-2xl font-semibold font-display" style={{ color: '#1E1830', letterSpacing: '-0.4px' }}>Telehealth</h1>
+          <p className="text-sm mt-0.5" style={{ color: '#7A7090' }}>HIPAA-compliant video consultations via Daily.co</p>
         </div>
         {!dailyEnabled && (
           <div className="flex items-center gap-2 text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-sm">

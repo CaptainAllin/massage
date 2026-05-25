@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Modal, Button, Input, Select, Textarea } from '@massage/ui';
 import { Client, Therapist } from '@massage/types';
 import { useCreateAppointment, useCheckAvailability } from '@/lib/hooks/use-appointments';
+import { useOnboardingContext } from '@/components/onboarding/OnboardingProvider';
 import { format } from 'date-fns';
 
 interface AddAppointmentModalProps {
@@ -38,8 +39,10 @@ export function AddAppointmentModal({
   const [price, setPrice] = useState('');
   const [notes, setNotes] = useState('');
   const [isVirtual, setIsVirtual] = useState(false);
+  const [sendReminder, setSendReminder] = useState(true);
 
   const createAppointment = useCreateAppointment(businessId);
+  const { checkedItems, toggleItem } = useOnboardingContext();
 
   // Calculate start and end times for availability check
   const startTime = date && time ? new Date(`${date}T${time}`) : null;
@@ -76,7 +79,10 @@ export function AddAppointmentModal({
         price: price ? parseFloat(price) : undefined,
         notes: notes || undefined,
         isVirtual,
-      });
+        sendReminder,
+      } as any);
+
+      if (!checkedItems.has('book_appointment')) toggleItem('book_appointment');
 
       onClose();
       resetForm();
@@ -95,6 +101,7 @@ export function AddAppointmentModal({
     setPrice('');
     setNotes('');
     setIsVirtual(false);
+    setSendReminder(true);
   };
 
   useEffect(() => {
@@ -250,23 +257,42 @@ export function AddAppointmentModal({
           />
         </div>
 
-        {/* Virtual Appointment Toggle */}
-        <div className="space-y-2">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={isVirtual}
-              onChange={(e) => setIsVirtual(e.target.checked)}
-              className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
-            />
-            <span className="text-sm font-medium text-gray-700">Virtual Appointment (Video Call)</span>
+        {/* Toggles: reminder + virtual */}
+        <div
+          className="rounded-xl p-3 space-y-3"
+          style={{ background: '#FAFAFA', border: '1px solid #EFE9F2' }}
+        >
+          <label className="flex items-center justify-between gap-3 cursor-pointer">
+            <div>
+              <p className="text-sm font-medium" style={{ color: '#1E1830' }}>Send reminder on booking</p>
+              <p className="text-xs mt-0.5" style={{ color: '#7A7090' }}>Notify the client as soon as this appointment is created</p>
+            </div>
+            <div
+              className={`relative w-10 h-5 rounded-full transition-colors flex-shrink-0 ${sendReminder ? 'bg-[#5D4AA8]' : 'bg-gray-200'}`}
+              onClick={() => setSendReminder(v => !v)}
+            >
+              <div
+                className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${sendReminder ? 'translate-x-5' : 'translate-x-0.5'}`}
+              />
+            </div>
           </label>
 
-          {isVirtual && (
-            <p className="text-sm text-blue-600 bg-blue-50 p-2 rounded">
-              A secure video consultation link will be created for this appointment.
-            </p>
-          )}
+          <div className="border-t" style={{ borderColor: '#EFE9F2' }} />
+
+          <label className="flex items-center justify-between gap-3 cursor-pointer">
+            <div>
+              <p className="text-sm font-medium" style={{ color: '#1E1830' }}>Virtual appointment</p>
+              <p className="text-xs mt-0.5" style={{ color: '#7A7090' }}>Create a secure video consultation link</p>
+            </div>
+            <div
+              className={`relative w-10 h-5 rounded-full transition-colors flex-shrink-0 ${isVirtual ? 'bg-[#5D4AA8]' : 'bg-gray-200'}`}
+              onClick={() => setIsVirtual(v => !v)}
+            >
+              <div
+                className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${isVirtual ? 'translate-x-5' : 'translate-x-0.5'}`}
+              />
+            </div>
+          </label>
         </div>
 
         {/* Actions */}

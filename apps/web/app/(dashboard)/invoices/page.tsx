@@ -10,6 +10,7 @@ import { CreateInvoiceDto } from '@massage/types';
 import { useClients } from '@/lib/hooks/use-clients';
 
 import { useBusinessId } from '@/lib/hooks/use-business-id';
+import { InvoicesTour } from '@/components/invoices/InvoicesTour';
 export default function InvoicesPage() {
   const businessId = useBusinessId();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -38,6 +39,9 @@ export default function InvoicesPage() {
           Create Invoice
         </Button>
       </div>
+
+      {/* Onboarding tour */}
+      <InvoicesTour />
 
       {/* Stats Cards */}
       {stats && (

@@ -1,26 +1,30 @@
 'use client';
 
-import { useState, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, Button, Input } from '@massage/ui';
-import { MessageSquare, Search, Send } from 'lucide-react';
+import { MessageSquare, Search, Send, Plus } from 'lucide-react';
 import { useConversations, useConversationMessages, useSendMessage, useMarkConversationRead } from '@/lib/hooks';
+import { useBusinessId } from '@/lib/hooks/use-business-id';
+import { CommunicationsTour } from '@/components/communications/CommunicationsTour';
 import { format } from 'date-fns';
 
-function MessagesPageContent() {
-  const searchParams = useSearchParams();
-  const businessId = searchParams?.get('businessId') || '';
+const CHANNEL_ICONS: Record<string, string> = {
+  EMAIL: '✉️',
+  SMS: '💬',
+  WHATSAPP: '📱',
+};
+
+export default function MessagesPage() {
+  const businessId = useBusinessId();
 
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [messageContent, setMessageContent] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Fetch conversations
   const { data: conversationsData, isLoading: conversationsLoading } = useConversations(businessId, {
     search: searchTerm,
   });
 
-  // Fetch messages for selected conversation
   const { data: messagesData, isLoading: messagesLoading } = useConversationMessages(
     selectedConversationId || '',
     businessId,
@@ -28,7 +32,6 @@ function MessagesPageContent() {
     50
   );
 
-  // Mutations
   const sendMessageMutation = useSendMessage(businessId);
   const markReadMutation = useMarkConversationRead(businessId);
 
@@ -36,16 +39,13 @@ function MessagesPageContent() {
   const messages = messagesData?.data || [];
   const selectedConversation = conversations.find((c: any) => c.id === selectedConversationId) as any;
 
-  // Handle conversation selection
   const handleSelectConversation = (conversationId: string) => {
     setSelectedConversationId(conversationId);
     markReadMutation.mutate(conversationId);
   };
 
-  // Handle send message
   const handleSendMessage = async () => {
     if (!messageContent.trim() || !selectedConversation) return;
-
     try {
       await sendMessageMutation.mutateAsync({
         businessId,
@@ -62,77 +62,93 @@ function MessagesPageContent() {
 
   if (!businessId) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-5">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground font-display">Messages</h1>
-          <p className="text-muted-foreground mt-2">Please select a business first</p>
+          <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: '#5D4AA8', letterSpacing: '1.4px' }}>Communications</p>
+          <h1 className="text-2xl font-semibold font-display" style={{ color: '#1E1830', letterSpacing: '-0.4px' }}>Messages</h1>
+          <p className="text-sm mt-0.5" style={{ color: '#7A7090' }}>Loading...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-foreground font-display">Messages</h1>
-        <p className="text-muted-foreground mt-2">
-          Communicate with your clients via SMS, email, and WhatsApp
-        </p>
+    <div className="space-y-5">
+      <CommunicationsTour />
+
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: '#5D4AA8', letterSpacing: '1.4px' }}>Communications</p>
+          <h1 className="text-2xl font-semibold font-display" style={{ color: '#1E1830', letterSpacing: '-0.4px' }}>Messages</h1>
+          <p className="text-sm mt-0.5" style={{ color: '#7A7090' }}>Communicate with your clients via SMS, Email, and WhatsApp</p>
+        </div>
+        <Button size="sm" variant="primary" onClick={() => {}}>
+          <Plus className="h-4 w-4 mr-1" />
+          New Message
+        </Button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-240px)]">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5" style={{ height: 'calc(100vh - 280px)', minHeight: '500px' }}>
         {/* Conversations List */}
-        <Card className="lg:col-span-1 flex flex-col">
-          <CardHeader>
-            <CardTitle>Conversations</CardTitle>
-            <div className="relative mt-4">
+        <Card className="lg:col-span-1 flex flex-col overflow-hidden">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Conversations</CardTitle>
+            <div className="relative mt-2">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search conversations..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-9 text-sm"
               />
             </div>
           </CardHeader>
-          <CardContent className="flex-1 overflow-y-auto">
+          <CardContent className="flex-1 overflow-y-auto p-3 pt-0">
             {conversationsLoading ? (
-              <div className="text-center text-muted-foreground py-8">Loading...</div>
+              <div className="text-center text-muted-foreground py-8 text-sm">Loading...</div>
             ) : conversations.length === 0 ? (
-              <div className="text-center text-muted-foreground py-8">
-                <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No conversations yet</p>
+              <div className="text-center text-muted-foreground py-10">
+                <MessageSquare className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                <p className="text-sm font-medium">No conversations yet</p>
+                <p className="text-xs mt-1">Send a message to a client to start a thread</p>
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {conversations.map((conversation: any) => (
                   <button
                     key={conversation.id}
                     onClick={() => handleSelectConversation(conversation.id)}
-                    className={`w-full text-left p-3 rounded-lg transition-colors ${
+                    className="w-full text-left p-3 rounded-xl transition-all"
+                    style={
                       selectedConversationId === conversation.id
-                        ? 'bg-primary/10 border-2 border-primary'
-                        : 'hover:bg-accent border-2 border-transparent'
-                    }`}
+                        ? { background: 'linear-gradient(135deg, #F3EFFD, #EDE5F4)', border: '1.5px solid rgba(93,74,168,0.3)' }
+                        : { background: 'transparent', border: '1.5px solid transparent' }
+                    }
                   >
-                    <div className="flex justify-between items-start">
-                      <div className="font-semibold">
-                        {conversation.client?.firstName} {conversation.client?.lastName}
+                    <div className="flex justify-between items-start gap-2">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="text-xs flex-shrink-0">{CHANNEL_ICONS[conversation.type] ?? '💬'}</span>
+                        <span className="font-medium text-sm truncate" style={{ color: '#1E1830' }}>
+                          {conversation.client?.firstName} {conversation.client?.lastName}
+                        </span>
                       </div>
                       {conversation.unreadCount > 0 && (
-                        <span className="bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full">
+                        <span
+                          className="flex-shrink-0 text-xs px-1.5 py-0.5 rounded-full font-semibold"
+                          style={{ background: '#5D4AA8', color: '#fff' }}
+                        >
                           {conversation.unreadCount}
                         </span>
                       )}
                     </div>
-                    <div className="text-sm text-muted-foreground truncate">
+                    <p className="text-xs mt-0.5 truncate" style={{ color: '#7A7090' }}>
                       {conversation.lastMessagePreview || 'No messages yet'}
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      {conversation.lastMessageAt
-                        ? format(new Date(conversation.lastMessageAt), 'MMM d, h:mm a')
-                        : ''}
-                    </div>
+                    </p>
+                    {conversation.lastMessageAt && (
+                      <p className="text-xs mt-0.5" style={{ color: '#9E96B0' }}>
+                        {format(new Date(conversation.lastMessageAt), 'MMM d, h:mm a')}
+                      </p>
+                    )}
                   </button>
                 ))}
               </div>
@@ -141,101 +157,96 @@ function MessagesPageContent() {
         </Card>
 
         {/* Message Thread */}
-        <Card className="lg:col-span-2 flex flex-col">
+        <Card className="lg:col-span-2 flex flex-col overflow-hidden">
           {selectedConversation ? (
             <>
-              <CardHeader>
-                <CardTitle>
-                  {selectedConversation.client?.firstName} {selectedConversation.client?.lastName}
-                </CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  {selectedConversation.type} conversation
-                </p>
+              <CardHeader className="pb-3" style={{ borderBottom: '1px solid #F0EBF8' }}>
+                <div className="flex items-center gap-2">
+                  <span className="text-base">{CHANNEL_ICONS[selectedConversation.type] ?? '💬'}</span>
+                  <div>
+                    <CardTitle className="text-base">
+                      {selectedConversation.client?.firstName} {selectedConversation.client?.lastName}
+                    </CardTitle>
+                    <p className="text-xs mt-0.5" style={{ color: '#7A7090' }}>
+                      {selectedConversation.type} conversation
+                    </p>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent className="flex-1 overflow-y-auto">
+              <CardContent className="flex-1 overflow-y-auto p-4">
                 {messagesLoading ? (
-                  <div className="text-center text-muted-foreground py-8">Loading messages...</div>
+                  <div className="text-center text-muted-foreground py-8 text-sm">Loading messages...</div>
                 ) : messages.length === 0 ? (
-                  <div className="text-center text-muted-foreground py-8">
-                    <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No messages yet. Start the conversation!</p>
+                  <div className="text-center text-muted-foreground py-10">
+                    <MessageSquare className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                    <p className="text-sm font-medium">No messages yet</p>
+                    <p className="text-xs mt-1">Start the conversation below</p>
                   </div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {[...messages].reverse().map((message: any) => (
                       <div
                         key={message.id}
-                        className={`flex ${
-                          message.direction === 'OUTBOUND' ? 'justify-end' : 'justify-start'
-                        }`}
+                        className={`flex ${message.direction === 'OUTBOUND' ? 'justify-end' : 'justify-start'}`}
                       >
                         <div
-                          className={`max-w-[70%] rounded-lg p-3 ${
+                          className="max-w-[72%] rounded-2xl px-4 py-2.5"
+                          style={
                             message.direction === 'OUTBOUND'
-                              ? 'bg-primary text-primary-foreground'
-                              : 'bg-accent'
-                          }`}
+                              ? { background: 'linear-gradient(135deg, #5D4AA8, #3F2F87)', color: '#fff' }
+                              : { background: '#F3EFFD', color: '#1E1830' }
+                          }
                         >
                           {message.subject && (
-                            <div className="font-semibold mb-1">{message.subject}</div>
+                            <p className="text-xs font-semibold mb-1 opacity-80">{message.subject}</p>
                           )}
-                          <div className="whitespace-pre-wrap">{message.content}</div>
-                          <div className="text-xs mt-2 opacity-70">
+                          <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                          <p className="text-xs mt-1.5 opacity-60">
                             {format(new Date(message.createdAt), 'MMM d, h:mm a')}
-                            {message.status && (
-                              <span className="ml-2">• {message.status}</span>
-                            )}
-                          </div>
+                            {message.status && ` · ${message.status}`}
+                          </p>
                         </div>
                       </div>
                     ))}
                   </div>
                 )}
               </CardContent>
-              <div className="border-t p-4">
+              <div className="p-4" style={{ borderTop: '1px solid #F0EBF8' }}>
                 <div className="flex gap-2">
                   <Input
                     placeholder="Type your message..."
                     value={messageContent}
                     onChange={(e) => setMessageContent(e.target.value)}
-                    onKeyPress={(e) => {
+                    onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
                         handleSendMessage();
                       }
                     }}
-                    className="flex-1"
+                    className="flex-1 text-sm"
                   />
                   <Button
                     onClick={handleSendMessage}
                     disabled={!messageContent.trim() || sendMessageMutation.isPending}
+                    style={{ background: 'linear-gradient(135deg, #5D4AA8, #3F2F87)', color: '#fff' }}
                   >
                     <Send className="h-4 w-4" />
                   </Button>
                 </div>
-                <div className="text-xs text-muted-foreground mt-2">
-                  Press Enter to send, Shift+Enter for new line
-                </div>
+                <p className="text-xs mt-1.5" style={{ color: '#9E96B0' }}>Press Enter to send · Shift+Enter for a new line</p>
               </div>
             </>
           ) : (
             <div className="flex-1 flex items-center justify-center">
-              <div className="text-center text-muted-foreground">
-                <MessageSquare className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                <p>Select a conversation to view messages</p>
+              <div className="text-center" style={{ color: '#9E96B0' }}>
+                <MessageSquare className="h-14 w-14 mx-auto mb-4 opacity-30" />
+                <p className="font-medium text-sm">Select a conversation to view messages</p>
+                <p className="text-xs mt-1">Or start a new thread with a client</p>
               </div>
             </div>
           )}
         </Card>
       </div>
     </div>
-  );
-}
-
-export default function MessagesPage() {
-  return (
-    <Suspense fallback={<div className="text-center py-12 text-sm text-gray-500">Loading messages...</div>}>
-      <MessagesPageContent />
-    </Suspense>
   );
 }

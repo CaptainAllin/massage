@@ -1,12 +1,17 @@
 'use client';
 
+import { useMemo } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Sidebar, Header } from '@massage/ui';
 import { useAuth, useRole } from '@massage/auth';
 import { QuickCallProvider, useQuickCall } from '@/components/quick-call/QuickCallContext';
 import { QuickCallModal } from '@/components/quick-call/QuickCallModal';
 import { useBusinessId } from '@/lib/hooks/use-business-id';
 import { useAppointments } from '@/lib/hooks/use-appointments';
+import { OnboardingProvider, useOnboardingContext } from '@/components/onboarding/OnboardingProvider';
+import { WelcomeModal } from '@/components/onboarding/WelcomeModal';
+import { OnboardingProgressBar } from '@/components/onboarding/OnboardingProgressBar';
 
 function PhoneCallIcon() {
   return (
@@ -44,14 +49,32 @@ function QuickCallButton() {
 }
 
 function DashboardContent({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
   const { user, signOut } = useAuth();
   const { role } = useRole();
   const businessId = useBusinessId();
+  const {
+    loaded,
+    welcomeShown,
+    setWelcomeShown,
+    checklistDismissed,
+    dismissChecklist,
+    reopenChecklist,
+    completedCount,
+    totalCount,
+    progressPct,
+    allDone,
+  } = useOnboardingContext();
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
+  // Memoized so React Query sees a stable query key — avoids re-fetching on
+  // every layout render (layout stays mounted across all dashboard pages).
+  const [today, tomorrow] = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    const t = new Date(d);
+    t.setDate(t.getDate() + 1);
+    return [d, t];
+  }, []);
 
   const { data: appointmentsData } = useAppointments(
     businessId || '',
@@ -75,6 +98,8 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
         userEmail={email}
         userInitials={initials}
         onSignOut={signOut}
+        onGetStarted={reopenChecklist}
+        onboardingProgress={progressPct}
       />
 
       <div className="flex flex-1 flex-col overflow-hidden lg:ml-[230px]">
@@ -102,19 +127,37 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
         />
 
         <main className="flex-1 overflow-y-auto" style={{ background: '#F3F4F7', padding: '24px 28px 32px' }}>
+          {loaded && !checklistDismissed && !allDone && (
+            <OnboardingProgressBar
+              completedCount={completedCount}
+              totalCount={totalCount}
+              progressPct={progressPct}
+              onDismiss={dismissChecklist}
+            />
+          )}
           {children}
         </main>
       </div>
 
       <QuickCallModal />
+
+      {loaded && !welcomeShown && (
+        <WelcomeModal
+          firstName={firstName}
+          onStart={() => { setWelcomeShown(true); router.push('/setup'); }}
+          onSkip={() => setWelcomeShown(true)}
+        />
+      )}
     </div>
   );
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
-    <QuickCallProvider>
-      <DashboardContent>{children}</DashboardContent>
-    </QuickCallProvider>
+    <OnboardingProvider>
+      <QuickCallProvider>
+        <DashboardContent>{children}</DashboardContent>
+      </QuickCallProvider>
+    </OnboardingProvider>
   );
 }

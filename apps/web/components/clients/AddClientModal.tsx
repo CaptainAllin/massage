@@ -33,6 +33,7 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
     insuranceProvider: '',
     insurancePolicyNumber: '',
     goals: '',
+    healthNotes: '',
   });
 
   const handleChange = (field: string, value: string) => {
@@ -41,9 +42,11 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
 
   const handleSubmit = async () => {
     try {
+      const { healthNotes, ...rest } = formData;
       await createClient.mutateAsync({
-        ...formData,
+        ...rest,
         dateOfBirth: formData.dateOfBirth ? new Date(formData.dateOfBirth) : undefined,
+        ...(healthNotes ? { medicalHistory: { notes: healthNotes } } : {}),
       });
       onClose();
       setFormData({
@@ -63,6 +66,7 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
         insuranceProvider: '',
         insurancePolicyNumber: '',
         goals: '',
+        healthNotes: '',
       });
     } catch (error) {
       console.error('Failed to create client:', error);
@@ -270,6 +274,18 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
                 value={formData.goals}
                 onChange={(e) => handleChange('goals', e.target.value)}
                 placeholder="Pain management, stress relief, improved mobility..."
+                rows={3}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Health Notes
+              </label>
+              <Textarea
+                value={formData.healthNotes}
+                onChange={(e) => handleChange('healthNotes', e.target.value)}
+                placeholder="Recent injuries, surgeries, pregnancy, blood pressure concerns, contraindications…"
                 rows={3}
               />
             </div>

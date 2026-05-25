@@ -39,10 +39,9 @@ export default function IntakeFormsPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground font-display">Intake Forms</h1>
-          <p className="text-muted-foreground mt-1 sm:mt-2">
-            Manage and review client intake forms
-          </p>
+          <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: '#5D4AA8', letterSpacing: '1.4px' }}>Practice</p>
+          <h1 className="text-2xl font-semibold font-display" style={{ color: '#1E1830', letterSpacing: '-0.4px' }}>Intake Forms</h1>
+          <p className="text-sm mt-0.5" style={{ color: '#7A7090' }}>Manage and review client intake forms</p>
         </div>
         <Link href="/intake-forms/templates">
           <Button variant="outline">

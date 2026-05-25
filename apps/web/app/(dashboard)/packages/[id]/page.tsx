@@ -2,9 +2,9 @@
 
 import React, { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Card, CardContent, Button, Skeleton, Badge, Tabs, Tab } from '@massage/ui';
-import { ArrowLeft, Calendar, AlertTriangle } from 'lucide-react';
-import { usePackage } from '@/lib/hooks/use-packages';
+import { Card, CardContent, Button, Skeleton, Badge, Tabs, Tab, Modal, Input } from '@massage/ui';
+import { ArrowLeft, Calendar, AlertTriangle, Pencil } from 'lucide-react';
+import { usePackage, useUpdatePackage } from '@/lib/hooks/use-packages';
 import { PackageSessionHistory } from '@/components/packages/PackageSessionHistory';
 import { PackageStatus } from '@massage/types';
 
@@ -16,8 +16,41 @@ export default function PackageDetailPage() {
   const businessId = useBusinessId();
 
   const { data: packagePurchase, isLoading } = usePackage(packageId, businessId);
+  const updateMutation = useUpdatePackage(businessId);
 
   const [activeTab, setActiveTab] = useState('details');
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState({ name: '', description: '', expirationDate: '' });
+  const [editLoading, setEditLoading] = useState(false);
+
+  const openEdit = () => {
+    if (!packagePurchase) return;
+    setEditForm({
+      name: packagePurchase.name,
+      description: packagePurchase.description || '',
+      expirationDate: packagePurchase.expirationDate
+        ? new Date(packagePurchase.expirationDate).toISOString().split('T')[0]
+        : '',
+    });
+    setIsEditOpen(true);
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEditLoading(true);
+    try {
+      await updateMutation.mutateAsync({
+        id: packageId,
+        businessId: businessId!,
+        name: editForm.name,
+        description: editForm.description || undefined,
+        expirationDate: editForm.expirationDate || undefined,
+      } as any);
+      setIsEditOpen(false);
+    } finally {
+      setEditLoading(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -72,7 +105,50 @@ export default function PackageDetailPage() {
           </div>
           <StatusBadge status={packagePurchase.status as PackageStatus} />
         </div>
+        <Button variant="outline" onClick={openEdit}>
+          <Pencil className="h-4 w-4 mr-2" />
+          Edit
+        </Button>
       </div>
+
+      {/* Edit Modal */}
+      <Modal isOpen={isEditOpen} onClose={() => setIsEditOpen(false)} title="Edit Package">
+        <form onSubmit={handleEditSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Package Name *</label>
+            <Input
+              value={editForm.name}
+              onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <Input
+              value={editForm.description}
+              onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+              placeholder="Optional description"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Expiry Date</label>
+            <Input
+              type="date"
+              value={editForm.expirationDate}
+              onChange={(e) => setEditForm({ ...editForm, expirationDate: e.target.value })}
+            />
+            <p className="text-xs text-gray-500 mt-1">Leave blank for no expiry.</p>
+          </div>
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <Button variant="outline" type="button" onClick={() => setIsEditOpen(false)} disabled={editLoading}>
+              Cancel
+            </Button>
+            <Button variant="primary" type="submit" disabled={editLoading}>
+              {editLoading ? 'Saving…' : 'Save Changes'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Expiration Warning */}
       {isExpiringSoon && !isExpired && (

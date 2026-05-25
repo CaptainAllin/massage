@@ -5,9 +5,12 @@ import { AppointmentStatus, AppointmentWithRelations, Therapist } from '@massage
 import { CalendarFilters } from './CalendarFilters';
 import { WeekView } from './WeekView';
 import { DayView } from './DayView';
+import { MonthView } from './MonthView';
 import { useAppointments } from '@/lib/hooks/use-appointments';
-import { startOfWeek, endOfWeek, startOfDay, endOfDay, getWeek, format } from 'date-fns';
+import { startOfWeek, endOfWeek, startOfDay, endOfDay, startOfMonth, endOfMonth, getWeek, format } from 'date-fns';
 import { EmptyState } from '@massage/ui';
+import { useQueryClient } from '@tanstack/react-query';
+import { apiClient } from '@/lib/api-client';
 
 interface AppointmentCalendarProps {
   businessId: string | undefined;
@@ -44,6 +47,9 @@ export function AppointmentCalendar({
     if (viewMode === 'day') {
       return { startDate: startOfDay(currentDate), endDate: endOfDay(currentDate) };
     }
+    if (viewMode === 'month') {
+      return { startDate: startOfMonth(currentDate), endDate: endOfMonth(currentDate) };
+    }
     return {
       startDate: startOfWeek(currentDate, { weekStartsOn: 0 }),
       endDate: endOfWeek(currentDate, { weekStartsOn: 0 }),
@@ -70,10 +76,26 @@ export function AppointmentCalendar({
   const dateRangeLabel =
     viewMode === 'day'
       ? format(currentDate, 'EEEE, d MMMM yyyy')
+      : viewMode === 'month'
+      ? format(currentDate, 'MMMM yyyy')
       : `${format(weekStart, 'd MMM')} – ${format(weekEnd, 'd MMM yyyy')}`;
 
   const handleSlotClick = (date: Date, _hour: number) => {
     onSlotClick(date, selectedTherapist || undefined);
+  };
+
+  const queryClient = useQueryClient();
+
+  const handleAppointmentDrop = async (appointmentId: string, newStartTime: Date) => {
+    try {
+      await apiClient.patch(`/appointments/${appointmentId}?businessId=${businessId}`, {
+        businessId,
+        startTime: newStartTime.toISOString(),
+      });
+      queryClient.invalidateQueries({ queryKey: ['appointments', businessId] });
+    } catch {
+      // silently ignore — the calendar will not update if the slot was unavailable
+    }
   };
 
   const calendarContent = isLoading ? (
@@ -96,12 +118,20 @@ export function AppointmentCalendar({
         description="There are no appointments scheduled for this time period. Click on a time slot to create one."
       />
     </div>
-  ) : viewMode === 'week' || viewMode === 'month' ? (
+  ) : viewMode === 'month' ? (
+    <MonthView
+      currentDate={currentDate}
+      appointments={appointments}
+      onAppointmentClick={onAppointmentClick}
+      onSlotClick={handleSlotClick}
+    />
+  ) : viewMode === 'week' ? (
     <WeekView
       currentDate={currentDate}
       appointments={appointments}
       onAppointmentClick={onAppointmentClick}
       onSlotClick={handleSlotClick}
+      onAppointmentDrop={handleAppointmentDrop}
     />
   ) : (
     <DayView
@@ -109,6 +139,7 @@ export function AppointmentCalendar({
       appointments={appointments}
       onAppointmentClick={onAppointmentClick}
       onSlotClick={handleSlotClick}
+      onAppointmentDrop={handleAppointmentDrop}
     />
   );
 

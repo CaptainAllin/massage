@@ -1,5 +1,5 @@
 import { AppointmentStatus, Therapist } from '@massage/types';
-import { format, addDays, subDays, getWeek, startOfWeek, endOfWeek } from 'date-fns';
+import { format, addDays, subDays, addMonths, subMonths, getWeek, startOfWeek, endOfWeek } from 'date-fns';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import { APT_COLORS, colorForTherapist } from '@/lib/appointment-colors';
 
@@ -29,11 +29,15 @@ export function CalendarFilters({
   onViewModeChange,
 }: CalendarFiltersProps) {
   const handlePrev = () => {
-    onDateChange(subDays(currentDate, viewMode === 'day' ? 1 : 7));
+    if (viewMode === 'day') onDateChange(subDays(currentDate, 1));
+    else if (viewMode === 'month') onDateChange(subMonths(currentDate, 1));
+    else onDateChange(subDays(currentDate, 7));
   };
 
   const handleNext = () => {
-    onDateChange(addDays(currentDate, viewMode === 'day' ? 1 : 7));
+    if (viewMode === 'day') onDateChange(addDays(currentDate, 1));
+    else if (viewMode === 'month') onDateChange(addMonths(currentDate, 1));
+    else onDateChange(addDays(currentDate, 7));
   };
 
   const handleToday = () => onDateChange(new Date());
@@ -45,6 +49,8 @@ export function CalendarFilters({
   const dateLabel =
     viewMode === 'day'
       ? format(currentDate, 'EEE, d MMM yyyy')
+      : viewMode === 'month'
+      ? format(currentDate, 'MMMM yyyy')
       : `${format(weekStart, 'd MMM')} – ${format(weekEnd, 'd MMM yyyy')}`;
 
   return (

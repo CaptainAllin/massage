@@ -10,9 +10,9 @@ function createQueryClient() {
   return new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: 60 * 1000, // 1 minute
+        staleTime: 5 * 60 * 1000, // 5 minutes — data stays fresh across page switches
+        gcTime: 10 * 60 * 1000,   // keep unmounted query data in memory for 10 minutes
         refetchOnWindowFocus: false,
-        // Show stale cached data while revalidating (good for offline)
         placeholderData: (prev: unknown) => prev,
       },
     },
@@ -22,12 +22,12 @@ function createQueryClient() {
 export function QueryProvider({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(createQueryClient);
   const hydrated = useRef(false);
+  const persistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Restore cache from localStorage on mount
   useEffect(() => {
     if (hydrated.current) return;
     hydrated.current = true;
-
     try {
       const raw = localStorage.getItem(CACHE_KEY);
       if (!raw) return;
@@ -39,28 +39,32 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
     }
   }, [queryClient]);
 
-  // Persist cache to localStorage on every cache change
+  // Persist cache to localStorage, debounced to avoid thrashing on rapid updates
   useEffect(() => {
     const unsubscribe = queryClient.getQueryCache().subscribe(() => {
-      try {
-        // Only persist successful queries to avoid storing error states
-        const dehydrated = dehydrate(queryClient, {
-          shouldDehydrateQuery: (q) =>
-            q.state.status === 'success' &&
-            // Only cache appointment and client data for offline use
-            (String(q.queryKey[0]).includes('appointments') ||
-              String(q.queryKey[0]).includes('clients')),
-        });
-        localStorage.setItem(
-          CACHE_KEY,
-          JSON.stringify({ timestamp: Date.now(), data: dehydrated })
-        );
-      } catch {
-        // quota exceeded or private browsing — ignore
-      }
+      if (persistTimer.current) clearTimeout(persistTimer.current);
+      persistTimer.current = setTimeout(() => {
+        try {
+          const dehydrated = dehydrate(queryClient, {
+            shouldDehydrateQuery: (q) =>
+              q.state.status === 'success' &&
+              (String(q.queryKey[0]).includes('appointments') ||
+                String(q.queryKey[0]).includes('clients')),
+          });
+          localStorage.setItem(
+            CACHE_KEY,
+            JSON.stringify({ timestamp: Date.now(), data: dehydrated })
+          );
+        } catch {
+          // quota exceeded or private browsing — ignore
+        }
+      }, 2000);
     });
 
-    return unsubscribe;
+    return () => {
+      unsubscribe();
+      if (persistTimer.current) clearTimeout(persistTimer.current);
+    };
   }, [queryClient]);
 
   return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;

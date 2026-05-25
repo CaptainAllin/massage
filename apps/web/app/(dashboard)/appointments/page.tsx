@@ -1,9 +1,11 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { Button } from '@massage/ui';
 import { AppointmentWithRelations } from '@massage/types';
 import { AppointmentCalendar } from '@/components/appointments/AppointmentCalendar';
+import { AppointmentsTour } from '@/components/appointments/AppointmentsTour';
 import { AddAppointmentModal } from '@/components/appointments/AddAppointmentModal';
 import { EditAppointmentModal } from '@/components/appointments/EditAppointmentModal';
 import { AppointmentDetailModal } from '@/components/appointments/AppointmentDetailModal';
@@ -12,11 +14,13 @@ import { TherapistAvailabilityModal } from '@/components/appointments/TherapistA
 import { TimeOffModal } from '@/components/appointments/TimeOffModal';
 import { useClients } from '@/lib/hooks/use-clients';
 import { useTherapists } from '@/lib/hooks/use-therapists';
-import { ClockIcon, UserGroupIcon } from '@heroicons/react/24/outline';
+import { ClockIcon, UserGroupIcon, LinkIcon } from '@heroicons/react/24/outline';
 import { useBusinessId } from '@/lib/hooks/use-business-id';
+import { useOnboardingContext } from '@/components/onboarding/OnboardingProvider';
 
 export default function AppointmentsPage() {
   const businessId = useBusinessId();
+  const { checkedItems, toggleItem } = useOnboardingContext();
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -54,8 +58,20 @@ export default function AppointmentsPage() {
     setIsCancelModalOpen(true);
   };
 
+  const bookingHref = businessId ? `/book/${businessId}` : null;
+
+  const handleCopyBookingLink = () => {
+    if (!bookingHref) return;
+    const url = `${window.location.origin}${bookingHref}`;
+    navigator.clipboard.writeText(url).catch(() => {});
+    if (!checkedItems.has('share_booking_link')) toggleItem('share_booking_link');
+  };
+
   return (
     <div className="space-y-5 max-w-7xl">
+      {/* Onboarding tour */}
+      <AppointmentsTour businessId={businessId} />
+
       {/* Utility actions row */}
       <div className="flex justify-end gap-2">
         <Button
@@ -147,6 +163,47 @@ export default function AppointmentsPage() {
         businessId={businessId}
         therapists={therapists || []}
       />
+
+      {/* Booking page link card */}
+      {bookingHref && (
+        <div
+          className="rounded-2xl p-5 flex items-center gap-4"
+          style={{ background: '#fff', border: '1px solid #EFE9F2', boxShadow: '0 2px 12px rgba(93,74,168,0.06)' }}
+        >
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{ background: '#EDE5F4' }}
+          >
+            <LinkIcon className="h-5 w-5" style={{ color: '#5D4AA8' }} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold" style={{ color: '#1E1830' }}>Client booking page</p>
+            <p className="text-xs mt-0.5 truncate" style={{ color: '#7A7090' }}>
+              Share this link so clients can self-book without a login
+            </p>
+            <p className="text-xs mt-1 font-medium truncate" style={{ color: '#5D4AA8' }}>
+              {typeof window !== 'undefined' ? window.location.origin : ''}{bookingHref}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button
+              onClick={handleCopyBookingLink}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+              style={{ border: '1px solid rgba(93,74,168,0.3)', color: '#5D4AA8', background: '#fff' }}
+            >
+              Copy link
+            </button>
+            <Link
+              href={bookingHref}
+              target="_blank"
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold"
+              style={{ background: 'linear-gradient(135deg, #5D4AA8, #3F2F87)', color: '#fff' }}
+            >
+              Preview
+            </Link>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

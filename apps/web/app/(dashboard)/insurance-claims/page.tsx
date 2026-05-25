@@ -7,6 +7,7 @@ import {
   CheckCircle, Clock, XCircle, AlertCircle, Building2, X,
 } from 'lucide-react';
 import { useBusinessId } from '@/lib/hooks/use-business-id';
+import { InsuranceTour } from '@/components/insurance/InsuranceTour';
 import {
   useInsuranceProviders, useCreateInsuranceProvider, useUpdateInsuranceProvider, useDeleteInsuranceProvider,
   useInsuranceClaims, useCreateInsuranceClaim, useUpdateInsuranceClaim, useDeleteInsuranceClaim,
@@ -705,6 +706,9 @@ export default function InsuranceClaimsPage() {
           </div>
         </div>
       </div>
+
+      {/* Onboarding tour */}
+      <InsuranceTour />
 
       {/* Summary stats */}
       {claims.length > 0 && (

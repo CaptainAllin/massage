@@ -50,6 +50,8 @@ export interface SidebarProps {
   userEmail?: string;
   userInitials?: string;
   onSignOut?: () => void;
+  onGetStarted?: () => void;
+  onboardingProgress?: number;
 }
 
 const defaultMenuGroups: MenuGroup[] = [
@@ -230,7 +232,10 @@ function NavItem({ item, active, onClick }: { item: MenuItem; active: boolean; o
     <Link
       href={item.href}
       onClick={onClick}
-      className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-all relative group"
+      className={cn(
+        'flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors group',
+        !active && 'hover:bg-[#EDE5F4]'
+      )}
       style={
         active
           ? {
@@ -261,13 +266,6 @@ function NavItem({ item, active, onClick }: { item: MenuItem; active: boolean; o
           {item.badge}
         </span>
       )}
-      {!active && (
-        <span
-          className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"
-          style={{ background: '#EDE5F4' }}
-          aria-hidden="true"
-        />
-      )}
     </Link>
   );
 }
@@ -279,6 +277,8 @@ function MenuContent({
   userInitials,
   onSignOut,
   onClose,
+  onGetStarted,
+  onboardingProgress,
 }: {
   userRole?: string | null;
   userName?: string;
@@ -286,6 +286,8 @@ function MenuContent({
   userInitials?: string;
   onSignOut?: () => void;
   onClose?: () => void;
+  onGetStarted?: () => void;
+  onboardingProgress?: number;
 }) {
   const pathname = usePathname();
 
@@ -336,6 +338,54 @@ function MenuContent({
         ))}
       </nav>
 
+      {/* Getting Started button */}
+      {onGetStarted && (
+        <div className="mx-3 mb-2">
+          <button
+            onClick={() => { onGetStarted(); onClose?.(); }}
+            className="w-full flex items-center gap-2.5 rounded-xl px-3 py-2.5 transition-all"
+            style={{ background: 'rgba(93,74,168,0.08)', border: '1px solid rgba(93,74,168,0.14)' }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(93,74,168,0.14)')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(93,74,168,0.08)')}
+          >
+            <div
+              className="w-6 h-6 rounded-lg flex-shrink-0 flex items-center justify-center"
+              style={{ background: 'linear-gradient(135deg, #5D4AA8, #7665C2)' }}
+            >
+              <svg width="12" height="12" fill="none" viewBox="0 0 24 24">
+                <path d="M12 2L14.09 8.26L21 9.27L16 14.14L17.18 21.02L12 17.77L6.82 21.02L8 14.14L3 9.27L9.91 8.26L12 2Z" fill="white" />
+              </svg>
+            </div>
+            <div className="flex-1 min-w-0 text-left">
+              <p className="text-xs font-semibold" style={{ color: '#3D3450' }}>Getting Started</p>
+              {onboardingProgress != null && onboardingProgress < 100 && (
+                <div className="mt-1 w-full overflow-hidden rounded-full" style={{ height: '3px', background: 'rgba(93,74,168,0.15)' }}>
+                  <div
+                    style={{
+                      width: `${onboardingProgress}%`,
+                      height: '3px',
+                      background: 'linear-gradient(90deg, #7665C2, #5D4AA8)',
+                      borderRadius: '9999px',
+                      transition: 'width 0.5s ease',
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+            {onboardingProgress != null && onboardingProgress < 100 && (
+              <span className="text-xs font-bold tabular-nums flex-shrink-0" style={{ color: '#5D4AA8' }}>
+                {onboardingProgress}%
+              </span>
+            )}
+            {onboardingProgress === 100 && (
+              <svg width="14" height="14" fill="#2D8A67" viewBox="0 0 24 24">
+                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
+              </svg>
+            )}
+          </button>
+        </div>
+      )}
+
       {/* User profile card */}
       <div
         className="mx-3 mb-3 rounded-2xl p-3 flex items-center gap-2.5"
@@ -379,6 +429,8 @@ export function Sidebar({
   userEmail,
   userInitials,
   onSignOut,
+  onGetStarted,
+  onboardingProgress,
 }: SidebarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
@@ -388,6 +440,8 @@ export function Sidebar({
     userEmail,
     userInitials,
     onSignOut,
+    onGetStarted,
+    onboardingProgress,
   };
 
   return (

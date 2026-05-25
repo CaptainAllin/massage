@@ -33,12 +33,13 @@ export default function TreatmentNoteDetailPage() {
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground font-display">SOAP Note</h1>
-          <p className="text-muted-foreground mt-2">
+          <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: '#5D4AA8', letterSpacing: '1.4px' }}>Practice</p>
+          <h1 className="text-2xl font-semibold font-display" style={{ color: '#1E1830', letterSpacing: '-0.4px' }}>SOAP Note</h1>
+          <p className="text-sm mt-0.5" style={{ color: '#7A7090' }}>
             {noteData.client
               ? `${noteData.client.firstName} ${noteData.client.lastName}`
               : 'Unknown Client'}{' '}
-            - {new Date(note.createdAt).toLocaleDateString()}
+            · {new Date(note.createdAt).toLocaleDateString()}
           </p>
         </div>
         <div className="flex gap-3">

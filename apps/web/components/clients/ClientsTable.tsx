@@ -12,6 +12,7 @@ export interface ClientsTableProps {
   currentPage: number;
   onPageChange: (page: number) => void;
   total?: number;
+  onAddClient?: () => void;
 }
 
 const APT_PALETTE = APT_COLORS.map((c, i) => ({ bg: APT_SOFT[i], text: c }));
@@ -56,6 +57,7 @@ export const ClientsTable: React.FC<ClientsTableProps> = ({
   currentPage,
   onPageChange,
   total,
+  onAddClient,
 }) => {
   const router = useRouter();
 
@@ -67,11 +69,56 @@ export const ClientsTable: React.FC<ClientsTableProps> = ({
           borderRadius: 18,
           border: '1px solid #EFE9F2',
           overflow: 'hidden',
-          padding: '48px 24px',
+          padding: '56px 24px',
           textAlign: 'center',
         }}
       >
-        <p style={{ color: '#7A7090', fontSize: 14 }}>No clients found.</p>
+        <div
+          style={{
+            width: 56,
+            height: 56,
+            borderRadius: '50%',
+            background: '#EDE5F4',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 16px',
+          }}
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" fill="#5D4AA8"/>
+          </svg>
+        </div>
+        <p style={{ color: '#1E1830', fontSize: 15, fontWeight: 600, marginBottom: 6 }}>
+          No clients yet
+        </p>
+        <p style={{ color: '#7A7090', fontSize: 13, maxWidth: 300, margin: '0 auto 20px' }}>
+          Add your first client to start linking appointments, notes, invoices, and intake forms.
+        </p>
+        {onAddClient && (
+          <button
+            onClick={onAddClient}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '9px 20px',
+              borderRadius: 999,
+              border: 'none',
+              background: 'linear-gradient(135deg, #5D4AA8, #3F2F87)',
+              fontSize: 13,
+              fontWeight: 500,
+              color: '#fff',
+              cursor: 'pointer',
+              boxShadow: '0 4px 16px #5D4AA844',
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+              <path d="M19 13H13V19H11V13H5V11H11V5H13V11H19V13Z" fill="white"/>
+            </svg>
+            Add your first client
+          </button>
+        )}
       </div>
     );
   }

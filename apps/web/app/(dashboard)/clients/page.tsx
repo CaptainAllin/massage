@@ -4,10 +4,12 @@ import { useState } from 'react';
 import { useClientsWithMeta, useClientCounts, ClientFilterType } from '@/lib/hooks/use-clients';
 import { ClientsTable } from '@/components/clients/ClientsTable';
 import { AddClientModal } from '@/components/clients/AddClientModal';
+import { ImportClientsModal } from '@/components/clients/ImportClientsModal';
 import { useBusinessId } from '@/lib/hooks/use-business-id';
 import {
   MagnifyingGlassIcon,
   ArrowDownTrayIcon,
+  ArrowUpTrayIcon,
   FunnelIcon,
   PlusIcon,
 } from '@heroicons/react/24/outline';
@@ -33,6 +35,7 @@ const FILTERS: { key: ClientFilterType; label: string; countKey: 'all' | 'vip' |
 export default function ClientsPage() {
   const businessId = useBusinessId();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [activeFilter, setActiveFilter] = useState<ClientFilterType>('all');
@@ -98,6 +101,25 @@ export default function ClientsPage() {
 
         {/* Action buttons */}
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <button
+            onClick={() => setIsImportModalOpen(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '8px 16px',
+              borderRadius: 999,
+              border: '1px solid #E5DEEC',
+              background: '#fff',
+              fontSize: 13,
+              fontWeight: 500,
+              color: '#3D3450',
+              cursor: 'pointer',
+            }}
+          >
+            <ArrowUpTrayIcon style={{ width: 15, height: 15 }} />
+            Import
+          </button>
           <button
             style={{
               display: 'flex',
@@ -266,12 +288,19 @@ export default function ClientsPage() {
           currentPage={currentPage}
           onPageChange={setCurrentPage}
           total={meta?.total}
+          onAddClient={() => setIsAddModalOpen(true)}
         />
       )}
 
       <AddClientModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
+        businessId={businessId}
+      />
+
+      <ImportClientsModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
         businessId={businessId}
       />
     </div>

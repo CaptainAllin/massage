@@ -16,6 +16,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { useBusinessId } from '@/lib/hooks/use-business-id';
+import { PayrollTour } from '@/components/payroll/PayrollTour';
 import {
   usePayrollPeriods,
   useCreatePayrollPeriod,
@@ -351,6 +352,9 @@ export default function PayrollPage() {
           Generate Payroll
         </Button>
       </div>
+
+      {/* Onboarding tour */}
+      <PayrollTour />
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

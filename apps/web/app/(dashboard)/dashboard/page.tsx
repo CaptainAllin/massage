@@ -1,13 +1,15 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@massage/auth';
 import { useAppointments } from '@/lib/hooks/use-appointments';
 import { useClients } from '@/lib/hooks/use-clients';
 import { useBusinessId } from '@/lib/hooks/use-business-id';
 import { apiClient } from '@/lib/api-client';
+import { useOnboardingContext } from '@/components/onboarding/OnboardingProvider';
+import { GettingStartedCard } from '@/components/onboarding/GettingStartedCard';
 
 // ── Sparkline SVG ──────────────────────────────────────────────────────────────
 
@@ -364,6 +366,8 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const businessId = useBusinessId();
   const firstName = user?.user_metadata?.first_name || '';
+  const { loaded, checkedItems, toggleItem, checklistDismissed, dismissChecklist, allDone } = useOnboardingContext();
+  const [mounted, setMounted] = useState(false);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -379,9 +383,11 @@ export default function DashboardPage() {
     { isActive: true }
   );
 
+  useEffect(() => setMounted(true), []);
+
   const todayAppts = appointmentsData?.data ?? [];
   const totalClients = clientsData?.length ?? 0;
-  const isLoading = apptLoading || clientsLoading;
+  const isLoading = !mounted || apptLoading || clientsLoading;
 
   const now = new Date();
   const dayName = today.toLocaleDateString('en-US', { weekday: 'long' });
@@ -431,12 +437,21 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* ── Onboarding checklist ── */}
+      {loaded && !checklistDismissed && !allDone && (
+        <GettingStartedCard
+          checkedItems={checkedItems}
+          onToggle={toggleItem}
+          onDismiss={dismissChecklist}
+        />
+      )}
+
       {/* ── Stats grid ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           label="Today's Sessions"
           value={isLoading ? '—' : todayAppts.length}
-          sub={todayAppts.length === 0 ? 'None scheduled' : 'Scheduled today'}
+          sub={isLoading ? undefined : todayAppts.length === 0 ? 'None scheduled' : 'Scheduled today'}
           trend={sessionTrend}
           delta="↑ 12%"
           sparkId="sessions"
@@ -449,7 +464,7 @@ export default function DashboardPage() {
         <StatCard
           label="Active Clients"
           value={isLoading ? '—' : totalClients}
-          sub={totalClients === 0 ? 'Add your first client' : 'In your practice'}
+          sub={isLoading ? undefined : totalClients === 0 ? 'Add your first client' : 'In your practice'}
           trend={clientTrend}
           delta="↑ 8%"
           sparkId="clients"

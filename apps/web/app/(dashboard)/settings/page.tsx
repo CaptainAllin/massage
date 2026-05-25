@@ -131,6 +131,21 @@ function BusinessTab({ businessId }: { businessId: string }) {
 
 // ─── Team Tab ─────────────────────────────────────────────────────────────────
 
+const ROLE_INFO: Record<string, { label: string; description: string }> = {
+  THERAPIST: {
+    label: 'Therapist',
+    description: 'Can view their own schedule, write treatment notes, and manage their availability. Cannot access billing, payroll, or other therapists\' records.',
+  },
+  RECEPTIONIST: {
+    label: 'Receptionist',
+    description: 'Can manage all appointments, clients, and invoices across the practice. Cannot access payroll or admin settings.',
+  },
+  ADMIN: {
+    label: 'Admin',
+    description: 'Full access to all features including settings, payroll, and team management.',
+  },
+};
+
 function TeamTab({ businessId }: { businessId: string }) {
   const { data: therapists, isLoading } = useTherapists(businessId);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
@@ -142,7 +157,6 @@ function TeamTab({ businessId }: { businessId: string }) {
         businessId,
         isActive: !current,
       });
-      // Invalidation happens in the hook — refetch
       window.location.reload();
     } finally {
       setUpdatingId(null);
@@ -167,6 +181,30 @@ function TeamTab({ businessId }: { businessId: string }) {
         description="Manage your staff members and their access roles."
       />
 
+      {/* Role explanation callout */}
+      <div
+        className="rounded-xl p-4 space-y-3"
+        style={{ background: '#F3EFFD', border: '1px solid rgba(93,74,168,0.15)' }}
+      >
+        <p className="text-sm font-semibold" style={{ color: '#3D3450' }}>Understanding roles</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {['THERAPIST', 'RECEPTIONIST'].map((role) => (
+            <div
+              key={role}
+              className="rounded-lg p-3"
+              style={{ background: '#fff', border: '1px solid rgba(93,74,168,0.1)' }}
+            >
+              <p className="text-xs font-semibold mb-1" style={{ color: '#5D4AA8' }}>
+                {ROLE_INFO[role].label}
+              </p>
+              <p className="text-xs leading-relaxed" style={{ color: '#7A7090' }}>
+                {ROLE_INFO[role].description}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <div className="space-y-3">
         {!therapists?.length && (
           <p className="text-sm text-muted-foreground">No team members found.</p>
@@ -188,7 +226,7 @@ function TeamTab({ businessId }: { businessId: string }) {
                       <p className="text-xs text-muted-foreground">{u?.email}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 flex-wrap">
                     <Badge variant={t.isActive ? 'success' : 'default'}>
                       {t.isActive ? 'Active' : 'Inactive'}
                     </Badge>
@@ -197,6 +235,7 @@ function TeamTab({ businessId }: { businessId: string }) {
                       defaultValue={u?.role || 'THERAPIST'}
                       onChange={(e) => handleRoleChange(u.id, e.target.value)}
                       disabled={updatingId === u?.id}
+                      title="Change role"
                     >
                       <option value="THERAPIST">Therapist</option>
                       <option value="RECEPTIONIST">Receptionist</option>
@@ -205,6 +244,9 @@ function TeamTab({ businessId }: { businessId: string }) {
                       variant={t.isActive ? 'outline' : 'primary'}
                       onClick={() => handleToggleActive(t.id, t.isActive)}
                       disabled={updatingId === t.id}
+                      title={t.isActive
+                        ? 'Deactivate — removes from scheduling and booking page'
+                        : 'Activate — restores access to scheduling and booking page'}
                     >
                       {updatingId === t.id ? (
                         <Loader2 className="h-3 w-3 animate-spin" />
@@ -227,14 +269,13 @@ function TeamTab({ businessId }: { businessId: string }) {
         })}
       </div>
 
-      <div className="rounded-lg border border-dashed border-gray-300 dark:border-gray-700 p-4 text-center">
-        <p className="text-sm text-muted-foreground">
-          To add new team members, create a Therapist record from the{' '}
-          <a href="/therapists" className="text-primary underline underline-offset-2">
-            Therapists
-          </a>{' '}
-          page.
-        </p>
+      <div
+        className="rounded-lg p-4 text-sm"
+        style={{ background: '#F9F8FF', border: '1px dashed rgba(93,74,168,0.3)', color: '#5D4AA8' }}
+      >
+        Team members appear here once they have a <strong>Therapist record</strong> linked to their account.
+        To add a new team member, go to the{' '}
+        <a href="/therapists" className="underline font-medium">Therapists</a> page → Team tab → Add Therapist Profile.
       </div>
     </div>
   );

@@ -1,14 +1,17 @@
-import { AppointmentWithRelations } from '@massage/types';
+import { AppointmentStatus, AppointmentWithRelations } from '@massage/types';
 import { AppointmentCard } from './AppointmentCard';
 import { format, addDays, startOfWeek, isSameDay, setHours, setMinutes } from 'date-fns';
-import { useMemo, useEffect, useRef } from 'react';
+import { useMemo, useEffect, useRef, useState } from 'react';
 
 interface WeekViewProps {
   currentDate: Date;
   appointments: AppointmentWithRelations[];
   onAppointmentClick: (appointment: AppointmentWithRelations) => void;
   onSlotClick: (date: Date, hour: number) => void;
+  onAppointmentDrop?: (appointmentId: string, newStartTime: Date) => void;
 }
+
+const DRAGGABLE_STATUSES = new Set([AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED]);
 
 const HOURS = Array.from({ length: 14 }, (_, i) => i + 7); // 7am to 8pm
 const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -19,9 +22,12 @@ export function WeekView({
   appointments,
   onAppointmentClick,
   onSlotClick,
+  onAppointmentDrop,
 }: WeekViewProps) {
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 });
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [dragOverKey, setDragOverKey] = useState<string | null>(null);
+  const draggingRef = useRef<{ id: string; originalStart: Date } | null>(null);
 
   const weekDates = useMemo(
     () => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
@@ -175,6 +181,8 @@ export function WeekView({
                   const appts = getAppointmentsForSlot(dayIndex, hour);
                   const slotDateTime = setMinutes(setHours(date, hour), 0);
                   const isTodayCol = isSameDay(date, now);
+                  const slotKey = `${dayIndex}-${hour}`;
+                  const isDragOver = dragOverKey === slotKey;
 
                   return (
                     <div
@@ -182,29 +190,77 @@ export function WeekView({
                       className="p-1 cursor-pointer transition-colors"
                       style={{
                         borderLeft: '1px solid #EFE9F2',
-                        background: isTodayCol ? '#FDFBFF' : 'transparent',
+                        background: isDragOver
+                          ? '#EDE5F4'
+                          : isTodayCol
+                          ? '#FDFBFF'
+                          : 'transparent',
+                        outline: isDragOver ? '2px solid #5D4AA8' : 'none',
+                        outlineOffset: '-2px',
+                        borderRadius: isDragOver ? '4px' : undefined,
+                        transition: 'background 0.1s, outline 0.1s',
                       }}
                       onMouseEnter={(e) => {
-                        if (!appts.length) e.currentTarget.style.background = '#F5F0FA';
+                        if (!appts.length && !draggingRef.current)
+                          e.currentTarget.style.background = '#F5F0FA';
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.background = isTodayCol ? '#FDFBFF' : 'transparent';
+                        if (!draggingRef.current)
+                          e.currentTarget.style.background = isTodayCol ? '#FDFBFF' : 'transparent';
                       }}
                       onClick={() => onSlotClick(slotDateTime, hour)}
+                      onDragOver={(e) => {
+                        if (!onAppointmentDrop) return;
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = 'move';
+                        setDragOverKey(slotKey);
+                      }}
+                      onDragLeave={(e) => {
+                        if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+                        setDragOverKey(null);
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        setDragOverKey(null);
+                        if (!onAppointmentDrop || !draggingRef.current) return;
+                        const { id, originalStart } = draggingRef.current;
+                        const newStart = setMinutes(setHours(date, hour), originalStart.getMinutes());
+                        if (
+                          isSameDay(newStart, originalStart) &&
+                          newStart.getHours() === originalStart.getHours()
+                        )
+                          return;
+                        onAppointmentDrop(id, newStart);
+                      }}
                     >
                       {appts.length > 0 && (
                         <div className="space-y-1">
-                          {appts.map((appt) => (
-                            <div
-                              key={appt.id}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onAppointmentClick(appt);
-                              }}
-                            >
-                              <AppointmentCard appointment={appt} />
-                            </div>
-                          ))}
+                          {appts.map((appt) => {
+                            const canDrag = DRAGGABLE_STATUSES.has(appt.status);
+                            return (
+                              <div
+                                key={appt.id}
+                                draggable={canDrag}
+                                style={{ cursor: canDrag ? 'grab' : 'default' }}
+                                onDragStart={(e) => {
+                                  if (!canDrag) { e.preventDefault(); return; }
+                                  draggingRef.current = { id: appt.id, originalStart: new Date(appt.startTime) };
+                                  e.dataTransfer.effectAllowed = 'move';
+                                  e.dataTransfer.setData('text/plain', appt.id);
+                                }}
+                                onDragEnd={() => {
+                                  draggingRef.current = null;
+                                  setDragOverKey(null);
+                                }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onAppointmentClick(appt);
+                                }}
+                              >
+                                <AppointmentCard appointment={appt} />
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
                     </div>

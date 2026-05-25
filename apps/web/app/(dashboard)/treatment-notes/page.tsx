@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation';
 import { Button, SearchInput, Table, Column, Skeleton } from '@massage/ui';
 import { useTreatmentNotes } from '@/lib/hooks';
 import { TreatmentNote } from '@massage/types';
-
 import { useBusinessId } from '@/lib/hooks/use-business-id';
+import { TreatmentNotesTour } from '@/components/treatment-notes/TreatmentNotesTour';
+
 export default function TreatmentNotesPage() {
   const router = useRouter();
   const businessId = useBusinessId();
@@ -58,6 +59,8 @@ export default function TreatmentNotesPage() {
 
   return (
     <div className="space-y-5 max-w-5xl">
+      <TreatmentNotesTour />
+
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: '#5D4AA8', letterSpacing: '1.4px' }}>Practice</p>

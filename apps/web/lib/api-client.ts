@@ -3,44 +3,62 @@ import { createClient } from '@/lib/supabase/client';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
+// In-memory session cache — avoids calling getSession() on every request.
+// A fresh Supabase client + getSession() on each of N parallel requests is
+// the single biggest source of page-load latency.
+let _cachedToken: string | null = null;
+let _tokenExpiresAt: number = 0;
+
+async function getAuthToken(): Promise<string | null> {
+  if (typeof window === 'undefined') return null;
+  // Serve from cache until 60 s before expiry
+  if (_cachedToken && Date.now() < _tokenExpiresAt - 60_000) {
+    return _cachedToken;
+  }
+  const supabase = createClient();
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session?.access_token) {
+    _cachedToken = session.access_token;
+    _tokenExpiresAt = (session.expires_at ?? 0) * 1000;
+    return _cachedToken;
+  }
+  _cachedToken = null;
+  _tokenExpiresAt = 0;
+  return null;
+}
+
+export function clearAuthTokenCache() {
+  _cachedToken = null;
+  _tokenExpiresAt = 0;
+}
+
 export const apiClient = axios.create({
   baseURL: API_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  headers: { 'Content-Type': 'application/json' },
 });
 
-// Request interceptor to add auth token
 apiClient.interceptors.request.use(
   async (config) => {
-    // Get Supabase session token
-    if (typeof window !== 'undefined') {
-      const supabase = createClient();
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (session?.access_token) {
-        config.headers.Authorization = `Bearer ${session.access_token}`;
-      }
+    const token = await getAuthToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// Response interceptor for error handling
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
-    // Don't auto-signout on 401 - just let the error bubble up
-    // The middleware will handle redirecting if the session is actually invalid
+    // Clear the cache on 401 so the next request re-fetches a fresh token
+    if (error.response?.status === 401) {
+      clearAuthTokenCache();
+    }
     console.error('[API CLIENT] Request failed:', {
       status: error.response?.status,
       url: error.config?.url,
-      message: error.message
+      message: error.message,
     });
     return Promise.reject(error);
   }

@@ -3,22 +3,45 @@ import { useAuth } from '@massage/auth';
 import { createClient } from '@/lib/supabase/client';
 import { apiClient } from '@/lib/api-client';
 
+const LS_KEY = 'wellness-bid';
+
+function readLocalBusinessId(): string | undefined {
+  try {
+    return localStorage.getItem(LS_KEY) ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function writeLocalBusinessId(id: string) {
+  try {
+    localStorage.setItem(LS_KEY, id);
+  } catch {
+    // private browsing / quota — ignore
+  }
+}
+
 /**
- * Returns the current user's businessId, auto-resolving it from the backend
- * when it's absent from Supabase user metadata (e.g. existing users who signed up
- * before the metadata-patching flow was added).
+ * Returns the current user's businessId.
+ *
+ * Priority order:
+ *  1. Supabase user metadata (authoritative, synced on sign-in)
+ *  2. localStorage (fast path on subsequent page loads — available before auth resolves)
+ *  3. Backend /businesses fetch (fallback for legacy accounts missing metadata)
  */
 export function useBusinessId(): string | undefined {
   const { user } = useAuth();
-  const [businessId, setBusinessId] = useState<string | undefined>(
-    user?.user_metadata?.businessId
-  );
 
-  // Sync when Supabase refreshes user metadata (e.g. after sign-up patches it)
+  const [businessId, setBusinessId] = useState<string | undefined>(undefined);
+
+  // Hydrate from user metadata or localStorage after mount (avoids SSR mismatch)
   useEffect(() => {
-    if (user?.user_metadata?.businessId) {
-      setBusinessId(user.user_metadata.businessId);
+    const id = user?.user_metadata?.businessId ?? readLocalBusinessId();
+    if (id) {
+      setBusinessId(id);
+      if (user?.user_metadata?.businessId) writeLocalBusinessId(user.user_metadata.businessId);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.user_metadata?.businessId]);
 
   // If still missing, fetch from backend and persist back into user metadata
@@ -32,6 +55,7 @@ export function useBusinessId(): string | undefined {
         if (businesses?.length > 0) {
           const id = businesses[0].id;
           setBusinessId(id);
+          writeLocalBusinessId(id);
           const supabase = createClient();
           await supabase.auth.updateUser({ data: { businessId: id } });
         }

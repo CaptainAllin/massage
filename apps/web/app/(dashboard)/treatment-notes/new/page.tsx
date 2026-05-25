@@ -63,11 +63,12 @@ export default function NewTreatmentNotePage() {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-foreground font-display">
+        <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: '#5D4AA8', letterSpacing: '1.4px' }}>Practice</p>
+        <h1 className="text-2xl font-semibold font-display" style={{ color: '#1E1830', letterSpacing: '-0.4px' }}>
           New SOAP Note
         </h1>
-        <p className="text-muted-foreground mt-2">
-          Document treatment session with SOAP format
+        <p className="text-sm mt-0.5" style={{ color: '#7A7090' }}>
+          Document the treatment session with SOAP format
         </p>
       </div>
 

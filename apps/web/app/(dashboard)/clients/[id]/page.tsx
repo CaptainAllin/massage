@@ -301,6 +301,14 @@ export default function ClientProfilePage() {
                   </SectionCard>
                 )}
 
+                {(client.medicalHistory as any)?.notes && (
+                  <SectionCard title="Health Notes">
+                    <p className="text-[13px] text-iris-ink2 leading-relaxed">
+                      {(client.medicalHistory as any).notes}
+                    </p>
+                  </SectionCard>
+                )}
+
                 {((client.medications?.length ?? 0) > 0 || (client.allergies?.length ?? 0) > 0) && (
                   <SectionCard title="Medications & Allergies">
                     <div className="grid grid-cols-2 gap-4">

@@ -10,6 +10,7 @@ import { usePayments, usePaymentStats } from '@/lib/hooks/use-payments';
 import { PaymentFilters, PaymentStatus } from '@massage/types';
 
 import { useBusinessId } from '@/lib/hooks/use-business-id';
+import { PaymentsTour } from '@/components/payments/PaymentsTour';
 export default function PaymentsPage() {
   const router = useRouter();
   const businessId = useBusinessId();
@@ -56,6 +57,9 @@ export default function PaymentsPage() {
           </Button>
         </div>
       </div>
+
+      {/* Onboarding tour */}
+      <PaymentsTour />
 
       {/* Stats Cards */}
       {stats && (

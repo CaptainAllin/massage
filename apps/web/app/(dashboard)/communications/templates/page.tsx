@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useState } from 'react';
 import {
   Card,
   CardContent,
@@ -11,7 +10,7 @@ import {
   Input,
   Modal,
 } from '@massage/ui';
-import { Plus, Search, Edit, Trash2, Eye } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Eye, Mail, MessageSquare, Smartphone } from 'lucide-react';
 import {
   useMessageTemplates,
   useCreateTemplate,
@@ -19,11 +18,25 @@ import {
   useDeleteTemplate,
   usePreviewTemplate,
 } from '@/lib/hooks';
+import { useBusinessId } from '@/lib/hooks/use-business-id';
 import { MessageTemplate, MessageType, TemplateCategory } from '@massage/types';
 
-function TemplatesPageContent() {
-  const searchParams = useSearchParams();
-  const businessId = searchParams?.get('businessId') || '';
+const TYPE_ICONS: Record<string, React.ReactNode> = {
+  EMAIL: <Mail className="h-3.5 w-3.5" />,
+  SMS: <MessageSquare className="h-3.5 w-3.5" />,
+  WHATSAPP: <Smartphone className="h-3.5 w-3.5" />,
+};
+
+const CATEGORY_COLORS: Record<string, string> = {
+  REMINDER: '#EDE5F4',
+  CONFIRMATION: '#E8F5E9',
+  FOLLOW_UP: '#FFF3E0',
+  MARKETING: '#E3F2FD',
+  CUSTOM: '#F3F4F6',
+};
+
+export default function TemplatesPage() {
+  const businessId = useBusinessId();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -31,7 +44,6 @@ function TemplatesPageContent() {
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
   const [previewContent, setPreviewContent] = useState({ subject: '', content: '' });
 
-  // Form state
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -42,12 +54,10 @@ function TemplatesPageContent() {
     isDefault: false,
   });
 
-  // Fetch templates
   const { data: templatesData, isLoading } = useMessageTemplates(businessId, {
     search: searchTerm,
   });
 
-  // Mutations
   const createTemplateMutation = useCreateTemplate(businessId);
   const updateTemplateMutation = useUpdateTemplate(businessId);
   const deleteTemplateMutation = useDeleteTemplate(businessId);
@@ -69,15 +79,7 @@ function TemplatesPageContent() {
       });
     } else {
       setEditingTemplate(null);
-      setFormData({
-        name: '',
-        description: '',
-        type: 'SMS' as MessageType,
-        category: 'CUSTOM',
-        subject: '',
-        content: '',
-        isDefault: false,
-      });
+      setFormData({ name: '', description: '', type: 'SMS', category: 'CUSTOM', subject: '', content: '', isDefault: false });
     }
     setIsDialogOpen(true);
   };
@@ -85,15 +87,9 @@ function TemplatesPageContent() {
   const handleSave = async () => {
     try {
       if (editingTemplate) {
-        await updateTemplateMutation.mutateAsync({
-          templateId: editingTemplate.id,
-          data: formData,
-        });
+        await updateTemplateMutation.mutateAsync({ templateId: editingTemplate.id, data: formData });
       } else {
-        await createTemplateMutation.mutateAsync({
-          businessId,
-          ...formData,
-        });
+        await createTemplateMutation.mutateAsync({ businessId: businessId!, ...formData });
       }
       setIsDialogOpen(false);
     } catch (error) {
@@ -102,7 +98,7 @@ function TemplatesPageContent() {
   };
 
   const handleDelete = async (templateId: string) => {
-    if (confirm('Are you sure you want to delete this template?')) {
+    if (confirm('Delete this template?')) {
       try {
         await deleteTemplateMutation.mutateAsync(templateId);
       } catch (error) {
@@ -131,23 +127,37 @@ function TemplatesPageContent() {
     }
   };
 
-  if (!businessId) {
-    return <div>Please select a business first</div>;
-  }
-
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-5">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground font-display">Message Templates</h1>
-          <p className="text-muted-foreground mt-2">
-            Create reusable templates for common communications
-          </p>
+          <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: '#5D4AA8', letterSpacing: '1.4px' }}>Communications</p>
+          <h1 className="text-2xl font-semibold font-display" style={{ color: '#1E1830', letterSpacing: '-0.4px' }}>Message Templates</h1>
+          <p className="text-sm mt-0.5" style={{ color: '#7A7090' }}>Reusable templates with merge tags for client communications</p>
         </div>
-        <Button onClick={() => handleOpenDialog()}>
-          <Plus className="h-4 w-4 mr-2" />
+        <Button size="sm" variant="primary" onClick={() => handleOpenDialog()}>
+          <Plus className="h-4 w-4 mr-1" />
           New Template
         </Button>
+      </div>
+
+      {/* Merge tags hint */}
+      <div
+        className="rounded-xl px-4 py-3 text-sm"
+        style={{ background: 'rgba(93,74,168,0.06)', border: '1px solid rgba(93,74,168,0.12)' }}
+      >
+        <span className="font-medium" style={{ color: '#5D4AA8' }}>Available merge tags: </span>
+        <span style={{ color: '#3D3450' }}>
+          {['{{clientName}}', '{{appointmentDate}}', '{{appointmentTime}}', '{{therapistName}}', '{{businessName}}'].map((tag, i) => (
+            <code
+              key={tag}
+              className="font-mono text-xs px-1.5 py-0.5 rounded mx-0.5"
+              style={{ background: 'rgba(93,74,168,0.1)', color: '#5D4AA8' }}
+            >
+              {tag}
+            </code>
+          ))}
+        </span>
       </div>
 
       <div className="relative">
@@ -156,74 +166,87 @@ function TemplatesPageContent() {
           placeholder="Search templates..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10"
+          className="pl-9"
         />
       </div>
 
       {isLoading ? (
-        <div className="text-center py-12">Loading templates...</div>
+        <div className="text-center py-12 text-sm text-muted-foreground">Loading templates...</div>
       ) : templates.length === 0 ? (
         <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground">No templates found. Create your first template!</p>
+          <CardContent className="py-14 text-center">
+            <MessageSquare className="h-10 w-10 mx-auto mb-3 opacity-20" />
+            <p className="font-medium text-sm" style={{ color: '#1E1830' }}>No templates yet</p>
+            <p className="text-xs mt-1" style={{ color: '#7A7090' }}>Create your first template to speed up client communications</p>
+            <Button size="sm" variant="primary" className="mt-4" onClick={() => handleOpenDialog()}>
+              <Plus className="h-4 w-4 mr-1" />
+              Create Template
+            </Button>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {templates.map((template: MessageTemplate) => (
-            <Card key={template.id}>
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <CardTitle className="text-lg">{template.name}</CardTitle>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
+            <Card key={template.id} className="hover:shadow-md transition-shadow">
+              <CardHeader className="pb-2">
+                <div className="flex justify-between items-start gap-2">
+                  <CardTitle className="text-sm font-semibold leading-tight" style={{ color: '#1E1830' }}>
+                    {template.name}
+                  </CardTitle>
+                  <div className="flex gap-1 flex-shrink-0">
+                    <button
                       onClick={() => handlePreview(template)}
+                      className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors hover:bg-[#F3EFFD]"
+                      title="Preview"
                     >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
+                      <Eye className="h-3.5 w-3.5" style={{ color: '#7A7090' }} />
+                    </button>
+                    <button
                       onClick={() => handleOpenDialog(template)}
+                      className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors hover:bg-[#F3EFFD]"
+                      title="Edit"
                     >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
+                      <Edit className="h-3.5 w-3.5" style={{ color: '#7A7090' }} />
+                    </button>
+                    <button
                       onClick={() => handleDelete(template.id)}
+                      className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors hover:bg-red-50"
+                      title="Delete"
                     >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                      <Trash2 className="h-3.5 w-3.5 text-red-400" />
+                    </button>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex gap-2">
-                    <span className="px-2 py-1 bg-primary/10 text-primary text-xs rounded">
-                      {template.type}
+              <CardContent className="pt-0">
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  <span
+                    className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium"
+                    style={{ background: '#EDE5F4', color: '#5D4AA8' }}
+                  >
+                    {TYPE_ICONS[template.type]}
+                    {template.type}
+                  </span>
+                  {template.category && (
+                    <span
+                      className="text-xs px-2 py-0.5 rounded-full"
+                      style={{ background: CATEGORY_COLORS[template.category] ?? '#F3F4F6', color: '#3D3450' }}
+                    >
+                      {template.category}
                     </span>
-                    {template.category && (
-                      <span className="px-2 py-1 bg-accent text-xs rounded">
-                        {template.category}
-                      </span>
-                    )}
-                    {template.isDefault && (
-                      <span className="px-2 py-1 bg-[#EDE5F4] text-[#5D4AA8] text-xs rounded">
-                        Default
-                      </span>
-                    )}
-                  </div>
-                  {template.description && (
-                    <p className="text-sm text-muted-foreground">{template.description}</p>
                   )}
-                  <p className="text-sm text-muted-foreground line-clamp-3">
-                    {template.content}
-                  </p>
+                  {template.isDefault && (
+                    <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: '#EDE5F4', color: '#5D4AA8' }}>
+                      Default
+                    </span>
+                  )}
                 </div>
+                {template.description && (
+                  <p className="text-xs mb-1.5" style={{ color: '#7A7090' }}>{template.description}</p>
+                )}
+                <p className="text-xs line-clamp-3" style={{ color: '#7A7090' }}>
+                  {template.content}
+                </p>
               </CardContent>
             </Card>
           ))}
@@ -234,31 +257,31 @@ function TemplatesPageContent() {
       <Modal
         isOpen={isDialogOpen}
         onClose={() => setIsDialogOpen(false)}
-        title={editingTemplate ? 'Edit Template' : 'Create Template'}
+        title={editingTemplate ? 'Edit Template' : 'New Template'}
         size="lg"
       >
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-2">Name</label>
+            <label className="block text-sm font-medium mb-1.5">Name *</label>
             <Input
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="Template name"
+              placeholder="e.g. 24h Appointment Reminder"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-2">Description</label>
+            <label className="block text-sm font-medium mb-1.5">Description</label>
             <Input
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Optional description"
+              placeholder="Optional — describe when this template is used"
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-2">Type</label>
+              <label className="block text-sm font-medium mb-1.5">Channel</label>
               <select
-                className="w-full border rounded px-3 py-2"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#5D4AA8]"
                 value={formData.type}
                 onChange={(e) => setFormData({ ...formData, type: e.target.value as MessageType })}
               >
@@ -268,9 +291,9 @@ function TemplatesPageContent() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">Category</label>
+              <label className="block text-sm font-medium mb-1.5">Category</label>
               <select
-                className="w-full border rounded px-3 py-2"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#5D4AA8]"
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
               >
@@ -284,42 +307,51 @@ function TemplatesPageContent() {
           </div>
           {formData.type === 'EMAIL' && (
             <div>
-              <label className="block text-sm font-medium mb-2">Subject</label>
+              <label className="block text-sm font-medium mb-1.5">Subject</label>
               <Input
                 value={formData.subject}
                 onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                placeholder="Email subject"
+                placeholder="Email subject line"
               />
             </div>
           )}
           <div>
-            <label className="block text-sm font-medium mb-2">Content</label>
+            <label className="block text-sm font-medium mb-1.5">Content *</label>
             <textarea
-              className="w-full border rounded px-3 py-2 min-h-[150px]"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm min-h-[140px] resize-none focus:outline-none focus:ring-2 focus:ring-[#5D4AA8]"
               value={formData.content}
               onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-              placeholder="Use {{clientName}}, {{appointmentDate}}, etc."
+              placeholder="Hi {{clientName}}, this is a reminder about your appointment on {{appointmentDate}} at {{appointmentTime}}..."
             />
-            <p className="text-xs text-muted-foreground mt-1">
-              Available variables: {'{{clientName}}'}, {'{{appointmentDate}}'}, {'{{appointmentTime}}'}, {'{{therapistName}}'}
+            <p className="text-xs mt-1" style={{ color: '#7A7090' }}>
+              Merge tags: <code className="font-mono bg-gray-100 px-1 rounded">{'{{clientName}}'}</code>{' '}
+              <code className="font-mono bg-gray-100 px-1 rounded">{'{{appointmentDate}}'}</code>{' '}
+              <code className="font-mono bg-gray-100 px-1 rounded">{'{{appointmentTime}}'}</code>{' '}
+              <code className="font-mono bg-gray-100 px-1 rounded">{'{{therapistName}}'}</code>
             </p>
           </div>
-          <div className="flex items-center">
+          <div className="flex items-center gap-2">
             <input
               type="checkbox"
               id="isDefault"
               checked={formData.isDefault}
               onChange={(e) => setFormData({ ...formData, isDefault: e.target.checked })}
-              className="mr-2"
+              className="rounded"
             />
-            <label htmlFor="isDefault" className="text-sm">Set as default template for this type</label>
+            <label htmlFor="isDefault" className="text-sm" style={{ color: '#3D3450' }}>
+              Set as default template for {formData.type}
+            </label>
           </div>
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+          <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSave} disabled={!formData.name || !formData.content}>
-              {editingTemplate ? 'Update' : 'Create'}
+            <Button
+              onClick={handleSave}
+              disabled={!formData.name || !formData.content}
+              style={{ background: 'linear-gradient(135deg, #5D4AA8, #3F2F87)', color: '#fff' }}
+            >
+              {editingTemplate ? 'Save Changes' : 'Create Template'}
             </Button>
           </div>
         </div>
@@ -334,29 +366,29 @@ function TemplatesPageContent() {
         <div className="space-y-4">
           {previewContent.subject && (
             <div>
-              <label className="block text-sm font-medium mb-2">Subject:</label>
-              <p className="text-sm">{previewContent.subject}</p>
+              <label className="block text-sm font-medium mb-1.5">Subject</label>
+              <p className="text-sm px-3 py-2 rounded-lg" style={{ background: '#F9F8FF', border: '1px solid #EFE9F2' }}>
+                {previewContent.subject}
+              </p>
             </div>
           )}
           <div>
-            <label className="block text-sm font-medium mb-2">Content:</label>
-            <div className="bg-accent p-4 rounded whitespace-pre-wrap text-sm">
+            <label className="block text-sm font-medium mb-1.5">Message</label>
+            <div
+              className="px-4 py-3 rounded-xl text-sm whitespace-pre-wrap"
+              style={{ background: '#F3EFFD', border: '1px solid rgba(93,74,168,0.12)', color: '#1E1830' }}
+            >
               {previewContent.content}
             </div>
           </div>
-          <div className="flex justify-end pt-4 border-t border-gray-200">
+          <p className="text-xs" style={{ color: '#7A7090' }}>
+            Preview uses sample data: John Doe, Jane Smith, Wellness Spa
+          </p>
+          <div className="flex justify-end pt-2 border-t border-gray-100">
             <Button onClick={() => setPreviewDialogOpen(false)}>Close</Button>
           </div>
         </div>
       </Modal>
     </div>
-  );
-}
-
-export default function TemplatesPage() {
-  return (
-    <Suspense fallback={<div className="text-center py-12">Loading templates...</div>}>
-      <TemplatesPageContent />
-    </Suspense>
   );
 }
