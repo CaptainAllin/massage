@@ -115,23 +115,23 @@
 > Replace the current sticky header with the Iris topbar: date/subtitle left, search bar center, "Quick call" + "New session" buttons right, avatar.
 
 ### 3.1 Date & Subtitle
-- [ ] **3.1.1** Replace page `title` prop usage with live date string: `"Tuesday, 25 May 2026"` (dynamic via `new Date()`)
-- [ ] **3.1.2** Add subtitle below date: e.g. "6 sessions today" — pulled from today's appointment count
-- [ ] **3.1.3** Style: date at 13.5px weight 500 ink, subtitle at 11.5px muted
+- [x] **3.1.1** Replace page `title` prop usage with live date string: `"Tuesday, 25 May 2026"` (dynamic via `new Date()`)
+- [x] **3.1.2** Add subtitle below date: e.g. "6 sessions today" — pulled from today's appointment count
+- [x] **3.1.3** Style: date at 13.5px weight 500 ink, subtitle at 11.5px muted
 
 ### 3.2 Global Search Bar
-- [ ] **3.2.1** Add search pill in topbar center: magnifier icon + "Search clients, sessions…" placeholder + `⌘K` badge
-- [ ] **3.2.2** Style: `height: 36px`, `border-radius: 999px`, white surface, line border, 280px width
-- [ ] **3.2.3** Wire `⌘K` keyboard shortcut to focus the search input
+- [x] **3.2.1** Add search pill in topbar center: magnifier icon + "Search clients, sessions…" placeholder + `⌘K` badge
+- [x] **3.2.2** Style: `height: 36px`, `border-radius: 999px`, white surface, line border, 280px width
+- [x] **3.2.3** Wire `⌘K` keyboard shortcut to focus the search input
 
 ### 3.3 Action Buttons
-- [ ] **3.3.1** Restyle "Quick Call" button: outlined pill (`border: 1px solid line`, white bg, phone icon)
-- [ ] **3.3.2** Restyle "New session" button: violet gradient pill (`linear-gradient(135deg, primary, primaryDk)`) + shadow
-- [ ] **3.3.3** Add divider between buttons and avatar
+- [x] **3.3.1** Restyle "Quick Call" button: outlined pill (`border: 1px solid line`, white bg, phone icon)
+- [x] **3.3.2** Restyle "New session" button: violet gradient pill (`linear-gradient(135deg, primary, primaryDk)`) + shadow
+- [x] **3.3.3** Add divider between buttons and avatar
 
 ### 3.4 Avatar
-- [ ] **3.4.1** Replace green avatar with violet gradient avatar (`linear-gradient(135deg, primary2, primary)`) + initials, 36×36px circle
-- [ ] **3.4.2** Remove the text name + role from the topbar (moved to sidebar bottom)
+- [x] **3.4.1** Replace green avatar with violet gradient avatar (`linear-gradient(135deg, primary2, primary)`) + initials, 36×36px circle
+- [x] **3.4.2** Remove the text name + role from the topbar (moved to sidebar bottom)
 
 ### 3.5 TopBar Panel Color & Border
 - [x] **3.5.1** Change header `bg-card` to `bg-iris-panel` (`#FBF8FD`)
@@ -148,39 +148,39 @@
 - [x] **4.1.1** Add overline label: day/date — violet, 11px, uppercase, letterSpacing 1.4
 - [x] **4.1.2** Render `h1` greeting banner with violet gradient background
 - [x] **4.1.3** Add sub-text: appointment count / loading state
-- [ ] **4.1.4** Add "Studio" status pill (right-aligned): "Open · 8a — 7p" with green dot and soft1 bg
+- [x] **4.1.4** Add "Studio" status pill (right-aligned): "Open · 8a — 7p" with green dot and soft1 bg
 
 ### 4.2 Stats Row (4 Cards)
 - [x] **4.2.1** Build 4-column stats grid: Sessions today, Active clients, Revenue · month, Pending Forms
 - [x] **4.2.2** Each card: white surface, `border-radius: 16px`, `border: 1px solid line2`, radial violet halo (top-right corner)
 - [x] **4.2.3** Value: 30px weight 500, tabular-nums; label: 11px violet overline uppercase
-- [ ] **4.2.4** Add sparkline SVG (7 data points, gradient stroke `primary2→primary`) + delta text in violet with ↑ arrow
+- [x] **4.2.4** Add sparkline SVG (7 data points, gradient stroke `primary2→primary`) + delta text in violet with ↑ arrow
 - [x] **4.2.5** Wire stats to real API data (appointments count, clients count)
 
 ### 4.3 Today's Sessions Panel
 - [x] **4.3.1** Replace current appointment list with Iris-styled session rows: avatar initials + client name + service + time + status badge
-- [ ] **4.3.2** Active "now" row: `bg-soft1`, `border: 1px solid primary33`
-- [ ] **4.3.3** Completed rows: `opacity: 0.5`
-- [ ] **4.3.4** NOW badge: violet gradient pill label
-- [ ] **4.3.5** Add "Open slots" AI suggestion card at bottom: peach bg, spark icon, "Send" button
+- [x] **4.3.2** Active "now" row: `bg-soft1`, `border: 1px solid primary33`
+- [x] **4.3.3** Completed rows: `opacity: 0.5`
+- [x] **4.3.4** NOW badge: violet gradient pill label
+- [x] **4.3.5** Add "Open slots" AI suggestion card at bottom: peach bg, spark icon, "Send" button
 - [x] **4.3.6** "View all →" link top-right of panel
 
 ### 4.4 Revenue Chart
-- [ ] **4.4.1** Add 30-day revenue sparkline chart card (right column): line chart with gradient fill underneath
-- [ ] **4.4.2** Header: `$14,280` large value + `↑ 18.4%` delta + 30d/90d/1y toggle pills
-- [ ] **4.4.3** X-axis labels: "Apr 26", "May 10", "Today"
-- [ ] **4.4.4** Wire to real revenue data from `/api/reports/revenue`
+- [x] **4.4.1** Add 30-day revenue sparkline chart card (right column): line chart with gradient fill underneath
+- [x] **4.4.2** Header: `$14,280` large value + `↑ 18.4%` delta + 30d/90d/1y toggle pills
+- [x] **4.4.3** X-axis labels: "Apr 26", "May 10", "Today"
+- [x] **4.4.4** Wire to real revenue data from `/api/analytics/revenue`
 
 ### 4.5 Service Mix
-- [ ] **4.5.1** Add service mix horizontal bar chart card below revenue chart
-- [ ] **4.5.2** Services: Deep Tissue (32%), Swedish (24%), Hot Stone (18%), Sports (14%), Prenatal (12%)
-- [ ] **4.5.3** Each row: service name + pct + colored bar (`height: 5px`, `border-radius: 3px`)
-- [ ] **4.5.4** Wire to real service breakdown from API
+- [x] **4.5.1** Add service mix horizontal bar chart card below revenue chart
+- [x] **4.5.2** Services: Deep Tissue (32%), Swedish (24%), Hot Stone (18%), Sports (14%), Prenatal (12%)
+- [x] **4.5.3** Each row: service name + pct + colored bar (`height: 5px`, `border-radius: 3px`)
+- [x] **4.5.4** Wire to real service breakdown from API (`/api/reports/revenue` byServiceType)
 
 ### 4.6 Layout Grid
-- [ ] **4.6.1** Main area: `padding: 24px 28px 32px`; background `bg-iris-bg`
-- [ ] **4.6.2** Two-column lower grid: `1.55fr 1fr` (sessions left, charts right)
-- [ ] **4.6.3** Chart area stacked vertically with `gap: 14px`
+- [x] **4.6.1** Main area: `padding: 24px 28px 32px`; background `bg-iris-bg`
+- [x] **4.6.2** Two-column lower grid: `1.55fr 1fr` (sessions left, charts right)
+- [x] **4.6.3** Chart area stacked vertically with `gap: 14px`
 
 ---
 
@@ -189,24 +189,24 @@
 > Update the week view calendar to match Iris: violet "today" circle, glowing now-line, appointment blocks with colored left borders.
 
 ### 5.1 Calendar Header
-- [ ] **5.1.1** Update page title to "Calendar" with week range + week number subtitle
-- [ ] **5.1.2** Add session/therapist/revenue summary: "32 sessions · 4 therapists · $4,210 booked"
-- [ ] **5.1.3** Add Day/Week/Month toggle: active pill = violet gradient, inactive = transparent
+- [x] **5.1.1** Update page title to "Calendar" with week range + week number subtitle
+- [x] **5.1.2** Add session/therapist/revenue summary: "32 sessions · 4 therapists · $4,210 booked"
+- [x] **5.1.3** Add Day/Week/Month toggle: active pill = violet gradient, inactive = transparent
 
 ### 5.2 Therapist Filter Strip
-- [ ] **5.2.1** Add horizontal therapist filter row below header: "All" (active gradient) + individual therapist chips with color dots
-- [ ] **5.2.2** Color-code therapists: Marcus (violet `#5D4AA8`), Sofía (slate `#7A92D2`), Naomi (peach `#C97E68`), Hana (lavender `#8A6FBE`)
+- [x] **5.2.1** Add horizontal therapist filter row below header: "All" (active gradient) + individual therapist chips with color dots
+- [x] **5.2.2** Color-code therapists: Marcus (violet `#5D4AA8`), Sofía (slate `#7A92D2`), Naomi (peach `#C97E68`), Hana (lavender `#8A6FBE`)
 
 ### 5.3 Week Grid
-- [ ] **5.3.1** Today column header: date number in violet gradient circle (`30px`, `linear-gradient(135deg, primary, primaryDk)`)
-- [ ] **5.3.2** "Now" line: 1.5px violet line + left dot + `box-shadow: 0 0 8px primary88`
-- [ ] **5.3.3** Hour grid lines: `line2` color, 56px per hour
-- [ ] **5.3.4** Appointment blocks: `background: aptSoft[col]`, `border-left: 2.5px solid apt[col]`, `border-radius: 8px`
+- [x] **5.3.1** Today column header: date number in violet gradient circle (`30px`, `linear-gradient(135deg, primary, primaryDk)`)
+- [x] **5.3.2** "Now" line: 1.5px violet line + left dot + `box-shadow: 0 0 8px primary88`
+- [x] **5.3.3** Hour grid lines: `line2` color, 56px per hour
+- [x] **5.3.4** Appointment blocks: `background: aptSoft[col]`, `border-left: 2.5px solid apt[col]`, `border-radius: 8px`
 
 ### 5.4 Calendar Panel Colors
-- [ ] **5.4.1** Calendar surface: white
-- [ ] **5.4.2** Calendar page background: `bg-iris-bg`
-- [ ] **5.4.3** Header bar: `bg-iris-panel`, `border-bottom: 1px solid line2`
+- [x] **5.4.1** Calendar surface: white
+- [x] **5.4.2** Calendar page background: `bg-iris-bg`
+- [x] **5.4.3** Header bar: `bg-iris-panel`, `border-bottom: 1px solid line2`
 
 ---
 
@@ -340,58 +340,59 @@
 | 2.5.2 | Sidebar bg → iris-panel | 2 | ✅ |
 | 2.5.3 | Sidebar border → iris-line | 2 | ✅ |
 | 2.5.4 | Layout offset → lg:ml-[230px] | 2 | ✅ |
-| 3.1.1 | Date string in topbar | 3 | ☐ |
-| 3.1.2 | Session count subtitle | 3 | ☐ |
-| 3.1.3 | Date/subtitle styling | 3 | ☐ |
-| 3.2.1 | Search pill component | 3 | ☐ |
-| 3.2.2 | Search pill styling | 3 | ☐ |
-| 3.2.3 | ⌘K shortcut | 3 | ☐ |
+| 3.1.1 | Date string in topbar | 3 | ✅ |
+| 3.1.2 | Session count subtitle | 3 | ✅ |
+| 3.1.3 | Date/subtitle styling | 3 | ✅ |
+| 3.2.1 | Search pill component | 3 | ✅ |
+| 3.2.2 | Search pill styling | 3 | ✅ |
+| 3.2.3 | ⌘K shortcut | 3 | ✅ |
 | 3.3.1 | Restyle Quick Call button | 3 | ✅ |
-| 3.3.2 | Restyle New session button | 3 | ☐ |
-| 3.3.3 | Divider between buttons and avatar | 3 | ☐ |
-| 3.4.1 | Violet gradient avatar | 3 | ☐ |
+| 3.3.2 | Restyle New session button | 3 | ✅ |
+| 3.3.3 | Divider between buttons and avatar | 3 | ✅ |
+| 3.4.1 | Violet gradient avatar | 3 | ✅ |
 | 3.4.2 | Remove name+role from topbar | 3 | ✅ |
+
 | 3.5.1 | Topbar bg → iris-panel | 3 | ✅ |
 | 3.5.2 | Topbar border → iris-line2 | 3 | ✅ |
 | 3.5.3 | Remove shadow-soft from topbar | 3 | ✅ |
 | 4.1.1 | Greeting banner with day/date overline | 4 | ✅ |
 | 4.1.2 | Gradient greeting h1 | 4 | ✅ |
 | 4.1.3 | Dashboard sub-text | 4 | ✅ |
-| 4.1.4 | Studio status pill | 4 | ☐ |
+| 4.1.4 | Studio status pill | 4 | ✅ |
 | 4.2.1 | 4-col stats grid | 4 | ✅ |
 | 4.2.2 | Stats card styling (halo, border) | 4 | ✅ |
 | 4.2.3 | Value + label typography | 4 | ✅ |
-| 4.2.4 | Sparkline SVGs + delta | 4 | ☐ |
+| 4.2.4 | Sparkline SVGs + delta | 4 | ✅ |
 | 4.2.5 | Wire stats to API | 4 | ✅ |
 | 4.3.1 | Iris-styled session rows | 4 | ✅ |
-| 4.3.2 | Active "now" row styling | 4 | ☐ |
-| 4.3.3 | Completed rows opacity | 4 | ☐ |
-| 4.3.4 | NOW badge | 4 | ☐ |
-| 4.3.5 | Open slots AI suggestion card | 4 | ☐ |
+| 4.3.2 | Active "now" row styling | 4 | ✅ |
+| 4.3.3 | Completed rows opacity | 4 | ✅ |
+| 4.3.4 | NOW badge | 4 | ✅ |
+| 4.3.5 | Open slots AI suggestion card | 4 | ✅ |
 | 4.3.6 | "View all →" link | 4 | ✅ |
-| 4.4.1 | Revenue sparkline chart | 4 | ☐ |
-| 4.4.2 | Revenue card header + toggle | 4 | ☐ |
-| 4.4.3 | X-axis labels | 4 | ☐ |
-| 4.4.4 | Wire to real revenue API | 4 | ☐ |
-| 4.5.1 | Service mix bar chart card | 4 | ☐ |
-| 4.5.2 | 5 service rows with bars | 4 | ☐ |
-| 4.5.3 | Bar styling (5px, colored) | 4 | ☐ |
-| 4.5.4 | Wire to real service data | 4 | ☐ |
-| 4.6.1 | Page padding | 4 | ☐ |
-| 4.6.2 | Two-column lower grid | 4 | ☐ |
-| 4.6.3 | Chart area gap | 4 | ☐ |
-| 5.1.1 | Calendar page title + week range | 5 | ☐ |
-| 5.1.2 | Session/therapist/revenue summary | 5 | ☐ |
-| 5.1.3 | Day/Week/Month toggle | 5 | ☐ |
-| 5.2.1 | Therapist filter chip strip | 5 | ☐ |
-| 5.2.2 | Therapist color assignments | 5 | ☐ |
-| 5.3.1 | Today header circle → violet gradient | 5 | ☐ |
-| 5.3.2 | "Now" line with glow | 5 | ☐ |
-| 5.3.3 | Hour grid spacing (56px) | 5 | ☐ |
-| 5.3.4 | Appointment block left-border style | 5 | ☐ |
-| 5.4.1 | Calendar surface white | 5 | ☐ |
-| 5.4.2 | Calendar page bg iris-bg | 5 | ☐ |
-| 5.4.3 | Calendar header panel color | 5 | ☐ |
+| 4.4.1 | Revenue sparkline chart | 4 | ✅ |
+| 4.4.2 | Revenue card header + toggle | 4 | ✅ |
+| 4.4.3 | X-axis labels | 4 | ✅ |
+| 4.4.4 | Wire to real revenue API | 4 | ✅ |
+| 4.5.1 | Service mix bar chart card | 4 | ✅ |
+| 4.5.2 | 5 service rows with bars | 4 | ✅ |
+| 4.5.3 | Bar styling (5px, colored) | 4 | ✅ |
+| 4.5.4 | Wire to real service data | 4 | ✅ |
+| 4.6.1 | Page padding | 4 | ✅ |
+| 4.6.2 | Two-column lower grid | 4 | ✅ |
+| 4.6.3 | Chart area gap | 4 | ✅ |
+| 5.1.1 | Calendar page title + week range | 5 | ✅ |
+| 5.1.2 | Session/therapist/revenue summary | 5 | ✅ |
+| 5.1.3 | Day/Week/Month toggle | 5 | ✅ |
+| 5.2.1 | Therapist filter chip strip | 5 | ✅ |
+| 5.2.2 | Therapist color assignments | 5 | ✅ |
+| 5.3.1 | Today header circle → violet gradient | 5 | ✅ |
+| 5.3.2 | "Now" line with glow | 5 | ✅ |
+| 5.3.3 | Hour grid spacing (56px) | 5 | ✅ |
+| 5.3.4 | Appointment block left-border style | 5 | ✅ |
+| 5.4.1 | Calendar surface white | 5 | ✅ |
+| 5.4.2 | Calendar page bg iris-bg | 5 | ✅ |
+| 5.4.3 | Calendar header panel color | 5 | ✅ |
 | 6.1.1 | Clients overline | 6 | ☐ |
 | 6.1.2 | Clients h1 + subtitle | 6 | ☐ |
 | 6.1.3 | Export + Add client buttons | 6 | ☐ |

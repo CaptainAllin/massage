@@ -12,7 +12,7 @@ interface WeekViewProps {
 
 const HOURS = Array.from({ length: 14 }, (_, i) => i + 7); // 7am to 8pm
 const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const ROW_HEIGHT = 60; // px per hour
+const ROW_HEIGHT = 56; // px per hour
 
 export function WeekView({
   currentDate,
@@ -93,7 +93,7 @@ export function WeekView({
                   <div className="flex items-center justify-center mt-1">
                     {isToday ? (
                       <span
-                        className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold text-white"
+                        className="w-[30px] h-[30px] rounded-full flex items-center justify-center text-sm font-semibold text-white"
                         style={{ background: 'linear-gradient(135deg, #5D4AA8, #3F2F87)' }}
                       >
                         {format(date, 'd')}
@@ -118,25 +118,37 @@ export function WeekView({
             className="overflow-y-auto relative"
             style={{ maxHeight: 'calc(100vh - 320px)' }}
           >
-            {/* Now line overlay */}
+            {/* Now-line overlay */}
             {showNowLine && todayColIndex >= 0 && (
               <div
                 className="absolute left-0 right-0 pointer-events-none z-10 flex items-center"
                 style={{ top: `${nowTopPx}px` }}
               >
-                <div className="w-[12.5%]" />
-                {/* Spacer for the hour-label column + columns before today */}
                 <div
                   style={{
-                    marginLeft: `calc(${(todayColIndex / 7) * 100}%)`,
-                    width: `${(1 / 7) * 100}%`,
                     position: 'absolute',
-                    left: '12.5%',
+                    left: `calc(12.5% + ${(todayColIndex / 7) * 87.5}%)`,
+                    width: `${(1 / 7) * 87.5}%`,
+                    display: 'flex',
+                    alignItems: 'center',
                   }}
                 >
+                  {/* Dot on the left */}
                   <div
-                    className="h-[1.5px] w-full"
                     style={{
+                      width: '8px',
+                      height: '8px',
+                      borderRadius: '50%',
+                      background: '#5D4AA8',
+                      flexShrink: 0,
+                      marginLeft: '-4px',
+                    }}
+                  />
+                  {/* Line */}
+                  <div
+                    style={{
+                      flex: 1,
+                      height: '1.5px',
                       background: '#5D4AA8',
                       boxShadow: '0 0 8px rgba(93,74,168,0.55)',
                     }}
@@ -149,7 +161,7 @@ export function WeekView({
               <div
                 key={hour}
                 className="grid grid-cols-8"
-                style={{ borderBottom: '1px solid #F3EEF8', minHeight: `${ROW_HEIGHT}px` }}
+                style={{ borderBottom: '1px solid #EFE9F2', minHeight: `${ROW_HEIGHT}px` }}
               >
                 {/* Hour label */}
                 <div
@@ -169,7 +181,7 @@ export function WeekView({
                       key={dayIndex}
                       className="p-1 cursor-pointer transition-colors"
                       style={{
-                        borderLeft: '1px solid #F3EEF8',
+                        borderLeft: '1px solid #EFE9F2',
                         background: isTodayCol ? '#FDFBFF' : 'transparent',
                       }}
                       onMouseEnter={(e) => {

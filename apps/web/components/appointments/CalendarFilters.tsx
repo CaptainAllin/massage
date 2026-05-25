@@ -1,7 +1,14 @@
-import { Select, Button } from '@massage/ui';
 import { AppointmentStatus, Therapist } from '@massage/types';
-import { format, addDays, subDays } from 'date-fns';
+import { format, addDays, subDays, getWeek, startOfWeek, endOfWeek } from 'date-fns';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+
+// 4-color Iris therapist palette (cycling by index)
+const THERAPIST_COLORS = ['#5D4AA8', '#7A92D2', '#C97E68', '#8A6FBE'];
+
+export function getTherapistColor(therapistId: string, therapists: Therapist[]): string {
+  const idx = therapists.findIndex((t) => t.id === therapistId);
+  return THERAPIST_COLORS[idx >= 0 ? idx % 4 : 0];
+}
 
 interface CalendarFiltersProps {
   currentDate: Date;
@@ -11,18 +18,9 @@ interface CalendarFiltersProps {
   selectedStatuses: AppointmentStatus[];
   onStatusesChange: (statuses: AppointmentStatus[]) => void;
   therapists: Therapist[];
-  viewMode: 'week' | 'day';
-  onViewModeChange: (mode: 'week' | 'day') => void;
+  viewMode: 'week' | 'day' | 'month';
+  onViewModeChange: (mode: 'week' | 'day' | 'month') => void;
 }
-
-const statusOptions = [
-  { value: AppointmentStatus.SCHEDULED, label: 'Scheduled' },
-  { value: AppointmentStatus.CONFIRMED, label: 'Confirmed' },
-  { value: AppointmentStatus.IN_PROGRESS, label: 'In Progress' },
-  { value: AppointmentStatus.COMPLETED, label: 'Completed' },
-  { value: AppointmentStatus.CANCELLED, label: 'Cancelled' },
-  { value: AppointmentStatus.NO_SHOW, label: 'No Show' },
-];
 
 export function CalendarFilters({
   currentDate,
@@ -35,115 +33,146 @@ export function CalendarFilters({
   viewMode,
   onViewModeChange,
 }: CalendarFiltersProps) {
-  const handlePreviousWeek = () => {
-    onDateChange(subDays(currentDate, viewMode === 'week' ? 7 : 1));
+  const handlePrev = () => {
+    onDateChange(subDays(currentDate, viewMode === 'day' ? 1 : 7));
   };
 
-  const handleNextWeek = () => {
-    onDateChange(addDays(currentDate, viewMode === 'week' ? 7 : 1));
+  const handleNext = () => {
+    onDateChange(addDays(currentDate, viewMode === 'day' ? 1 : 7));
   };
 
-  const handleToday = () => {
-    onDateChange(new Date());
-  };
+  const handleToday = () => onDateChange(new Date());
 
-  const handleStatusToggle = (status: AppointmentStatus) => {
-    if (selectedStatuses.includes(status)) {
-      onStatusesChange(selectedStatuses.filter((s) => s !== status));
-    } else {
-      onStatusesChange([...selectedStatuses, status]);
-    }
-  };
+  const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 });
+  const weekEnd = endOfWeek(currentDate, { weekStartsOn: 0 });
+  const weekNum = getWeek(currentDate, { weekStartsOn: 0 });
 
-  const therapistOptions = [
-    { value: 'all', label: 'All Therapists' },
-    ...therapists.map((therapist: any) => ({
-      value: therapist.id,
-      label: therapist.user
-        ? `${therapist.user.firstName || ''} ${therapist.user.lastName || ''}`
-        : 'Unknown',
-    })),
-  ];
+  const dateLabel =
+    viewMode === 'day'
+      ? format(currentDate, 'EEE, d MMM yyyy')
+      : `${format(weekStart, 'd MMM')} – ${format(weekEnd, 'd MMM yyyy')}`;
 
   return (
     <div className="space-y-3">
-      {/* View Mode and Date Navigation */}
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <Button
-            variant={viewMode === 'week' ? 'primary' : 'secondary'}
-            onClick={() => onViewModeChange('week')}
-            size="sm"
-          >
-            Week
-          </Button>
-          <Button
-            variant={viewMode === 'day' ? 'primary' : 'secondary'}
-            onClick={() => onViewModeChange('day')}
-            size="sm"
-          >
-            Day
-          </Button>
+      {/* Row 1: View toggle + date navigation */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {/* Day / Week / Month toggle */}
+        <div
+          className="flex items-center gap-1 p-1 rounded-xl"
+          style={{ background: '#EDE5F4' }}
+        >
+          {(['day', 'week', 'month'] as const).map((mode) => {
+            const active = viewMode === mode;
+            return (
+              <button
+                key={mode}
+                onClick={() => onViewModeChange(mode)}
+                className="px-3 py-1 rounded-lg text-sm font-medium transition-all capitalize"
+                style={
+                  active
+                    ? {
+                        background: 'linear-gradient(135deg, #5D4AA8, #3F2F87)',
+                        color: '#fff',
+                        boxShadow: '0 2px 8px rgba(93,74,168,0.30)',
+                      }
+                    : { color: '#5D4AA8', background: 'transparent' }
+                }
+              >
+                {mode.charAt(0).toUpperCase() + mode.slice(1)}
+              </button>
+            );
+          })}
         </div>
 
+        {/* Date navigation */}
         <div className="flex items-center gap-2">
-          <Button variant="secondary" onClick={handlePreviousWeek} size="sm">
+          <button
+            onClick={handlePrev}
+            className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors"
+            style={{ border: '1px solid #E5DEEC', background: '#fff', color: '#3D3450' }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = '#EDE5F4')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = '#fff')}
+          >
             <ChevronLeftIcon className="h-4 w-4" />
-          </Button>
+          </button>
 
-          <span className="text-xs sm:text-sm font-semibold text-gray-900 min-w-[100px] sm:min-w-[140px] text-center">
-            {viewMode === 'week'
-              ? `Week of ${format(currentDate, 'MMM d')}`
-              : format(currentDate, 'MMM d, yyyy')}
-          </span>
-
-          <Button variant="secondary" onClick={handleNextWeek} size="sm">
-            <ChevronRightIcon className="h-4 w-4" />
-          </Button>
-
-          <Button variant="secondary" onClick={handleToday} size="sm">
-            Today
-          </Button>
-        </div>
-      </div>
-
-      {/* Therapist and Status Filters */}
-      <div className="flex flex-wrap items-start gap-3">
-        {/* Therapist Filter */}
-        <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Therapist:</label>
-          <Select
-            value={selectedTherapist || 'all'}
-            onChange={(e) =>
-              onTherapistChange(e.target.value === 'all' ? null : e.target.value)
-            }
-            options={therapistOptions}
-          />
-        </div>
-
-        {/* Status Filter */}
-        <div className="flex flex-wrap items-center gap-2">
-          <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Status:</label>
-          <div className="flex gap-1.5 flex-wrap">
-            {statusOptions.map((option) => {
-              const isSelected = selectedStatuses.includes(option.value);
-              return (
-                <button
-                  key={option.value}
-                  onClick={() => handleStatusToggle(option.value)}
-                  className={`px-2 py-0.5 text-xs font-medium rounded-full transition-colors ${
-                    isSelected
-                      ? 'bg-sage-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  {option.label}
-                </button>
-              );
-            })}
+          <div className="text-center min-w-[160px]">
+            <p className="text-sm font-semibold" style={{ color: '#1E1830' }}>{dateLabel}</p>
+            {viewMode === 'week' && (
+              <p className="text-xs" style={{ color: '#7A7090' }}>Week {weekNum}</p>
+            )}
           </div>
+
+          <button
+            onClick={handleNext}
+            className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors"
+            style={{ border: '1px solid #E5DEEC', background: '#fff', color: '#3D3450' }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = '#EDE5F4')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = '#fff')}
+          >
+            <ChevronRightIcon className="h-4 w-4" />
+          </button>
+
+          <button
+            onClick={handleToday}
+            className="px-3 py-1 rounded-lg text-sm font-medium transition-colors"
+            style={{ border: '1px solid #E5DEEC', background: '#fff', color: '#5D4AA8' }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = '#EDE5F4')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = '#fff')}
+          >
+            Today
+          </button>
         </div>
       </div>
+
+      {/* Row 2: Therapist filter strip */}
+      {therapists.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          {/* All chip */}
+          <button
+            onClick={() => onTherapistChange(null)}
+            className="flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium transition-all"
+            style={
+              selectedTherapist === null
+                ? {
+                    background: 'linear-gradient(135deg, #5D4AA8, #3F2F87)',
+                    color: '#fff',
+                    boxShadow: '0 2px 8px rgba(93,74,168,0.28)',
+                  }
+                : { border: '1px solid #E5DEEC', background: '#fff', color: '#3D3450' }
+            }
+          >
+            All
+          </button>
+
+          {therapists.map((therapist, idx) => {
+            const color = THERAPIST_COLORS[idx % 4];
+            const isSelected = selectedTherapist === therapist.id;
+            const name = therapist.user
+              ? `${therapist.user.firstName || ''} ${therapist.user.lastName || ''}`.trim()
+              : 'Unknown';
+
+            return (
+              <button
+                key={therapist.id}
+                onClick={() => onTherapistChange(therapist.id)}
+                className="flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium transition-all"
+                style={
+                  isSelected
+                    ? { background: color + '22', border: `1px solid ${color}`, color: color }
+                    : { border: '1px solid #E5DEEC', background: '#fff', color: '#3D3450' }
+                }
+              >
+                <span
+                  className="w-2 h-2 rounded-full flex-shrink-0"
+                  style={{ background: color }}
+                />
+                {name}
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
