@@ -215,23 +215,23 @@
 > Update the clients list page with Iris header, filter tabs, and styled table.
 
 ### 6.1 Clients Page Header
-- [ ] **6.1.1** Add overline: "Clients · 142 active" — violet uppercase
-- [ ] **6.1.2** Render `h1`: "Your people" + subtitle "8 new clients this month · 4 are due for a follow-up."
-- [ ] **6.1.3** Add Export button (outlined) + Add client button (violet gradient)
+- [x] **6.1.1** Add overline: "Clients · 142 active" — violet uppercase
+- [x] **6.1.2** Render `h1`: "Your people" + subtitle "8 new clients this month · 4 are due for a follow-up."
+- [x] **6.1.3** Add Export button (outlined) + Add client button (violet gradient)
 
 ### 6.2 Filter Tabs
-- [ ] **6.2.1** Add filter bar card: search input pill + filter chips: All (142), VIP (12), New this month (8), Due for visit (24), Inactive 60d+ (18)
-- [ ] **6.2.2** Active filter: violet gradient background; inactive: outlined
-- [ ] **6.2.3** Add "More filters" button (right-aligned, outlined, filter icon)
-- [ ] **6.2.4** Wire filter counts to real API data
+- [x] **6.2.1** Add filter bar card: search input pill + filter chips: All (142), VIP (12), New this month (8), Due for visit (24), Inactive 60d+ (18)
+- [x] **6.2.2** Active filter: violet gradient background; inactive: outlined
+- [x] **6.2.3** Add "More filters" button (right-aligned, outlined, filter icon)
+- [x] **6.2.4** Wire filter counts to real API data
 
 ### 6.3 Clients Table
-- [ ] **6.3.1** Table columns: Client (avatar + name + therapist), Tags, Last visit, Lifetime $, Visits, Next session, chevron
-- [ ] **6.3.2** Avatar: colored initials circle (`aptSoft` bg, `apt` text color)
-- [ ] **6.3.3** Tags: VIP → peach `soft2` bg; other tags → violet `soft1` bg
-- [ ] **6.3.4** Table header: 10.5px uppercase muted letterSpacing 1
-- [ ] **6.3.5** Pagination: Previous (outlined) + page indicator + Next (violet gradient)
-- [ ] **6.3.6** Table `border-radius: 18px`, overflow hidden, white surface
+- [x] **6.3.1** Table columns: Client (avatar + name + therapist), Tags, Last visit, Lifetime $, Visits, Next session, chevron
+- [x] **6.3.2** Avatar: colored initials circle (`aptSoft` bg, `apt` text color)
+- [x] **6.3.3** Tags: VIP → peach `soft2` bg; other tags → violet `soft1` bg
+- [x] **6.3.4** Table header: 10.5px uppercase muted letterSpacing 1
+- [x] **6.3.5** Pagination: Previous (outlined) + page indicator + Next (violet gradient)
+- [x] **6.3.6** Table `border-radius: 18px`, overflow hidden, white surface
 
 ---
 
@@ -240,33 +240,33 @@
 > Update the client profile page with Iris header card, KPI row, tabs, session timeline, notes, and recurring booking.
 
 ### 7.1 Profile Header Card
-- [ ] **7.1.1** Add breadcrumb: `← Clients / Priya Raman` with violet chevron
-- [ ] **7.1.2** Large avatar (72px circle, aptSoft bg, large initials)
-- [ ] **7.1.3** Name `h1` + active status pill: "In Room 2 · started 11:32" with violet dot
-- [ ] **7.1.4** Contact row: phone, email, pronouns, age/condition in muted text
-- [ ] **7.1.5** Tags: condition tags (`soft1`/`soft2` bg), allergy tag in peach
-- [ ] **7.1.6** Action buttons: Message (outlined) + Book session (violet gradient)
-- [ ] **7.1.7** Radial violet halo in top-right corner of card
+- [x] **7.1.1** Add breadcrumb: `← Clients / Priya Raman` with violet chevron
+- [x] **7.1.2** Large avatar (72px circle, aptSoft bg, large initials)
+- [x] **7.1.3** Name `h1` + active status pill: "In Room 2 · started 11:32" with violet dot
+- [x] **7.1.4** Contact row: phone, email, pronouns, age/condition in muted text
+- [x] **7.1.5** Tags: condition tags (`soft1`/`soft2` bg), allergy tag in peach
+- [x] **7.1.6** Action buttons: Message (outlined) + Book session (violet gradient)
+- [x] **7.1.7** Radial violet halo in top-right corner of card
 
 ### 7.2 KPI Row
-- [ ] **7.2.1** 4-column KPI grid inside header card (below border): Sessions, Lifetime spent, Cadence, Retention
-- [ ] **7.2.2** Value at 22px weight 500; label uppercase 10.5px muted; sub-text 11px muted
+- [x] **7.2.1** 4-column KPI grid inside header card (below border): Sessions, Lifetime spent, Cadence, Retention
+- [x] **7.2.2** Value at 22px weight 500; label uppercase 10.5px muted; sub-text 11px muted
 
 ### 7.3 Profile Tabs
-- [ ] **7.3.1** Tabs: Overview, Sessions, Notes `[3]`, Intake forms, Payments, Files
-- [ ] **7.3.2** Active tab: violet underline `2px solid primary`, violet text weight 500
-- [ ] **7.3.3** Notes badge: `accent33` bg + `accentDk` text
+- [x] **7.3.1** Tabs: Overview, Sessions, Notes `[3]`, Intake forms, Payments, Files
+- [x] **7.3.2** Active tab: violet underline `2px solid primary`, violet text weight 500
+- [x] **7.3.3** Notes badge: `accent33` bg + `accentDk` text
 
 ### 7.4 Session History Timeline
-- [ ] **7.4.1** Vertical timeline: 2px `line2` line, dot markers (`14px` circles)
-- [ ] **7.4.2** Active dot: filled violet + `box-shadow: 0 0 0 4px primary22`
-- [ ] **7.4.3** Past dots: white fill, `primary2` border
-- [ ] **7.4.4** Row grid: dot col + service/therapist/date + price right
+- [x] **7.4.1** Vertical timeline: 2px `line2` line, dot markers (`14px` circles)
+- [x] **7.4.2** Active dot: filled violet + `box-shadow: 0 0 0 4px primary22`
+- [x] **7.4.3** Past dots: white fill, `primary2` border
+- [x] **7.4.4** Row grid: dot col + service/therapist/date + price right
 
 ### 7.5 Notes & Recurring Booking Cards
-- [ ] **7.5.1** Latest notes card: date header + note body text + therapist avatar credit
-- [ ] **7.5.2** Recurring booking card: calendar icon + schedule text + "Until birth" pill
-- [ ] **7.5.3** AI upsell banner: peach bg + spark icon + postpartum package copy
+- [x] **7.5.1** Latest notes card: date header + note body text + therapist avatar credit
+- [x] **7.5.2** Recurring booking card: calendar icon + schedule text + "Until birth" pill
+- [x] **7.5.3** AI upsell banner: peach bg + spark icon + postpartum package copy
 
 ---
 
@@ -393,38 +393,38 @@
 | 5.4.1 | Calendar surface white | 5 | ✅ |
 | 5.4.2 | Calendar page bg iris-bg | 5 | ✅ |
 | 5.4.3 | Calendar header panel color | 5 | ✅ |
-| 6.1.1 | Clients overline | 6 | ☐ |
-| 6.1.2 | Clients h1 + subtitle | 6 | ☐ |
-| 6.1.3 | Export + Add client buttons | 6 | ☐ |
-| 6.2.1 | Filter bar card | 6 | ☐ |
-| 6.2.2 | Active/inactive filter styling | 6 | ☐ |
-| 6.2.3 | More filters button | 6 | ☐ |
-| 6.2.4 | Wire filter counts | 6 | ☐ |
-| 6.3.1 | Table columns | 6 | ☐ |
-| 6.3.2 | Avatar initials | 6 | ☐ |
-| 6.3.3 | Tag styling (VIP peach, others violet) | 6 | ☐ |
-| 6.3.4 | Table header style | 6 | ☐ |
-| 6.3.5 | Pagination styling | 6 | ☐ |
-| 6.3.6 | Table border-radius + overflow | 6 | ☐ |
-| 7.1.1 | Profile breadcrumb | 7 | ☐ |
-| 7.1.2 | Large avatar | 7 | ☐ |
-| 7.1.3 | Name + status pill | 7 | ☐ |
-| 7.1.4 | Contact row | 7 | ☐ |
-| 7.1.5 | Profile tags | 7 | ☐ |
-| 7.1.6 | Action buttons | 7 | ☐ |
-| 7.1.7 | Radial halo in header card | 7 | ☐ |
-| 7.2.1 | KPI 4-col grid | 7 | ☐ |
-| 7.2.2 | KPI typography | 7 | ☐ |
-| 7.3.1 | Profile tabs | 7 | ☐ |
-| 7.3.2 | Active tab styling | 7 | ☐ |
-| 7.3.3 | Notes count badge | 7 | ☐ |
-| 7.4.1 | Session timeline vertical line | 7 | ☐ |
-| 7.4.2 | Active dot (filled violet + ring) | 7 | ☐ |
-| 7.4.3 | Past dot (white + primary2 border) | 7 | ☐ |
-| 7.4.4 | Timeline row grid | 7 | ☐ |
-| 7.5.1 | Latest notes card | 7 | ☐ |
-| 7.5.2 | Recurring booking card | 7 | ☐ |
-| 7.5.3 | AI upsell banner | 7 | ☐ |
+| 6.1.1 | Clients overline | 6 | ✅ |
+| 6.1.2 | Clients h1 + subtitle | 6 | ✅ |
+| 6.1.3 | Export + Add client buttons | 6 | ✅ |
+| 6.2.1 | Filter bar card | 6 | ✅ |
+| 6.2.2 | Active/inactive filter styling | 6 | ✅ |
+| 6.2.3 | More filters button | 6 | ✅ |
+| 6.2.4 | Wire filter counts | 6 | ✅ |
+| 6.3.1 | Table columns | 6 | ✅ |
+| 6.3.2 | Avatar initials | 6 | ✅ |
+| 6.3.3 | Tag styling (VIP peach, others violet) | 6 | ✅ |
+| 6.3.4 | Table header style | 6 | ✅ |
+| 6.3.5 | Pagination styling | 6 | ✅ |
+| 6.3.6 | Table border-radius + overflow | 6 | ✅ |
+| 7.1.1 | Profile breadcrumb | 7 | ✅ |
+| 7.1.2 | Large avatar | 7 | ✅ |
+| 7.1.3 | Name + status pill | 7 | ✅ |
+| 7.1.4 | Contact row | 7 | ✅ |
+| 7.1.5 | Profile tags | 7 | ✅ |
+| 7.1.6 | Action buttons | 7 | ✅ |
+| 7.1.7 | Radial halo in header card | 7 | ✅ |
+| 7.2.1 | KPI 4-col grid | 7 | ✅ |
+| 7.2.2 | KPI typography | 7 | ✅ |
+| 7.3.1 | Profile tabs | 7 | ✅ |
+| 7.3.2 | Active tab styling | 7 | ✅ |
+| 7.3.3 | Notes count badge | 7 | ✅ |
+| 7.4.1 | Session timeline vertical line | 7 | ✅ |
+| 7.4.2 | Active dot (filled violet + ring) | 7 | ✅ |
+| 7.4.3 | Past dot (white + primary2 border) | 7 | ✅ |
+| 7.4.4 | Timeline row grid | 7 | ✅ |
+| 7.5.1 | Latest notes card | 7 | ✅ |
+| 7.5.2 | Recurring booking card | 7 | ✅ |
+| 7.5.3 | AI upsell banner | 7 | ✅ |
 | 8.1.1 | Button variants → violet | 8 | ☐ |
 | 8.1.2 | Card radius + border | 8 | ☐ |
 | 8.1.3 | Input/Select Iris styling | 8 | ☐ |

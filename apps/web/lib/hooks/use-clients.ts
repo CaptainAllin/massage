@@ -2,7 +2,17 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Client, ClientFilters, ApiResponse } from '@massage/types';
 import { apiClient } from '@/lib/api-client';
 
-// Fetch all clients
+export type ClientFilterType = 'all' | 'vip' | 'new' | 'due' | 'inactive';
+
+export interface ClientCounts {
+  all: number;
+  vip: number;
+  newThisMonth: number;
+  dueForVisit: number;
+  inactive60d: number;
+}
+
+// Fetch all clients (returns array — backwards-compatible)
 export function useClients(businessId: string | undefined, filters?: ClientFilters) {
   return useQuery({
     queryKey: ['clients', businessId, filters],
@@ -14,8 +24,44 @@ export function useClients(businessId: string | undefined, filters?: ClientFilte
         ...(filters?.page && { page: String(filters.page) }),
         ...(filters?.limit && { limit: String(filters.limit) }),
       });
-
       const response = await apiClient.get<ApiResponse<Client[]>>(`/clients?${params}`);
+      return response.data.data;
+    },
+    enabled: !!businessId,
+  });
+}
+
+// Fetch clients with meta + filter support (used by clients page)
+export function useClientsWithMeta(
+  businessId: string | undefined,
+  filters?: { search?: string; page?: number; limit?: number; filter?: ClientFilterType }
+) {
+  return useQuery({
+    queryKey: ['clients-meta', businessId, filters],
+    queryFn: async () => {
+      const params = new URLSearchParams({ businessId: businessId! });
+      if (filters?.search) params.set('search', filters.search);
+      if (filters?.page) params.set('page', String(filters.page));
+      if (filters?.limit) params.set('limit', String(filters.limit));
+      if (filters?.filter && filters.filter !== 'all') params.set('filter', filters.filter);
+
+      const response = await apiClient.get<any>(`/clients?${params}`);
+      return {
+        data: response.data.data as Client[],
+        meta: response.data.meta as { page: number; limit: number; total: number; totalPages: number },
+      };
+    },
+    enabled: !!businessId,
+  });
+}
+
+// Fetch filter counts for the filter chips
+export function useClientCounts(businessId: string | undefined) {
+  return useQuery({
+    queryKey: ['clients-counts', businessId],
+    queryFn: async () => {
+      const params = new URLSearchParams({ businessId: businessId!, counts: 'true' });
+      const response = await apiClient.get<ApiResponse<ClientCounts>>(`/clients?${params}`);
       return response.data.data;
     },
     enabled: !!businessId,
