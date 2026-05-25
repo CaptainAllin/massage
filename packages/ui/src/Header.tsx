@@ -108,7 +108,7 @@ export function Header({
             style={{
               fontSize: '11px',
               color: '#7A7090',
-              background: '#F1ECF5',
+              background: '#F3F4F7',
               border: '1px solid #E5DEEC',
               borderRadius: '4px',
               padding: '1px 5px',

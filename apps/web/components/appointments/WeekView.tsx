@@ -80,7 +80,7 @@ export function WeekView({
                   key={index}
                   className="py-3 px-2 text-center"
                   style={{
-                    background: isToday ? '#F1ECF5' : '#FBF8FD',
+                    background: isToday ? '#F3F4F7' : '#FBF8FD',
                     borderLeft: '1px solid #EFE9F2',
                   }}
                 >

@@ -101,7 +101,7 @@ export default function SignUpPage() {
   return (
     <div
       className="min-h-screen flex items-center justify-center py-12 px-4"
-      style={{ background: '#F1ECF5' }}
+      style={{ background: '#F3F4F7' }}
     >
       <div className="w-full max-w-sm">
         {/* Logo */}

@@ -68,7 +68,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
   const email = user?.email ?? '';
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: '#F1ECF5' }}>
+    <div className="flex h-screen overflow-hidden" style={{ background: '#F3F4F7' }}>
       <Sidebar
         userRole={role}
         userName={fullName}
@@ -101,7 +101,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
           }
         />
 
-        <main className="flex-1 overflow-y-auto" style={{ background: '#F1ECF5', padding: '24px 28px 32px' }}>
+        <main className="flex-1 overflow-y-auto" style={{ background: '#F3F4F7', padding: '24px 28px 32px' }}>
           {children}
         </main>
       </div>

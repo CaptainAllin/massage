@@ -29,7 +29,7 @@ function SignInForm() {
   return (
     <div
       className="min-h-screen flex items-center justify-center py-12 px-4"
-      style={{ background: '#F1ECF5' }}
+      style={{ background: '#F3F4F7' }}
     >
       <div className="w-full max-w-sm">
         {/* Logo */}
@@ -142,7 +142,7 @@ export default function SignInPage() {
     <Suspense fallback={
       <div
         className="min-h-screen flex items-center justify-center"
-        style={{ background: '#F1ECF5' }}
+        style={{ background: '#F3F4F7' }}
       >
         <div className="text-sm" style={{ color: '#7A7090' }}>Loading…</div>
       </div>
