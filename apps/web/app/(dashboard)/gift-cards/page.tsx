@@ -28,7 +28,7 @@ function GiftCardBadge({ isActive, balance }: { isActive: boolean; balance: numb
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-[#EDE5F4] text-[#5D4AA8]">
       <CheckCircle className="w-3 h-3" /> Active
     </span>
   );
@@ -83,7 +83,7 @@ function CreateGiftCardModal({
               required
               value={form.amount}
               onChange={(e) => setForm({ ...form, amount: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-\[#5D4AA8\]"
               placeholder="50.00"
             />
           </div>
@@ -93,7 +93,7 @@ function CreateGiftCardModal({
               type="text"
               value={form.recipientName}
               onChange={(e) => setForm({ ...form, recipientName: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-\[#5D4AA8\]"
               placeholder="Jane Smith"
             />
           </div>
@@ -103,7 +103,7 @@ function CreateGiftCardModal({
               type="email"
               value={form.recipientEmail}
               onChange={(e) => setForm({ ...form, recipientEmail: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-\[#5D4AA8\]"
               placeholder="jane@example.com"
             />
           </div>
@@ -112,7 +112,7 @@ function CreateGiftCardModal({
             <select
               value={form.purchasedById}
               onChange={(e) => setForm({ ...form, purchasedById: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-\[#5D4AA8\]"
             >
               <option value="">— Select client —</option>
               {Array.isArray(clients) && clients.map((c: any) => (
@@ -126,7 +126,7 @@ function CreateGiftCardModal({
               type="text"
               value={form.note}
               onChange={(e) => setForm({ ...form, note: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-\[#5D4AA8\]"
               placeholder="Happy Birthday!"
             />
           </div>
@@ -136,7 +136,7 @@ function CreateGiftCardModal({
               type="date"
               value={form.expiresAt}
               onChange={(e) => setForm({ ...form, expiresAt: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-\[#5D4AA8\]"
             />
           </div>
           <div className="flex gap-3 pt-2">
@@ -177,9 +177,9 @@ function RedeemModal({
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
         </div>
         <div className="p-6">
-          <div className="mb-4 p-3 bg-green-50 rounded-lg text-sm">
-            <p className="font-mono text-lg font-bold text-green-700">{giftCard.code}</p>
-            <p className="text-green-600 mt-1">Available balance: {formatCurrency(giftCard.balance)}</p>
+          <div className="mb-4 p-3 bg-[#EDE5F4] rounded-lg text-sm">
+            <p className="font-mono text-lg font-bold text-[#5D4AA8]">{giftCard.code}</p>
+            <p className="text-[#7665C2] mt-1">Available balance: {formatCurrency(giftCard.balance)}</p>
           </div>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -192,7 +192,7 @@ function RedeemModal({
                 required
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-\[#5D4AA8\]"
               />
             </div>
             <div className="flex gap-3">
@@ -280,8 +280,8 @@ export default function GiftCardsPage() {
                 <p className="text-sm font-medium text-gray-600">Total Redeemed</p>
                 <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(totalRedeemed)}</p>
               </div>
-              <div className="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <DollarSign className="h-6 w-6 text-green-600" />
+              <div className="h-12 w-12 bg-[#EDE5F4] rounded-lg flex items-center justify-center">
+                <DollarSign className="h-6 w-6 text-[#5D4AA8]" />
               </div>
             </div>
           </CardContent>
@@ -298,7 +298,7 @@ export default function GiftCardsPage() {
                 placeholder="Search by code, recipient..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-\[#5D4AA8\]"
               />
             </div>
             <div className="flex gap-1 border border-gray-200 rounded-lg p-1 bg-gray-50">

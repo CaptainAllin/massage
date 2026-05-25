@@ -73,8 +73,8 @@ export function MembershipSessionHistory({
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                   <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                     session.appointment?.status === 'COMPLETED'
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-blue-100 text-blue-800'
+                      ? 'bg-[#EDE5F4] text-[#5D4AA8]'
+                      : 'bg-[#EDE5F4] text-[#7665C2]'
                   }`}>
                     {session.appointment?.status || 'REDEEMED'}
                   </span>

@@ -214,7 +214,7 @@ export function QuickCallModal() {
                         onClick={() => handleSelectClient(client)}
                         className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left"
                       >
-                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-green-100 text-green-700 text-sm font-semibold flex-shrink-0">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#EDE5F4] text-[#5D4AA8] text-sm font-semibold flex-shrink-0">
                           {client.firstName[0]}{client.lastName[0]}
                         </div>
                         <div className="flex-1 min-w-0">
@@ -316,7 +316,7 @@ export function QuickCallModal() {
         <div className="space-y-4">
           {/* Client summary */}
           <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 text-green-700 text-sm font-semibold flex-shrink-0">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#EDE5F4] text-[#5D4AA8] text-sm font-semibold flex-shrink-0">
               {selectedClient.firstName[0]}{selectedClient.lastName[0]}
             </div>
             <div className="flex-1 min-w-0">

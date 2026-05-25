@@ -4,13 +4,11 @@ import React from 'react';
 import Link from 'next/link';
 import { ChevronLeft, Phone, Mail, MessageSquare, CalendarPlus } from 'lucide-react';
 import { Client } from '@massage/types';
-
-const APT_SOFT = ['#EDE5F4', '#E8EDF7', '#F7EDE5', '#EEE8F4'];
-const APT_COLOR = ['#5D4AA8', '#7A92D2', '#C97E68', '#8A6FBE'];
+import { APT_COLORS, APT_SOFT } from '@/lib/appointment-colors';
 
 function colorIdx(id: string): number {
   let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h + id.charCodeAt(i)) % 4;
+  for (let i = 0; i < id.length; i++) h = (h + id.charCodeAt(i)) % APT_COLORS.length;
   return h;
 }
 
@@ -93,7 +91,7 @@ export const ClientHeader: React.FC<ClientHeaderProps> = ({
             {/* 7.1.2 Large avatar */}
             <div
               className="w-[72px] h-[72px] rounded-full flex items-center justify-center flex-shrink-0 text-2xl font-semibold select-none"
-              style={{ background: APT_SOFT[ci], color: APT_COLOR[ci] }}
+              style={{ background: APT_SOFT[ci], color: APT_COLORS[ci] }}
             >
               {initials}
             </div>

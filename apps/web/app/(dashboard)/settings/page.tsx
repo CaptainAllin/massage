@@ -178,7 +178,7 @@ function TeamTab({ businessId }: { businessId: string }) {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between gap-4 flex-wrap">
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center text-green-800 font-semibold text-sm">
+                    <div className="h-10 w-10 rounded-full bg-[#EDE5F4] flex items-center justify-center text-[#5D4AA8] font-semibold text-sm">
                       {u?.firstName?.[0]}{u?.lastName?.[0]}
                     </div>
                     <div>
@@ -295,7 +295,7 @@ function NotificationsTab({ businessId }: { businessId: string }) {
           checked={checked}
           onChange={(e) => onChange(e.target.checked)}
         />
-        <div className={`w-11 h-6 rounded-full transition-colors ${checked ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`}>
+        <div className={`w-11 h-6 rounded-full transition-colors ${checked ? 'bg-[#5D4AA8]' : 'bg-gray-300 dark:bg-gray-600'}`}>
           <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${checked ? 'translate-x-5' : 'translate-x-0.5'}`} />
         </div>
       </div>
@@ -660,8 +660,8 @@ export default function SettingsPage() {
         href="/settings/locations"
         className="flex items-center gap-3 p-4 bg-card border border-border rounded-xl hover:bg-muted transition-colors"
       >
-        <div className="h-10 w-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
-          <MapPin className="h-5 w-5 text-green-600" />
+        <div className="h-10 w-10 bg-[#EDE5F4] rounded-lg flex items-center justify-center flex-shrink-0">
+          <MapPin className="h-5 w-5 text-[#5D4AA8]" />
         </div>
         <div>
           <p className="font-medium text-foreground">Manage Locations</p>

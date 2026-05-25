@@ -165,11 +165,11 @@ function TherapistDetailPanel({ therapist, teamAvg, onClose }: DetailPanelProps)
                   <p className="text-xl font-bold text-gray-900">{formatted}</p>
                   <div className="flex items-center gap-1 mt-1">
                     {diff >= 0 ? (
-                      <TrendingUp className="h-3 w-3 text-green-600" />
+                      <TrendingUp className="h-3 w-3 text-[#5D4AA8]" />
                     ) : (
                       <TrendingDown className="h-3 w-3 text-red-500" />
                     )}
-                    <span className={`text-xs font-medium ${diff >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                    <span className={`text-xs font-medium ${diff >= 0 ? 'text-[#5D4AA8]' : 'text-red-500'}`}>
                       {diff >= 0 ? '+' : ''}{diff.toFixed(1)}% vs team avg
                     </span>
                   </div>
@@ -255,7 +255,7 @@ export default function TherapistsPage() {
       header: 'Therapist',
       render: (t) => (
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 text-green-800 text-xs font-semibold border border-green-200 shrink-0">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#EDE5F4] text-[#5D4AA8] text-xs font-semibold border border-[#E5DEEC] shrink-0">
             {t.therapistName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)}
           </div>
           <span className="font-medium">{t.therapistName}</span>

@@ -18,10 +18,10 @@ export interface TimelineProps {
 
 const Timeline: React.FC<TimelineProps> = ({ items, className }) => {
   const colorStyles = {
-    primary: 'bg-primary border-primary',
-    secondary: 'bg-secondary border-secondary',
-    success: 'bg-green-500 border-green-500',
-    warning: 'bg-yellow-500 border-yellow-500',
+    primary: 'bg-[#5D4AA8] border-[#5D4AA8]',
+    secondary: 'bg-[#7665C2] border-[#7665C2]',
+    success: 'bg-[#5D4AA8] border-[#5D4AA8]',
+    warning: 'bg-[#C97E68] border-[#C97E68]',
     danger: 'bg-red-500 border-red-500',
   };
 
@@ -38,7 +38,7 @@ const Timeline: React.FC<TimelineProps> = ({ items, className }) => {
   return (
     <div className={cn('relative', className)}>
       {/* Vertical line */}
-      <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200" />
+      <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-[#EFE9F2]" />
 
       {/* Timeline items */}
       <div className="space-y-6">

@@ -275,37 +275,37 @@
 > System-wide polish: update all shared UI components to use Iris tokens; ensure consistency across all pages.
 
 ### 8.1 Shared UI Component Updates
-- [ ] **8.1.1** Update `Button` variants in `packages/ui/src/Button.tsx`: primary → violet gradient, secondary → soft1 bg + violet text
-- [ ] **8.1.2** Update `Card` component: border → `line2`, radius → 18px, shadow none (use border only)
-- [ ] **8.1.3** Update `Input` / `Select`: border → `line`, focus ring → `primary`, radius → 12px
-- [ ] **8.1.4** Update `Badge` / `Tag`: default → soft1/primary, warning → soft2/accentDk
-- [ ] **8.1.5** Update `Modal`: backdrop tint, header border `line2`, content padding
-- [ ] **8.1.6** Update `Checkbox` / `Radio`: checked color → `primary`
+- [x] **8.1.1** Update `Button` variants in `packages/ui/src/Button.tsx`: primary → violet gradient, secondary → soft1 bg + violet text
+- [x] **8.1.2** Update `Card` component: border → `line2`, radius → 18px, shadow none (use border only)
+- [x] **8.1.3** Update `Input` / `Select`: border → `line`, focus ring → `primary`, radius → 12px
+- [x] **8.1.4** Update `Badge` / `Tag`: default → soft1/primary, warning → soft2/accentDk
+- [x] **8.1.5** Update `Modal`: backdrop tint, header border `line2`, content padding
+- [x] **8.1.6** Update `Checkbox` / `Radio`: checked color → `primary`
 
 ### 8.2 Page Background & Main Area
-- [ ] **8.2.1** Change `main` background from `bg-background` to `bg-iris-bg` (`#F1ECF5`) on dashboard layout
-- [ ] **8.2.2** Ensure `bg-iris-bg` applied to all dashboard route pages
-- [ ] **8.2.3** Update page padding from `p-4 md:p-6` to `px-7 py-6` to match Iris 28px horizontal
+- [x] **8.2.1** Change `main` background from `bg-background` to `bg-iris-bg` (`#F1ECF5`) on dashboard layout
+- [x] **8.2.2** Ensure `bg-iris-bg` applied to all dashboard route pages
+- [x] **8.2.3** Update page padding from `p-4 md:p-6` to `px-7 py-6` to match Iris 28px horizontal
 
 ### 8.3 Sign-In / Sign-Up Pages
-- [ ] **8.3.1** Update auth pages background to `bg-iris-bg`
-- [ ] **8.3.2** Update form card to white surface with `line2` border, `border-radius: 22px`
-- [ ] **8.3.3** Update submit button to violet gradient
-- [ ] **8.3.4** Update "Iris" branding on auth pages (logo + wordmark)
+- [x] **8.3.1** Update auth pages background to `bg-iris-bg`
+- [x] **8.3.2** Update form card to white surface with `line2` border, `border-radius: 22px`
+- [x] **8.3.3** Update submit button to violet gradient
+- [x] **8.3.4** Update "Iris" branding on auth pages (logo + wordmark)
 
 ### 8.4 Empty States & Loading Skeletons
-- [ ] **8.4.1** Update `EmptyState` component: icon color → muted violet
-- [ ] **8.4.2** Update `Skeleton` pulse color from cream to `soft1`
+- [x] **8.4.1** Update `EmptyState` component: icon color → muted violet
+- [x] **8.4.2** Update `Skeleton` pulse color from cream to `soft1`
 
 ### 8.5 Appointment Color System
-- [ ] **8.5.1** Define 4-color appointment palette matching Iris: `apt[0]=#5D4AA8`, `apt[1]=#7A92D2`, `apt[2]=#C97E68`, `apt[3]=#8A6FBE`
-- [ ] **8.5.2** Map each therapist to a color slot
-- [ ] **8.5.3** Apply appointment colors consistently in calendar blocks, dashboard session rows, and client table avatars
+- [x] **8.5.1** Define 4-color appointment palette matching Iris: `apt[0]=#5D4AA8`, `apt[1]=#7A92D2`, `apt[2]=#C97E68`, `apt[3]=#8A6FBE`
+- [x] **8.5.2** Map each therapist to a color slot
+- [x] **8.5.3** Apply appointment colors consistently in calendar blocks, dashboard session rows, and client table avatars
 
 ### 8.6 Notification & Status Badges
-- [ ] **8.6.1** Replace green "Active" badges with violet `soft1` pills
-- [ ] **8.6.2** Replace green appointment status indicators with Iris color-coded dots
-- [ ] **8.6.3** Update notification dots to use `accent` (peach) for new items
+- [x] **8.6.1** Replace green "Active" badges with violet `soft1` pills
+- [x] **8.6.2** Replace green appointment status indicators with Iris color-coded dots
+- [x] **8.6.3** Update notification dots to use `accent` (peach) for new items
 
 ---
 
@@ -425,27 +425,27 @@
 | 7.5.1 | Latest notes card | 7 | ✅ |
 | 7.5.2 | Recurring booking card | 7 | ✅ |
 | 7.5.3 | AI upsell banner | 7 | ✅ |
-| 8.1.1 | Button variants → violet | 8 | ☐ |
-| 8.1.2 | Card radius + border | 8 | ☐ |
-| 8.1.3 | Input/Select Iris styling | 8 | ☐ |
-| 8.1.4 | Badge/Tag Iris styling | 8 | ☐ |
-| 8.1.5 | Modal Iris styling | 8 | ☐ |
-| 8.1.6 | Checkbox/Radio → violet | 8 | ☐ |
-| 8.2.1 | Main bg → iris-bg | 8 | ☐ |
-| 8.2.2 | All page bgs updated | 8 | ☐ |
-| 8.2.3 | Page padding standardised | 8 | ☐ |
-| 8.3.1 | Auth pages bg | 8 | ☐ |
-| 8.3.2 | Auth form card styling | 8 | ☐ |
-| 8.3.3 | Auth submit button | 8 | ☐ |
-| 8.3.4 | Iris branding on auth pages | 8 | ☐ |
-| 8.4.1 | EmptyState violet icon | 8 | ☐ |
-| 8.4.2 | Skeleton soft1 pulse | 8 | ☐ |
-| 8.5.1 | 4-color appointment palette | 8 | ☐ |
-| 8.5.2 | Therapist → color mapping | 8 | ☐ |
-| 8.5.3 | Appointment colors in calendar/dashboard | 8 | ☐ |
-| 8.6.1 | Replace green badges with violet | 8 | ☐ |
-| 8.6.2 | Appointment status indicators | 8 | ☐ |
-| 8.6.3 | Notification dots → accent peach | 8 | ☐ |
+| 8.1.1 | Button variants → violet | 8 | ✅ |
+| 8.1.2 | Card radius + border | 8 | ✅ |
+| 8.1.3 | Input/Select Iris styling | 8 | ✅ |
+| 8.1.4 | Badge/Tag Iris styling | 8 | ✅ |
+| 8.1.5 | Modal Iris styling | 8 | ✅ |
+| 8.1.6 | Checkbox/Radio → violet | 8 | ✅ |
+| 8.2.1 | Main bg → iris-bg | 8 | ✅ |
+| 8.2.2 | All page bgs updated | 8 | ✅ |
+| 8.2.3 | Page padding standardised | 8 | ✅ |
+| 8.3.1 | Auth pages bg | 8 | ✅ |
+| 8.3.2 | Auth form card styling | 8 | ✅ |
+| 8.3.3 | Auth submit button | 8 | ✅ |
+| 8.3.4 | Iris branding on auth pages | 8 | ✅ |
+| 8.4.1 | EmptyState violet icon | 8 | ✅ |
+| 8.4.2 | Skeleton soft1 pulse | 8 | ✅ |
+| 8.5.1 | 4-color appointment palette | 8 | ✅ |
+| 8.5.2 | Therapist → color mapping | 8 | ✅ |
+| 8.5.3 | Appointment colors in calendar/dashboard | 8 | ✅ |
+| 8.6.1 | Replace green badges with violet | 8 | ✅ |
+| 8.6.2 | Appointment status indicators | 8 | ✅ |
+| 8.6.3 | Notification dots → accent peach | 8 | ✅ |
 
 ---
 

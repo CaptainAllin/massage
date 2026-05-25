@@ -36,7 +36,7 @@ function ConsentModal({ onAccept, onDecline }: { onAccept: () => void; onDecline
             </ul>
           </div>
           <div className="flex gap-3">
-            <Button onClick={onAccept} className="flex-1 bg-green-600 hover:bg-green-700 text-white">
+            <Button onClick={onAccept} className="flex-1 [background:linear-gradient(135deg,#5D4AA8,#3F2F87)] hover:opacity-90 text-white">
               I Consent — Join Session
             </Button>
             <Button onClick={onDecline} variant="outline" className="flex-1">
@@ -81,7 +81,7 @@ function VideoCallRoom({ sessionUrl, sessionId, onEnd }: { sessionUrl: string; s
     return (
       <div className="flex flex-col items-center justify-center h-full gap-6 max-w-lg mx-auto">
         <div className="text-center">
-          <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
+          <CheckCircle className="w-12 h-12 text-[#5D4AA8] mx-auto mb-3" />
           <h2 className="text-xl font-semibold">Session Ended</h2>
           <p className="text-muted-foreground text-sm">Duration: {formatDuration(duration)}</p>
         </div>
@@ -100,7 +100,7 @@ function VideoCallRoom({ sessionUrl, sessionId, onEnd }: { sessionUrl: string; s
                   // Note saved — in a real app, this would link to the treatment notes API
                   onEnd();
                 }}
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                className="flex-1 [background:linear-gradient(135deg,#5D4AA8,#3F2F87)] hover:opacity-90 text-white"
               >
                 <FileText className="w-4 h-4 mr-2" />
                 Save Notes & Close
@@ -219,16 +219,16 @@ function UpcomingVideoSessions({ businessId }: { businessId: string }) {
               </div>
               <div className="flex items-center gap-2">
                 <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                  appt.status === 'CONFIRMED' ? 'bg-green-100 text-green-700' :
-                  appt.status === 'SCHEDULED' ? 'bg-blue-100 text-blue-700' :
-                  'bg-gray-100 text-gray-600'
+                  appt.status === 'CONFIRMED' ? 'bg-[#EDE5F4] text-[#5D4AA8]' :
+                  appt.status === 'SCHEDULED' ? 'bg-[#EDE5F4] text-[#7665C2]' :
+                  'bg-[#EFE9F2] text-[#7A7090]'
                 }`}>
                   {appt.status}
                 </span>
                 <Button
                   onClick={() => handleJoin(appt.id)}
                   disabled={joiningId === appt.id}
-                  className="bg-green-600 hover:bg-green-700 text-white"
+                  className="[background:linear-gradient(135deg,#5D4AA8,#3F2F87)] hover:opacity-90 text-white"
                   size="sm"
                 >
                   <Video className="w-4 h-4 mr-1" />
@@ -266,7 +266,7 @@ export default function TelehealthPage() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
           { label: 'Platform', value: 'Daily.co', sub: 'HIPAA BAA available', icon: Video, color: 'text-blue-600 bg-blue-50' },
-          { label: 'Encryption', value: 'End-to-End', sub: 'AES-256 encrypted', icon: CheckCircle, color: 'text-green-600 bg-green-50' },
+          { label: 'Encryption', value: 'End-to-End', sub: 'AES-256 encrypted', icon: CheckCircle, color: 'text-[#5D4AA8] bg-[#EDE5F4]' },
           { label: 'Recording', value: 'Consent-gated', sub: 'Client consent required', icon: Monitor, color: 'text-purple-600 bg-purple-50' },
         ].map(({ label, value, sub, icon: Icon, color }) => (
           <Card key={label}>

@@ -212,7 +212,7 @@ function TemplatesPageContent() {
                       </span>
                     )}
                     {template.isDefault && (
-                      <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">
+                      <span className="px-2 py-1 bg-[#EDE5F4] text-[#5D4AA8] text-xs rounded">
                         Default
                       </span>
                     )}

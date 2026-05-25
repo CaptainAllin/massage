@@ -55,14 +55,14 @@ function LocationFormModal({
             <label className="block text-sm font-medium text-gray-700 mb-1">Location Name *</label>
             <input required type="text" value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-\[#5D4AA8\]"
               placeholder="Main Street Studio" />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Street Address</label>
             <input type="text" value={form.address}
               onChange={(e) => setForm({ ...form, address: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-\[#5D4AA8\]"
               placeholder="123 Main St" />
           </div>
           <div className="grid grid-cols-3 gap-3">
@@ -70,13 +70,13 @@ function LocationFormModal({
               <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
               <input type="text" value={form.city}
                 onChange={(e) => setForm({ ...form, city: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-\[#5D4AA8\]" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
               <input type="text" value={form.state}
                 onChange={(e) => setForm({ ...form, state: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-\[#5D4AA8\]" />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -84,20 +84,20 @@ function LocationFormModal({
               <label className="block text-sm font-medium text-gray-700 mb-1">Postal Code</label>
               <input type="text" value={form.postalCode}
                 onChange={(e) => setForm({ ...form, postalCode: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-\[#5D4AA8\]" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
               <input type="tel" value={form.phoneNumber}
                 onChange={(e) => setForm({ ...form, phoneNumber: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-\[#5D4AA8\]" />
             </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
             <input type="email" value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-\[#5D4AA8\]" />
           </div>
           <div className="flex gap-6">
             <label className="flex items-center gap-2 cursor-pointer">
@@ -168,8 +168,8 @@ export default function LocationsPage() {
               <CardContent className="p-5">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <div className="h-9 w-9 bg-green-100 rounded-lg flex items-center justify-center">
-                      <MapPin className="h-5 w-5 text-green-600" />
+                    <div className="h-9 w-9 bg-[#EDE5F4] rounded-lg flex items-center justify-center">
+                      <MapPin className="h-5 w-5 text-[#5D4AA8]" />
                     </div>
                     <div>
                       <h3 className="font-semibold text-gray-900">{loc.name}</h3>

@@ -25,9 +25,9 @@ import {
 } from '@/lib/hooks/use-payroll';
 
 const STATUS_COLORS: Record<string, string> = {
-  DRAFT: 'bg-gray-100 text-gray-700',
-  PROCESSING: 'bg-yellow-100 text-yellow-700',
-  PAID: 'bg-green-100 text-green-700',
+  DRAFT: 'bg-[#EFE9F2] text-[#7A7090]',
+  PROCESSING: 'bg-[#F7E5DD] text-[#C97E68]',
+  PAID: 'bg-[#EDE5F4] text-[#5D4AA8]',
   CANCELLED: 'bg-red-100 text-red-700',
 };
 

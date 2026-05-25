@@ -15,14 +15,14 @@ import {
 import { useClients } from '@/lib/hooks/use-clients';
 
 const CLAIM_STATUS_STYLES: Record<string, string> = {
-  DRAFT: 'bg-gray-100 text-gray-700',
-  SUBMITTED: 'bg-blue-100 text-blue-700',
-  PENDING: 'bg-yellow-100 text-yellow-700',
-  APPROVED: 'bg-green-100 text-green-700',
+  DRAFT: 'bg-[#EFE9F2] text-[#7A7090]',
+  SUBMITTED: 'bg-[#EDE5F4] text-[#5D4AA8]',
+  PENDING: 'bg-[#F7E5DD] text-[#C97E68]',
+  APPROVED: 'bg-[#EDE5F4] text-[#5D4AA8]',
   DENIED: 'bg-red-100 text-red-700',
-  APPEALING: 'bg-orange-100 text-orange-700',
-  PAID: 'bg-emerald-100 text-emerald-700',
-  VOID: 'bg-gray-100 text-gray-500',
+  APPEALING: 'bg-[#F7E5DD] text-[#C97E68]',
+  PAID: 'bg-[#EDE5F4] text-[#5D4AA8]',
+  VOID: 'bg-[#EFE9F2] text-[#7A7090]',
 };
 
 const CLAIM_STATUS_ICONS: Record<string, React.ReactNode> = {
@@ -637,9 +637,9 @@ function ReimbursementsTab({ businessId }: { businessId: string }) {
                     <div className="flex items-center gap-2 mb-1">
                       <span className="font-mono text-sm">{r.claim?.claimNumber}</span>
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                        r.status === 'RECONCILED' ? 'bg-green-100 text-green-700' :
-                        r.status === 'RECEIVED' ? 'bg-blue-100 text-blue-700' :
-                        'bg-gray-100 text-gray-700'
+                        r.status === 'RECONCILED' ? 'bg-[#EDE5F4] text-[#5D4AA8]' :
+                        r.status === 'RECEIVED' ? 'bg-[#EDE5F4] text-[#5D4AA8]' :
+                        'bg-[#EFE9F2] text-[#7A7090]'
                       }`}>{r.status}</span>
                     </div>
                     <p className="text-sm font-medium">

@@ -13,7 +13,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 
     const variantStyles = {
       primary: '[background:linear-gradient(135deg,#5D4AA8,#3F2F87)] text-white hover:opacity-90 focus-visible:ring-[#5D4AA8] shadow-iris-primary',
-      secondary: 'bg-[#EDE5F4] text-[#3D3450] hover:bg-[#E5DEEC] focus-visible:ring-[#5D4AA8]',
+      secondary: 'bg-[#EDE5F4] text-[#5D4AA8] hover:bg-[#E5DEEC] focus-visible:ring-[#5D4AA8]',
       outline: 'border-2 border-[#5D4AA8] bg-transparent text-[#5D4AA8] hover:bg-[#EDE5F4] focus-visible:ring-[#5D4AA8]',
       ghost: 'bg-transparent text-[#3D3450] hover:bg-[#EDE5F4] focus-visible:ring-[#EDE5F4]',
       danger: 'bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-600',

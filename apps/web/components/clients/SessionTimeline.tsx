@@ -2,8 +2,8 @@
 
 import React from 'react';
 import { Appointment, AppointmentStatus } from '@massage/types';
+import { colorForId } from '@/lib/appointment-colors';
 
-const APT_COLOR = ['#5D4AA8', '#7A92D2', '#C97E68', '#8A6FBE'];
 const STATUS_LABEL: Record<string, string> = {
   COMPLETED: 'Completed',
   CANCELLED: 'Cancelled',
@@ -12,12 +12,6 @@ const STATUS_LABEL: Record<string, string> = {
   CONFIRMED: 'Confirmed',
   SCHEDULED: 'Scheduled',
 };
-
-function colorForTherapist(therapistId: string): string {
-  let h = 0;
-  for (let i = 0; i < therapistId.length; i++) h = (h + therapistId.charCodeAt(i)) % 4;
-  return APT_COLOR[h];
-}
 
 interface SessionTimelineProps {
   appointments: Appointment[];
@@ -68,7 +62,7 @@ export const SessionTimeline: React.FC<SessionTimelineProps> = ({ appointments, 
           const isCancelled =
             apt.status === AppointmentStatus.CANCELLED ||
             apt.status === AppointmentStatus.NO_SHOW;
-          const dotColor = colorForTherapist(apt.therapistId);
+          const dotColor = colorForId(apt.therapistId);
           const date = new Date(apt.startTime);
 
           return (

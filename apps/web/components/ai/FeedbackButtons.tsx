@@ -39,7 +39,7 @@ export function FeedbackButtons({ onFeedback, isSubmitting }: FeedbackButtonsPro
     return (
       <div className="flex items-center justify-center space-x-2 py-4">
         <svg
-          className="w-5 h-5 text-green-600"
+          className="w-5 h-5 text-[#5D4AA8]"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -66,7 +66,7 @@ export function FeedbackButtons({ onFeedback, isSubmitting }: FeedbackButtonsPro
           <button
             onClick={() => handleFeedbackClick(true)}
             disabled={isSubmitting}
-            className="flex items-center space-x-2 px-4 py-2 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg transition-colors border border-green-200 disabled:opacity-50"
+            className="flex items-center space-x-2 px-4 py-2 bg-[#EDE5F4] hover:bg-[#E5DEEC] text-[#5D4AA8] rounded-lg transition-colors border border-[#E5DEEC] disabled:opacity-50"
           >
             <svg
               className="w-5 h-5"

@@ -1,14 +1,9 @@
 import { AppointmentStatus, Therapist } from '@massage/types';
 import { format, addDays, subDays, getWeek, startOfWeek, endOfWeek } from 'date-fns';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import { APT_COLORS, colorForTherapist } from '@/lib/appointment-colors';
 
-// 4-color Iris therapist palette (cycling by index)
-const THERAPIST_COLORS = ['#5D4AA8', '#7A92D2', '#C97E68', '#8A6FBE'];
-
-export function getTherapistColor(therapistId: string, therapists: Therapist[]): string {
-  const idx = therapists.findIndex((t) => t.id === therapistId);
-  return THERAPIST_COLORS[idx >= 0 ? idx % 4 : 0];
-}
+export { colorForTherapist as getTherapistColor };
 
 interface CalendarFiltersProps {
   currentDate: Date;
@@ -146,7 +141,7 @@ export function CalendarFilters({
           </button>
 
           {therapists.map((therapist, idx) => {
-            const color = THERAPIST_COLORS[idx % 4];
+            const color = APT_COLORS[idx % APT_COLORS.length];
             const isSelected = selectedTherapist === therapist.id;
             const name = therapist.user
               ? `${therapist.user.firstName || ''} ${therapist.user.lastName || ''}`.trim()

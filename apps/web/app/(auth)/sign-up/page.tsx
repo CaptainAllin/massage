@@ -127,7 +127,7 @@ export default function SignUpPage() {
 
         {/* Card */}
         <div
-          className="rounded-2xl p-8"
+          className="rounded-[22px] p-8"
           style={{ background: '#fff', border: '1px solid #EFE9F2', boxShadow: '0 4px 24px rgba(93,74,168,0.08)' }}
         >
           {error && (

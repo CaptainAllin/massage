@@ -62,9 +62,9 @@ export const ExportHistory: React.FC = () => {
 
   const getStatusBadge = (status: string) => {
     const statusClasses = {
-      COMPLETED: 'bg-green-100 text-green-800',
-      PROCESSING: 'bg-blue-100 text-blue-800',
-      PENDING: 'bg-yellow-100 text-yellow-800',
+      COMPLETED: 'bg-[#EDE5F4] text-[#5D4AA8]',
+      PROCESSING: 'bg-[#EDE5F4] text-[#7665C2]',
+      PENDING: 'bg-[#F7E5DD] text-[#C97E68]',
       FAILED: 'bg-red-100 text-red-800',
     };
 

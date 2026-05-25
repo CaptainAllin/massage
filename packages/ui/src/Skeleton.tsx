@@ -25,7 +25,7 @@ const Skeleton: React.FC<SkeletonProps> = ({
   const skeletonElement = (
     <div
       className={cn(
-        'animate-pulse bg-gray-200',
+        'animate-pulse bg-[#EDE5F4]',
         variantStyles[variant],
         className
       )}

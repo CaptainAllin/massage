@@ -48,12 +48,12 @@ const Modal: React.FC<ModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1E1830]/40 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
         className={cn(
-          'relative w-full bg-white rounded-2xl shadow-xl',
+          'relative w-full bg-white rounded-[22px] shadow-none border border-[#EFE9F2]',
           'max-h-[90vh] overflow-hidden flex flex-col',
           sizeStyles[size],
           className
@@ -62,7 +62,7 @@ const Modal: React.FC<ModalProps> = ({
       >
         {/* Header */}
         {(title || showCloseButton) && (
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-[#EFE9F2]">
             {title && <h2 className="text-xl font-semibold text-gray-900">{title}</h2>}
             {showCloseButton && (
               <button

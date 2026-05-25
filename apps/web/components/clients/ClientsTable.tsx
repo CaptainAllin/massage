@@ -4,6 +4,7 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronRightIcon, ChevronLeftIcon } from '@heroicons/react/24/outline';
 import { Client } from '@massage/types';
+import { APT_COLORS, APT_SOFT } from '@/lib/appointment-colors';
 
 export interface ClientsTableProps {
   clients: Client[];
@@ -13,16 +14,11 @@ export interface ClientsTableProps {
   total?: number;
 }
 
-const APT_COLORS = [
-  { bg: '#EDE5F4', text: '#5D4AA8' },
-  { bg: '#E5EAF7', text: '#7A92D2' },
-  { bg: '#F7E5DD', text: '#C97E68' },
-  { bg: '#F0ECF8', text: '#8A6FBE' },
-];
+const APT_PALETTE = APT_COLORS.map((c, i) => ({ bg: APT_SOFT[i], text: c }));
 
 function getAptColor(name: string) {
-  const idx = (name.charCodeAt(0) + (name.charCodeAt(1) || 0)) % APT_COLORS.length;
-  return APT_COLORS[idx];
+  const idx = (name.charCodeAt(0) + (name.charCodeAt(1) || 0)) % APT_PALETTE.length;
+  return APT_PALETTE[idx];
 }
 
 function getInitials(firstName: string, lastName: string) {

@@ -325,7 +325,7 @@ function AutomationRuleModal({
             </p>
 
             <div className="flex gap-2">
-              <Button type="submit" disabled={isPending} className="flex-1 bg-green-600 hover:bg-green-700 text-white">
+              <Button type="submit" disabled={isPending} className="flex-1 [background:linear-gradient(135deg,#5D4AA8,#3F2F87)] hover:opacity-90 text-white">
                 {isPending ? 'Saving...' : rule ? 'Save Changes' : 'Create Rule'}
               </Button>
               <Button type="button" onClick={onClose} variant="outline">Cancel</Button>
@@ -368,7 +368,7 @@ function RuleCard({ rule, businessId }: { rule: any; businessId: string }) {
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <p className="font-medium truncate">{rule.name}</p>
-                  <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${rule.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                  <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${rule.isActive ? 'bg-[#EDE5F4] text-[#5D4AA8]' : 'bg-[#EFE9F2] text-[#7A7090]'}`}>
                     {rule.isActive ? 'Active' : 'Paused'}
                   </span>
                 </div>
@@ -387,7 +387,7 @@ function RuleCard({ rule, businessId }: { rule: any; businessId: string }) {
                 title={rule.isActive ? 'Pause rule' : 'Activate rule'}
                 className="text-muted-foreground hover:text-primary"
               >
-                {rule.isActive ? <ToggleRight className="w-5 h-5 text-green-600" /> : <ToggleLeft className="w-5 h-5" />}
+                {rule.isActive ? <ToggleRight className="w-5 h-5 text-[#5D4AA8]" /> : <ToggleLeft className="w-5 h-5 text-[#7A7090]" />}
               </button>
               <button onClick={() => setEditing(true)} className="text-muted-foreground hover:text-primary">
                 <Edit2 className="w-4 h-4" />
@@ -427,14 +427,14 @@ function RuleCard({ rule, businessId }: { rule: any; businessId: string }) {
                     {rule.logs.slice(0, 5).map((log: any) => (
                       <div key={log.id} className="flex items-center gap-2 text-xs">
                         {log.status === 'SUCCESS' ? (
-                          <CheckCircle className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+                          <CheckCircle className="w-3.5 h-3.5 text-[#5D4AA8] flex-shrink-0" />
                         ) : log.status === 'FAILED' ? (
                           <XCircle className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />
                         ) : (
                           <AlertCircle className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
                         )}
                         <span className="text-muted-foreground">{new Date(log.executedAt).toLocaleString()}</span>
-                        <span className={log.status === 'SUCCESS' ? 'text-green-600' : log.status === 'FAILED' ? 'text-red-600' : 'text-gray-500'}>
+                        <span className={log.status === 'SUCCESS' ? 'text-[#5D4AA8]' : log.status === 'FAILED' ? 'text-red-600' : 'text-[#7A7090]'}>
                           {log.status}
                         </span>
                         {log.errorMessage && <span className="text-red-400 truncate">{log.errorMessage}</span>}
@@ -471,7 +471,7 @@ export default function AutomationPage() {
           <h1 className="text-2xl font-bold">Automation</h1>
           <p className="text-muted-foreground text-sm mt-1">If–then rules that run automatically</p>
         </div>
-        <Button onClick={() => setShowModal(true)} className="bg-green-600 hover:bg-green-700 text-white">
+        <Button onClick={() => setShowModal(true)} className="[background:linear-gradient(135deg,#5D4AA8,#3F2F87)] hover:opacity-90 text-white">
           <Plus className="w-4 h-4 mr-2" />
           New Rule
         </Button>
@@ -480,9 +480,9 @@ export default function AutomationPage() {
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
-          { label: 'Active Rules', value: String(activeCount), icon: Zap, color: 'text-green-600 bg-green-50' },
-          { label: 'Total Rules', value: String(rules.length), icon: ClipboardList, color: 'text-blue-600 bg-blue-50' },
-          { label: 'Total Executions', value: String(totalRuns), icon: CheckCircle, color: 'text-purple-600 bg-purple-50' },
+          { label: 'Active Rules', value: String(activeCount), icon: Zap, color: 'text-[#5D4AA8] bg-[#EDE5F4]' },
+          { label: 'Total Rules', value: String(rules.length), icon: ClipboardList, color: 'text-[#7665C2] bg-[#EDE5F4]' },
+          { label: 'Total Executions', value: String(totalRuns), icon: CheckCircle, color: 'text-[#5D4AA8] bg-[#EDE5F4]' },
         ].map(({ label, value, icon: Icon, color }) => (
           <Card key={label}>
             <CardContent className="p-4 flex items-center gap-3">
@@ -506,7 +506,7 @@ export default function AutomationPage() {
             <Zap className="w-12 h-12 mx-auto mb-3 opacity-30" />
             <p className="font-medium">No automation rules yet</p>
             <p className="text-sm mt-1">Create your first rule or start from a template</p>
-            <Button onClick={() => setShowModal(true)} className="mt-4 bg-green-600 hover:bg-green-700 text-white">
+            <Button onClick={() => setShowModal(true)} className="mt-4 [background:linear-gradient(135deg,#5D4AA8,#3F2F87)] hover:opacity-90 text-white">
               <Plus className="w-4 h-4 mr-2" />
               Create First Rule
             </Button>

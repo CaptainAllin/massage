@@ -17,10 +17,10 @@ const Tag: React.FC<TagProps> = ({
   className,
 }) => {
   const variantStyles = {
-    default: 'bg-gray-100 text-gray-700 border-gray-200',
-    primary: 'bg-primary/10 text-primary border-primary/20',
-    success: 'bg-green-100 text-green-700 border-green-200',
-    warning: 'bg-yellow-100 text-yellow-700 border-yellow-200',
+    default: 'bg-[#EDE5F4] text-[#5D4AA8] border-[#E5DEEC]',
+    primary: 'bg-[#EDE5F4] text-[#5D4AA8] border-[#E5DEEC]',
+    success: 'bg-[#EDE5F4] text-[#5D4AA8] border-[#E5DEEC]',
+    warning: 'bg-[#F7E5DD] text-[#C97E68] border-[#E8A893]',
     danger: 'bg-red-100 text-red-700 border-red-200',
   };
 
