@@ -21,7 +21,8 @@ function QuickCallButton() {
     <button
       onClick={() => openQuickCall()}
       title="Quick Call Intake"
-      className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition-colors shadow-sm"
+      className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-white text-sm font-medium transition-all shadow-sm iris-shadow-primary"
+      style={{ background: 'linear-gradient(135deg, #5D4AA8, #3F2F87)' }}
     >
       <PhoneCallIcon />
       <span className="hidden sm:inline">Quick Call</span>
@@ -33,43 +34,34 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
   const { user, signOut } = useAuth();
   const { role } = useRole();
 
-  const initials = user?.user_metadata?.first_name
-    ? `${user.user_metadata.first_name[0]}${user.user_metadata.last_name?.[0] || ''}`.toUpperCase()
+  const firstName = user?.user_metadata?.first_name ?? '';
+  const lastName = user?.user_metadata?.last_name ?? '';
+  const initials = firstName
+    ? `${firstName[0]}${lastName?.[0] ?? ''}`.toUpperCase()
     : 'U';
+  const fullName = [firstName, lastName].filter(Boolean).join(' ') || 'My Account';
+  const email = user?.email ?? '';
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <Sidebar userRole={role} />
+    <div className="flex h-screen overflow-hidden" style={{ background: '#F1ECF5' }}>
+      <Sidebar
+        userRole={role}
+        userName={fullName}
+        userEmail={email}
+        userInitials={initials}
+        onSignOut={signOut}
+      />
 
-      <div className="flex flex-1 flex-col overflow-hidden lg:ml-64">
+      <div className="flex flex-1 flex-col overflow-hidden lg:ml-[230px]">
         <Header
           userMenu={
             <div className="flex items-center gap-2 sm:gap-3">
               <QuickCallButton />
-              <div className="flex items-center gap-2 sm:gap-3">
-                <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-green-100 text-green-800 font-semibold text-sm border border-green-200 shadow-sm">
-                  {initials}
-                </div>
-                <div className="hidden md:flex flex-col text-left">
-                  <span className="text-sm font-medium text-foreground">
-                    {user?.user_metadata?.first_name} {user?.user_metadata?.last_name}
-                  </span>
-                  <span className="text-xs text-muted-foreground capitalize">
-                    {role?.toLowerCase()?.replace('_', ' ')}
-                  </span>
-                </div>
-              </div>
-              <button
-                onClick={() => signOut()}
-                className="text-xs sm:text-sm text-muted-foreground hover:text-foreground hover:bg-gray-100 px-2 sm:px-3 py-1.5 rounded-md border border-gray-200 transition-colors font-medium"
-              >
-                Sign Out
-              </button>
             </div>
           }
         />
 
-        <main className="flex-1 overflow-y-auto bg-background p-4 md:p-6">
+        <main className="flex-1 overflow-y-auto p-4 md:p-6" style={{ background: '#F1ECF5' }}>
           {children}
         </main>
       </div>

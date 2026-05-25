@@ -12,10 +12,10 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const baseStyles = 'inline-flex items-center justify-center font-medium rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50';
 
     const variantStyles = {
-      primary: 'bg-primary text-white hover:bg-primary/90 focus-visible:ring-primary',
-      secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80 focus-visible:ring-secondary',
-      outline: 'border-2 border-primary bg-transparent text-primary hover:bg-primary hover:text-white focus-visible:ring-primary',
-      ghost: 'bg-transparent text-foreground hover:bg-muted focus-visible:ring-muted',
+      primary: '[background:linear-gradient(135deg,#5D4AA8,#3F2F87)] text-white hover:opacity-90 focus-visible:ring-[#5D4AA8] shadow-iris-primary',
+      secondary: 'bg-[#EDE5F4] text-[#3D3450] hover:bg-[#E5DEEC] focus-visible:ring-[#5D4AA8]',
+      outline: 'border-2 border-[#5D4AA8] bg-transparent text-[#5D4AA8] hover:bg-[#EDE5F4] focus-visible:ring-[#5D4AA8]',
+      ghost: 'bg-transparent text-[#3D3450] hover:bg-[#EDE5F4] focus-visible:ring-[#EDE5F4]',
       danger: 'bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-600',
     };
 

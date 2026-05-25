@@ -13,9 +13,10 @@ const config: Config = {
     extend: {
       ...baseConfig.theme?.extend,
       fontFamily: {
-        sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
-        display: ['var(--font-poppins)', 'system-ui', 'sans-serif'],
-        body: ['var(--font-inter)', 'system-ui', 'sans-serif'],
+        sans: ['var(--font-sora)', 'var(--font-inter)', 'system-ui', 'sans-serif'],
+        display: ['var(--font-sora)', 'system-ui', 'sans-serif'],
+        body: ['var(--font-sora)', 'var(--font-inter)', 'system-ui', 'sans-serif'],
+        sora: ['var(--font-sora)', 'system-ui', 'sans-serif'],
       },
     },
   },

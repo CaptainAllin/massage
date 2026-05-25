@@ -4,27 +4,34 @@
 
 @layer base {
   :root {
-    --background: 247 244 238; /* cream */
-    --foreground: 47 52 55; /* charcoal */
+    /* Iris palette — violet on lavender-white */
+    --background: 285 28% 94%;       /* #F1ECF5 */
+    --foreground: 252 31% 15%;       /* #1E1830 */
 
-    --card: 0 0% 100%;
-    --card-foreground: 47 52 55;
+    --card: 0 0% 100%;               /* #FFFFFF */
+    --card-foreground: 252 31% 15%;
 
-    --primary: 168 195 160; /* sage */
+    --panel: 285 40% 99%;            /* #FBF8FD */
+
+    --primary: 258 38% 47%;          /* #5D4AA8 */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 231 216 201; /* sand */
-    --secondary-foreground: 47 52 55;
+    --secondary: 275 38% 91%;        /* #EDE5F4 */
+    --secondary-foreground: 252 22% 26%; /* #3D3450 */
 
-    --muted: 235 230 220; /* cream-dark */
-    --muted-foreground: 74 79 82;
+    --muted: 278 27% 95%;            /* #EFE9F2 */
+    --muted-foreground: 262 14% 50%; /* #7A7090 */
 
-    --accent: 124 154 146; /* eucalyptus */
-    --accent-foreground: 0 0% 100%;
+    --accent: 15 62% 74%;            /* #E8A893 */
+    --accent-foreground: 252 31% 15%;
 
-    --border: 212 192 174;
-    --input: 212 192 174;
-    --ring: 168 195 160;
+    --border: 278 24% 89%;           /* #E5DEEC */
+    --input: 278 24% 89%;
+    --ring: 258 38% 47%;             /* #5D4AA8 */
+
+    --line2: 278 28% 93%;            /* #EFE9F2 */
+    --soft1: 275 38% 91%;            /* #EDE5F4 */
+    --soft2: 15 50% 93%;             /* #F7E5DD */
   }
 }
 
@@ -37,5 +44,23 @@
   }
   h1, h2, h3, h4, h5, h6 {
     @apply font-display;
+  }
+}
+
+@layer utilities {
+  .iris-gradient-primary {
+    background: linear-gradient(135deg, #5D4AA8, #3F2F87);
+  }
+  .iris-gradient-nav {
+    background: linear-gradient(90deg, #5D4AA8, #7665C2);
+  }
+  .iris-shadow-primary {
+    box-shadow: 0 4px 16px rgba(93, 74, 168, 0.27);
+  }
+  .iris-shadow-nav {
+    box-shadow: 0 4px 12px rgba(93, 74, 168, 0.20);
+  }
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
   }
 }

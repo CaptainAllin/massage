@@ -63,36 +63,41 @@ export default function AppointmentsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 max-w-7xl">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground font-display">
+          <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: '#5D4AA8', letterSpacing: '1.4px' }}>
+            Schedule
+          </p>
+          <h1 className="text-2xl font-semibold font-display" style={{ color: '#1E1830', letterSpacing: '-0.4px' }}>
             Appointments
           </h1>
-          <p className="text-muted-foreground mt-1 sm:mt-2">
+          <p className="text-sm mt-0.5" style={{ color: '#7A7090' }}>
             Manage your appointment schedule and availability
           </p>
         </div>
-        <div className="flex flex-wrap gap-2 sm:gap-3">
+        <div className="flex flex-wrap gap-2">
           <Button
             variant="secondary"
+            size="sm"
             onClick={() => setIsTimeOffModalOpen(true)}
           >
-            <ClockIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2" />
+            <ClockIcon className="h-4 w-4 mr-1.5" />
             <span className="hidden xs:inline">Time Off</span>
             <span className="xs:hidden">Off</span>
           </Button>
           <Button
             variant="secondary"
+            size="sm"
             onClick={() => setIsAvailabilityModalOpen(true)}
           >
-            <UserGroupIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2" />
+            <UserGroupIcon className="h-4 w-4 mr-1.5" />
             <span className="hidden sm:inline">Availability</span>
             <span className="sm:hidden">Avail.</span>
           </Button>
-          <Button variant="primary" onClick={() => setIsAddModalOpen(true)}>
-            <CalendarIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2" />
+          <Button size="sm" variant="primary" onClick={() => setIsAddModalOpen(true)}>
+            <CalendarIcon className="h-4 w-4 mr-1.5" />
             <span className="hidden sm:inline">New Appointment</span>
             <span className="sm:hidden">New</span>
           </Button>

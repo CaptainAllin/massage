@@ -29,11 +29,12 @@ export default function PaymentsPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+    <div className="space-y-5 max-w-6xl">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground font-display">Payments</h1>
-          <p className="text-muted-foreground mt-1 sm:mt-2">
+          <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: '#5D4AA8', letterSpacing: '1.4px' }}>Operations</p>
+          <h1 className="text-2xl font-semibold font-display" style={{ color: '#1E1830', letterSpacing: '-0.4px' }}>Payments</h1>
+          <p className="text-sm mt-0.5" style={{ color: '#7A7090' }}>
             Manage payments, invoices, and track revenue
           </p>
         </div>

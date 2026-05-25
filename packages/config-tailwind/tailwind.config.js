@@ -4,75 +4,56 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Wellness color palette from PRD
-        wellness: {
-          sage: {
-            DEFAULT: '#A8C3A0',
-            light: '#C5D9BF',
-            dark: '#8BAA84',
-          },
-          sand: {
-            DEFAULT: '#E7D8C9',
-            light: '#F0E7DC',
-            dark: '#D4C0AE',
-          },
-          cream: {
-            DEFAULT: '#F7F4EE',
-            light: '#FDFCFA',
-            dark: '#EBE6DC',
-          },
-          eucalyptus: {
-            DEFAULT: '#7C9A92',
-            light: '#9FB5AE',
-            dark: '#627D77',
-          },
-          charcoal: {
-            DEFAULT: '#2F3437',
-            light: '#4A4F52',
-            dark: '#1F2123',
-          },
-          lavender: {
-            DEFAULT: '#C9BEDD',
-            light: '#DDD5E9',
-            dark: '#B5A6CA',
-          },
-          teal: {
-            DEFAULT: '#6FA7A1',
-            light: '#8DBDB8',
-            dark: '#5A8A85',
-          },
+        // Iris design system palette
+        iris: {
+          bg: '#F1ECF5',
+          surface: '#FFFFFF',
+          panel: '#FBF8FD',
+          ink: '#1E1830',
+          ink2: '#3D3450',
+          muted: '#7A7090',
+          line: '#E5DEEC',
+          line2: '#EFE9F2',
+          primary: '#5D4AA8',
+          primary2: '#7665C2',
+          'primary-dk': '#3F2F87',
+          accent: '#E8A893',
+          'accent-dk': '#C97E68',
+          soft1: '#EDE5F4',
+          soft2: '#F7E5DD',
         },
-        // Semantic color mappings
+        // Semantic color mappings — Iris violet palette
         primary: {
-          DEFAULT: '#A8C3A0', // sage
+          DEFAULT: '#5D4AA8',
           foreground: '#FFFFFF',
         },
         secondary: {
-          DEFAULT: '#E7D8C9', // sand
-          foreground: '#2F3437', // charcoal
+          DEFAULT: '#EDE5F4',
+          foreground: '#3D3450',
         },
         accent: {
-          DEFAULT: '#7C9A92', // eucalyptus
-          foreground: '#FFFFFF',
+          DEFAULT: '#E8A893',
+          foreground: '#1E1830',
         },
-        background: '#F7F4EE', // cream
-        foreground: '#2F3437', // charcoal
+        background: '#F1ECF5',
+        foreground: '#1E1830',
         muted: {
-          DEFAULT: '#EBE6DC', // cream-dark
-          foreground: '#4A4F52', // charcoal-light
+          DEFAULT: '#EFE9F2',
+          foreground: '#7A7090',
         },
         card: {
           DEFAULT: '#FFFFFF',
-          foreground: '#2F3437',
+          foreground: '#1E1830',
         },
-        border: '#D4C0AE', // sand-dark
-        input: '#D4C0AE',
-        ring: '#A8C3A0', // sage
+        border: '#E5DEEC',
+        input: '#E5DEEC',
+        ring: '#5D4AA8',
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-        display: ['Poppins', 'system-ui', 'sans-serif'],
-        body: ['Inter', 'system-ui', 'sans-serif'],
+        sans: ['Sora', 'Inter', 'system-ui', 'sans-serif'],
+        display: ['Sora', 'system-ui', 'sans-serif'],
+        body: ['Sora', 'Inter', 'system-ui', 'sans-serif'],
+        sora: ['Sora', 'system-ui', 'sans-serif'],
       },
       borderRadius: {
         lg: '0.75rem',
@@ -81,9 +62,11 @@ module.exports = {
         '3xl': '2rem',
       },
       boxShadow: {
-        soft: '0 2px 8px rgba(47, 52, 55, 0.08)',
-        'soft-lg': '0 4px 16px rgba(47, 52, 55, 0.12)',
-        'soft-xl': '0 8px 24px rgba(47, 52, 55, 0.16)',
+        soft: '0 2px 8px rgba(93, 74, 168, 0.08)',
+        'soft-lg': '0 4px 16px rgba(93, 74, 168, 0.12)',
+        'soft-xl': '0 8px 24px rgba(93, 74, 168, 0.16)',
+        'iris-primary': '0 4px 16px rgba(93, 74, 168, 0.27)',
+        'iris-card': '0 2px 12px rgba(93, 74, 168, 0.06)',
       },
       animation: {
         'fade-in': 'fadeIn 0.3s ease-in-out',

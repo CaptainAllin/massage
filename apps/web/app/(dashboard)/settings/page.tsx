@@ -610,26 +610,28 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<Tab>('business');
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 max-w-4xl">
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-foreground font-display">Settings</h1>
-        <p className="text-muted-foreground mt-2">
+        <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: '#5D4AA8', letterSpacing: '1.4px' }}>Tools</p>
+        <h1 className="text-2xl font-semibold font-display" style={{ color: '#1E1830', letterSpacing: '-0.4px' }}>Settings</h1>
+        <p className="text-sm mt-0.5" style={{ color: '#7A7090' }}>
           Manage your practice, team, notifications, and branding.
         </p>
       </div>
 
       {/* Tab Navigation */}
-      <div className="border-b border-border">
+      <div style={{ borderBottom: '1px solid #EFE9F2' }}>
         <nav className="-mb-px flex gap-6 overflow-x-auto">
           {TABS.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${
+              className="flex items-center gap-2 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors"
+              style={
                 activeTab === tab.id
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
+                  ? { borderBottomColor: '#5D4AA8', color: '#5D4AA8' }
+                  : { borderBottomColor: 'transparent', color: '#7A7090' }
+              }
             >
               {tab.icon}
               {tab.label}

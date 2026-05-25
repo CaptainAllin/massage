@@ -1,5 +1,4 @@
 import { AppointmentWithRelations, AppointmentStatus } from '@massage/types';
-import { StatusBadge } from './StatusBadge';
 import { format } from 'date-fns';
 
 interface AppointmentCardProps {
@@ -7,13 +6,14 @@ interface AppointmentCardProps {
   onClick?: () => void;
 }
 
-const statusStyles: Record<AppointmentStatus, string> = {
-  [AppointmentStatus.SCHEDULED]: 'border-l-4 border-l-blue-500 bg-blue-50',
-  [AppointmentStatus.CONFIRMED]: 'border-l-4 border-l-green-500 bg-green-50',
-  [AppointmentStatus.IN_PROGRESS]: 'border-l-4 border-l-orange-500 bg-orange-50',
-  [AppointmentStatus.COMPLETED]: 'border-l-4 border-l-gray-400 bg-gray-50',
-  [AppointmentStatus.CANCELLED]: 'border-l-4 border-l-red-500 bg-red-50 opacity-60',
-  [AppointmentStatus.NO_SHOW]: 'border-l-4 border-l-red-500 bg-red-50 opacity-60',
+// Iris 4-color appointment palette
+const statusConfig: Record<AppointmentStatus, { border: string; bg: string; text: string }> = {
+  [AppointmentStatus.SCHEDULED]:   { border: '#7A92D2', bg: '#EEF1F9', text: '#3D5490' },
+  [AppointmentStatus.CONFIRMED]:   { border: '#5D4AA8', bg: '#EDE5F4', text: '#3F2F87' },
+  [AppointmentStatus.IN_PROGRESS]: { border: '#C97E68', bg: '#F7E5DD', text: '#A05040' },
+  [AppointmentStatus.COMPLETED]:   { border: '#8A9E88', bg: '#EAF0E9', text: '#4A6448' },
+  [AppointmentStatus.CANCELLED]:   { border: '#C94040', bg: '#F5E5E5', text: '#922020' },
+  [AppointmentStatus.NO_SHOW]:     { border: '#C94040', bg: '#F5E5E5', text: '#922020' },
 };
 
 export function AppointmentCard({ appointment, onClick }: AppointmentCardProps) {
@@ -21,45 +21,43 @@ export function AppointmentCard({ appointment, onClick }: AppointmentCardProps) 
   const endTime = new Date(appointment.endTime);
   const clientName = appointment.client
     ? `${appointment.client.firstName} ${appointment.client.lastName}`
-    : 'Unknown Client';
+    : 'Unknown';
   const therapistName = appointment.therapist?.user
     ? `${appointment.therapist.user.firstName || ''} ${appointment.therapist.user.lastName || ''}`
-    : 'Unknown Therapist';
+    : '';
+
+  const cfg = statusConfig[appointment.status] ?? statusConfig[AppointmentStatus.CONFIRMED];
+  const isCancelled =
+    appointment.status === AppointmentStatus.CANCELLED ||
+    appointment.status === AppointmentStatus.NO_SHOW;
 
   return (
     <div
-      className={`rounded-lg p-3 shadow-sm cursor-pointer hover:shadow-md transition-shadow ${
-        statusStyles[appointment.status]
-      } ${appointment.status === AppointmentStatus.CANCELLED ? 'line-through' : ''}`}
+      className="rounded-lg p-2 cursor-pointer transition-all hover:brightness-95"
+      style={{
+        borderLeft: `2.5px solid ${cfg.border}`,
+        background: cfg.bg,
+        opacity: isCancelled ? 0.55 : 1,
+      }}
       onClick={onClick}
     >
-      <div className="flex items-start justify-between gap-2 mb-2">
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-gray-900 truncate">
-            {clientName}
-          </p>
-          <p className="text-xs text-gray-600 truncate">{therapistName}</p>
-        </div>
-        <StatusBadge status={appointment.status} size="sm" />
-      </div>
-
-      <div className="flex items-center gap-2 text-xs text-gray-600">
-        <span className="font-medium">
-          {format(startTime, 'h:mm a')} - {format(endTime, 'h:mm a')}
-        </span>
-        <span className="text-gray-400">•</span>
-        <span>{appointment.duration} min</span>
-      </div>
-
-      {appointment.serviceType && (
-        <p className="text-xs text-gray-500 mt-1 truncate">
-          {appointment.serviceType}
+      <p
+        className="text-xs font-semibold truncate leading-tight"
+        style={{ color: cfg.text, textDecoration: isCancelled ? 'line-through' : 'none' }}
+      >
+        {clientName}
+      </p>
+      {therapistName && (
+        <p className="text-xs truncate mt-0.5" style={{ color: cfg.text, opacity: 0.75 }}>
+          {therapistName}
         </p>
       )}
-
-      {appointment.price && (
-        <p className="text-xs text-gray-700 font-medium mt-1">
-          ${appointment.price.toFixed(2)}
+      <p className="text-xs mt-1 tabular-nums" style={{ color: cfg.text, opacity: 0.85 }}>
+        {format(startTime, 'h:mm')}–{format(endTime, 'h:mm a')}
+      </p>
+      {appointment.serviceType && (
+        <p className="text-xs mt-0.5 truncate" style={{ color: cfg.text, opacity: 0.7 }}>
+          {appointment.serviceType}
         </p>
       )}
     </div>

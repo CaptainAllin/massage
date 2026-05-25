@@ -1,7 +1,7 @@
 import { AppointmentWithRelations } from '@massage/types';
 import { AppointmentCard } from './AppointmentCard';
 import { format, addDays, startOfWeek, isSameDay, setHours, setMinutes } from 'date-fns';
-import { useMemo } from 'react';
+import { useMemo, useEffect, useRef } from 'react';
 
 interface WeekViewProps {
   currentDate: Date;
@@ -12,6 +12,7 @@ interface WeekViewProps {
 
 const HOURS = Array.from({ length: 14 }, (_, i) => i + 7); // 7am to 8pm
 const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const ROW_HEIGHT = 60; // px per hour
 
 export function WeekView({
   currentDate,
@@ -19,115 +20,188 @@ export function WeekView({
   onAppointmentClick,
   onSlotClick,
 }: WeekViewProps) {
-  // Get the start of the week (Sunday)
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 });
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Generate array of dates for the week
   const weekDates = useMemo(
     () => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
     [weekStart]
   );
 
-  // Group appointments by day and hour
+  // Scroll to current time on mount
+  useEffect(() => {
+    if (scrollRef.current) {
+      const now = new Date();
+      const hourOffset = Math.max(0, now.getHours() - 7 - 1);
+      scrollRef.current.scrollTop = hourOffset * ROW_HEIGHT;
+    }
+  }, []);
+
   const appointmentsByDayAndHour = useMemo(() => {
     const grouped: Record<string, AppointmentWithRelations[]> = {};
-
     appointments.forEach((appointment) => {
       const startTime = new Date(appointment.startTime);
       const dayIndex = weekDates.findIndex((date) => isSameDay(date, startTime));
-
       if (dayIndex !== -1) {
         const hour = startTime.getHours();
         const key = `${dayIndex}-${hour}`;
-        if (!grouped[key]) {
-          grouped[key] = [];
-        }
+        if (!grouped[key]) grouped[key] = [];
         grouped[key].push(appointment);
       }
     });
-
     return grouped;
   }, [appointments, weekDates]);
 
-  const getAppointmentsForSlot = (dayIndex: number, hour: number) => {
-    return appointmentsByDayAndHour[`${dayIndex}-${hour}`] || [];
-  };
+  const getAppointmentsForSlot = (dayIndex: number, hour: number) =>
+    appointmentsByDayAndHour[`${dayIndex}-${hour}`] || [];
+
+  // Calculate now-line position
+  const now = new Date();
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const startMinutes = 7 * 60;
+  const nowTopPx = ((nowMinutes - startMinutes) / 60) * ROW_HEIGHT;
+  const showNowLine = nowMinutes >= startMinutes && nowMinutes <= (7 + 14) * 60;
+  const todayColIndex = weekDates.findIndex((d) => isSameDay(d, now));
 
   return (
-    <div className="bg-white rounded-xl shadow-soft border border-gray-200 overflow-hidden">
-      {/* Horizontal scroll wrapper for small screens */}
+    <div
+      className="rounded-2xl overflow-hidden"
+      style={{ background: '#fff', border: '1px solid #EFE9F2', boxShadow: '0 2px 12px rgba(93,74,168,0.06)' }}
+    >
       <div className="overflow-x-auto">
-      <div style={{ minWidth: '560px' }}>
-      {/* Week Header */}
-      <div className="grid grid-cols-8 border-b border-gray-200">
-        <div className="p-2 sm:p-4 bg-gray-50"></div>
-        {weekDates.map((date, index) => {
-          const isToday = isSameDay(date, new Date());
-          return (
-            <div
-              key={index}
-              className={`p-2 sm:p-4 text-center border-l border-gray-200 ${
-                isToday ? 'bg-sage-50' : 'bg-gray-50'
-              }`}
-            >
-              <div className="text-xs sm:text-sm font-semibold text-gray-900">
-                {DAYS_OF_WEEK[index]}
-              </div>
-              <div
-                className={`text-lg sm:text-2xl font-bold mt-0.5 sm:mt-1 ${
-                  isToday ? 'text-sage-600' : 'text-gray-700'
-                }`}
-              >
-                {format(date, 'd')}
-              </div>
-              <div className="text-xs text-gray-500 hidden sm:block">{format(date, 'MMM')}</div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Calendar Grid */}
-      <div className="overflow-y-auto max-h-[calc(100vh-300px)]">
-        {HOURS.map((hour) => (
-          <div key={hour} className="grid grid-cols-8 border-b border-gray-100 min-h-[60px] sm:min-h-[80px]">
-            {/* Hour Label */}
-            <div className="p-1 sm:p-2 text-xs font-medium text-gray-600 bg-gray-50 flex items-start justify-end pr-2 sm:pr-4">
-              {format(setHours(new Date(), hour), 'h:mm a')}
-            </div>
-
-            {/* Day Columns */}
-            {weekDates.map((date, dayIndex) => {
-              const appointmentsInSlot = getAppointmentsForSlot(dayIndex, hour);
-              const slotDateTime = setMinutes(setHours(date, hour), 0);
-
+        <div style={{ minWidth: '600px' }}>
+          {/* Week header */}
+          <div className="grid grid-cols-8" style={{ borderBottom: '1px solid #EFE9F2' }}>
+            <div className="py-3 px-2" style={{ background: '#FBF8FD' }} />
+            {weekDates.map((date, index) => {
+              const isToday = isSameDay(date, new Date());
               return (
                 <div
-                  key={dayIndex}
-                  className="p-2 border-l border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors relative"
-                  onClick={() => onSlotClick(slotDateTime, hour)}
+                  key={index}
+                  className="py-3 px-2 text-center"
+                  style={{
+                    background: isToday ? '#F1ECF5' : '#FBF8FD',
+                    borderLeft: '1px solid #EFE9F2',
+                  }}
                 >
-                  {appointmentsInSlot.length > 0 ? (
-                    <div className="space-y-1">
-                      {appointmentsInSlot.map((appointment) => (
-                        <div
-                          key={appointment.id}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onAppointmentClick(appointment);
-                          }}
-                        >
-                          <AppointmentCard appointment={appointment} />
-                        </div>
-                      ))}
-                    </div>
-                  ) : null}
+                  <div
+                    className="text-xs font-semibold uppercase tracking-wide"
+                    style={{ color: isToday ? '#5D4AA8' : '#7A7090', letterSpacing: '0.8px' }}
+                  >
+                    {DAYS_OF_WEEK[index]}
+                  </div>
+                  <div className="flex items-center justify-center mt-1">
+                    {isToday ? (
+                      <span
+                        className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold text-white"
+                        style={{ background: 'linear-gradient(135deg, #5D4AA8, #3F2F87)' }}
+                      >
+                        {format(date, 'd')}
+                      </span>
+                    ) : (
+                      <span className="text-sm font-medium" style={{ color: '#3D3450' }}>
+                        {format(date, 'd')}
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-xs mt-0.5 hidden sm:block" style={{ color: '#7A7090' }}>
+                    {format(date, 'MMM')}
+                  </div>
                 </div>
               );
             })}
           </div>
-        ))}
-      </div>
-      </div>
+
+          {/* Grid with now-line */}
+          <div
+            ref={scrollRef}
+            className="overflow-y-auto relative"
+            style={{ maxHeight: 'calc(100vh - 320px)' }}
+          >
+            {/* Now line overlay */}
+            {showNowLine && todayColIndex >= 0 && (
+              <div
+                className="absolute left-0 right-0 pointer-events-none z-10 flex items-center"
+                style={{ top: `${nowTopPx}px` }}
+              >
+                <div className="w-[12.5%]" />
+                {/* Spacer for the hour-label column + columns before today */}
+                <div
+                  style={{
+                    marginLeft: `calc(${(todayColIndex / 7) * 100}%)`,
+                    width: `${(1 / 7) * 100}%`,
+                    position: 'absolute',
+                    left: '12.5%',
+                  }}
+                >
+                  <div
+                    className="h-[1.5px] w-full"
+                    style={{
+                      background: '#5D4AA8',
+                      boxShadow: '0 0 8px rgba(93,74,168,0.55)',
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {HOURS.map((hour) => (
+              <div
+                key={hour}
+                className="grid grid-cols-8"
+                style={{ borderBottom: '1px solid #F3EEF8', minHeight: `${ROW_HEIGHT}px` }}
+              >
+                {/* Hour label */}
+                <div
+                  className="px-2 py-1 text-xs flex items-start justify-end pt-1.5"
+                  style={{ background: '#FBF8FD', color: '#7A7090', fontVariantNumeric: 'tabular-nums' }}
+                >
+                  {format(setHours(new Date(), hour), 'h a')}
+                </div>
+
+                {weekDates.map((date, dayIndex) => {
+                  const appts = getAppointmentsForSlot(dayIndex, hour);
+                  const slotDateTime = setMinutes(setHours(date, hour), 0);
+                  const isTodayCol = isSameDay(date, now);
+
+                  return (
+                    <div
+                      key={dayIndex}
+                      className="p-1 cursor-pointer transition-colors"
+                      style={{
+                        borderLeft: '1px solid #F3EEF8',
+                        background: isTodayCol ? '#FDFBFF' : 'transparent',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!appts.length) e.currentTarget.style.background = '#F5F0FA';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = isTodayCol ? '#FDFBFF' : 'transparent';
+                      }}
+                      onClick={() => onSlotClick(slotDateTime, hour)}
+                    >
+                      {appts.length > 0 && (
+                        <div className="space-y-1">
+                          {appts.map((appt) => (
+                            <div
+                              key={appt.id}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onAppointmentClick(appt);
+                              }}
+                            >
+                              <AppointmentCard appointment={appt} />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );

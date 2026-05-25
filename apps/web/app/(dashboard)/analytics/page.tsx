@@ -49,12 +49,13 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-5 max-w-6xl">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Analytics Dashboard</h1>
-          <p className="text-sm text-gray-600 mt-1">
+          <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: '#5D4AA8', letterSpacing: '1.4px' }}>Growth</p>
+          <h1 className="text-2xl font-semibold font-display" style={{ color: '#1E1830', letterSpacing: '-0.4px' }}>Analytics</h1>
+          <p className="text-sm mt-0.5" style={{ color: '#7A7090' }}>
             Overview of your business performance
           </p>
         </div>

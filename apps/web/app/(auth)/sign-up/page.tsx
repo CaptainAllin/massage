@@ -4,6 +4,29 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 
+const inputClass = "w-full px-3.5 py-2.5 text-sm rounded-xl outline-none transition-all";
+const inputStyle = { border: '1px solid #E5DEEC', color: '#1E1830', background: '#fff' };
+
+function IrisInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <input
+      {...props}
+      className={inputClass}
+      style={inputStyle}
+      onFocus={(e) => { e.currentTarget.style.borderColor = '#5D4AA8'; props.onFocus?.(e); }}
+      onBlur={(e) => { e.currentTarget.style.borderColor = '#E5DEEC'; props.onBlur?.(e); }}
+    />
+  );
+}
+
+function IrisLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <label className="block text-xs font-semibold mb-1.5" style={{ color: '#3D3450' }}>
+      {children}
+    </label>
+  );
+}
+
 export default function SignUpPage() {
   const [formData, setFormData] = useState({
     email: '',
@@ -47,7 +70,6 @@ export default function SignUpPage() {
       return;
     }
 
-    // If we have a session immediately (email confirmation disabled), set up business
     const session = signUpData.session;
     if (session && formData.role === 'BUSINESS_OWNER') {
       try {
@@ -63,7 +85,6 @@ export default function SignUpPage() {
             email: formData.email,
           }),
         });
-
         if (res.ok) {
           const json = await res.json();
           const businessId = json.data?.id;
@@ -72,101 +93,95 @@ export default function SignUpPage() {
           }
         }
       } catch (setupErr) {
-        // Non-fatal — user can still log in, businessId can be resolved later
         console.warn('[SIGN-UP] Business setup failed:', setupErr);
       }
     }
-    // Let AuthProvider's onStateChange trigger navigation
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Create your account
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Or{' '}
-            <Link href="/sign-in" className="font-medium text-green-600 hover:text-green-500">
-              sign in to existing account
-            </Link>
-          </p>
+    <div
+      className="min-h-screen flex items-center justify-center py-12 px-4"
+      style={{ background: '#F1ECF5' }}
+    >
+      <div className="w-full max-w-sm">
+        {/* Logo */}
+        <div className="flex flex-col items-center mb-8">
+          <div
+            className="w-12 h-12 rounded-2xl flex items-center justify-center mb-3"
+            style={{ background: 'linear-gradient(135deg, #5D4AA8, #3F2F87)' }}
+          >
+            <svg width="22" height="22" viewBox="0 0 18 18" fill="none">
+              <path
+                d="M9 2C9 2 5 5.5 5 9.5C5 11.985 6.791 14 9 14C11.209 14 13 11.985 13 9.5C13 5.5 9 2 9 2Z"
+                fill="white"
+                opacity="0.9"
+              />
+              <path d="M9 14V16M6 15.5H12" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </div>
+          <h1 className="text-lg font-semibold" style={{ color: '#1E1830', letterSpacing: '-0.3px' }}>
+            Iris Care Suite
+          </h1>
+          <p className="text-sm mt-0.5" style={{ color: '#7A7090' }}>Create your account</p>
         </div>
 
-        {error && (
-          <div className="rounded-md bg-red-50 p-4">
-            <div className="text-sm text-red-800">{error}</div>
-          </div>
-        )}
+        {/* Card */}
+        <div
+          className="rounded-2xl p-8"
+          style={{ background: '#fff', border: '1px solid #EFE9F2', boxShadow: '0 4px 24px rgba(93,74,168,0.08)' }}
+        >
+          {error && (
+            <div
+              className="rounded-xl p-3 mb-5 text-sm"
+              style={{ background: '#F5E5E5', color: '#922020', border: '1px solid #F5CECE' }}
+            >
+              {error}
+            </div>
+          )}
 
-        <form className="mt-8 space-y-6" onSubmit={handleSignUp}>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+          <form className="space-y-4" onSubmit={handleSignUp}>
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
-                  First Name
-                </label>
-                <input
-                  id="firstName"
-                  name="firstName"
+                <IrisLabel>First Name</IrisLabel>
+                <IrisInput
                   type="text"
                   required
-                  className="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
                   value={formData.firstName}
-                  onChange={(e) =>
-                    setFormData({ ...formData, firstName: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                  placeholder="Jane"
                 />
               </div>
               <div>
-                <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
-                  Last Name
-                </label>
-                <input
-                  id="lastName"
-                  name="lastName"
+                <IrisLabel>Last Name</IrisLabel>
+                <IrisInput
                   type="text"
                   required
-                  className="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
                   value={formData.lastName}
-                  onChange={(e) =>
-                    setFormData({ ...formData, lastName: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                  placeholder="Smith"
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email address
-              </label>
-              <input
-                id="email"
-                name="email"
+              <IrisLabel>Email address</IrisLabel>
+              <IrisInput
                 type="email"
                 autoComplete="email"
                 required
-                className="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
                 value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                placeholder="you@example.com"
               />
             </div>
 
             <div>
-              <label htmlFor="role" className="block text-sm font-medium text-gray-700">
-                Role
-              </label>
+              <IrisLabel>Role</IrisLabel>
               <select
-                id="role"
-                name="role"
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
+                className={inputClass}
+                style={inputStyle}
                 value={formData.role}
-                onChange={(e) =>
-                  setFormData({ ...formData, role: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
               >
                 <option value="BUSINESS_OWNER">Business Owner</option>
                 <option value="THERAPIST">Therapist</option>
@@ -176,52 +191,50 @@ export default function SignUpPage() {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
-              </label>
-              <input
-                id="password"
-                name="password"
+              <IrisLabel>Password</IrisLabel>
+              <IrisInput
                 type="password"
                 autoComplete="new-password"
                 required
-                className="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
                 value={formData.password}
-                onChange={(e) =>
-                  setFormData({ ...formData, password: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                placeholder="••••••••"
               />
             </div>
 
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-                Confirm Password
-              </label>
-              <input
-                id="confirmPassword"
-                name="confirmPassword"
+              <IrisLabel>Confirm Password</IrisLabel>
+              <IrisInput
                 type="password"
                 autoComplete="new-password"
                 required
-                className="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
                 value={formData.confirmPassword}
-                onChange={(e) =>
-                  setFormData({ ...formData, confirmPassword: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                placeholder="••••••••"
               />
             </div>
-          </div>
 
-          <div>
             <button
               type="submit"
               disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50"
+              style={{
+                background: 'linear-gradient(135deg, #5D4AA8, #3F2F87)',
+                boxShadow: '0 4px 16px rgba(93,74,168,0.27)',
+                marginTop: '8px',
+              }}
             >
-              {loading ? 'Creating account...' : 'Sign up'}
+              {loading ? 'Creating account…' : 'Create account'}
             </button>
-          </div>
-        </form>
+          </form>
+        </div>
+
+        <p className="text-center text-sm mt-5" style={{ color: '#7A7090' }}>
+          Already have an account?{' '}
+          <Link href="/sign-in" className="font-semibold" style={{ color: '#5D4AA8' }}>
+            Sign in
+          </Link>
+        </p>
       </div>
     </div>
   );

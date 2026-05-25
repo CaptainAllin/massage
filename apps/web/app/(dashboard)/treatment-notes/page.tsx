@@ -57,16 +57,17 @@ export default function TreatmentNotesPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-5 max-w-5xl">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground font-display">
+          <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: '#5D4AA8', letterSpacing: '1.4px' }}>Practice</p>
+          <h1 className="text-2xl font-semibold font-display" style={{ color: '#1E1830', letterSpacing: '-0.4px' }}>
             Treatment Notes
           </h1>
-          <p className="text-muted-foreground mt-1 sm:mt-2">SOAP notes and treatment documentation</p>
+          <p className="text-sm mt-0.5" style={{ color: '#7A7090' }}>SOAP notes and treatment documentation</p>
         </div>
-        <Button variant="primary" onClick={() => router.push('/treatment-notes/new')}>
-          New SOAP Note
+        <Button size="sm" variant="primary" onClick={() => router.push('/treatment-notes/new')}>
+          + New SOAP Note
         </Button>
       </div>
 

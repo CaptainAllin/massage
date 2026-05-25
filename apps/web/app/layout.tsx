@@ -1,6 +1,6 @@
 import './globals.css';
 import type { Metadata } from 'next';
-import { inter, poppins } from '@/lib/fonts';
+import { inter, sora } from '@/lib/fonts';
 import { AuthProvider } from '@/components/providers/AuthProvider';
 import { QueryProvider } from '@/components/providers/QueryProvider';
 
@@ -16,7 +16,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${inter.variable} ${poppins.variable}`}>
+    <html lang="en" className={`${inter.variable} ${sora.variable}`}>
       <body>
         <AuthProvider>
           <QueryProvider>
