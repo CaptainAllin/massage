@@ -1,5 +1,5 @@
 import { withAuth, res } from '@/lib/api-auth';
-import { checkAvailability } from '../../route';
+import { checkAvailability } from '@/lib/check-availability';
 
 export const GET = withAuth(async (req) => {
   const { searchParams } = new URL(req.url);

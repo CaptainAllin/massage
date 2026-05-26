@@ -27,13 +27,14 @@ import {
   Zap,
   ShieldCheck,
   LogOut,
-  ChevronDown,
+  HelpCircle,
+  Sparkles,
 } from 'lucide-react';
 
 export interface MenuItem {
   label: string;
   href: string;
-  icon: React.ComponentType<{ className?: string; size?: number }>;
+  icon: React.ComponentType<{ className?: string; size?: number }> | any;
   allowedRoles?: string[];
   badge?: number;
 }
@@ -52,6 +53,8 @@ export interface SidebarProps {
   onSignOut?: () => void;
   onGetStarted?: () => void;
   onboardingProgress?: number;
+  whatsNewCount?: number;
+  onWhatsNew?: () => void;
 }
 
 const defaultMenuGroups: MenuGroup[] = [
@@ -121,7 +124,7 @@ const defaultMenuGroups: MenuGroup[] = [
       },
       {
         label: 'Insurance',
-        href: '/insurance',
+        href: '/insurance-claims',
         icon: ShieldCheck,
         allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER', 'RECEPTIONIST'],
       },
@@ -279,6 +282,8 @@ function MenuContent({
   onClose,
   onGetStarted,
   onboardingProgress,
+  whatsNewCount,
+  onWhatsNew,
 }: {
   userRole?: string | null;
   userName?: string;
@@ -288,6 +293,8 @@ function MenuContent({
   onClose?: () => void;
   onGetStarted?: () => void;
   onboardingProgress?: number;
+  whatsNewCount?: number;
+  onWhatsNew?: () => void;
 }) {
   const pathname = usePathname();
 
@@ -337,6 +344,55 @@ function MenuContent({
           </div>
         ))}
       </nav>
+
+      {/* Help & What's New */}
+      <div className="mx-3 mb-1 space-y-0.5">
+        <a
+          href="https://docs.iris.care"
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={onClose}
+          className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition-colors group"
+          style={{ color: '#3D3450' }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = '#EDE5F4')}
+          onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+        >
+          <span className="opacity-60 group-hover:opacity-90">
+            <HelpCircle size={16} />
+          </span>
+          <span style={{ fontSize: '13.5px' }}>Help &amp; Docs</span>
+        </a>
+        {onWhatsNew && (
+          <button
+            onClick={() => { onWhatsNew(); onClose?.(); }}
+            className="w-full flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition-colors group text-left"
+            style={{ color: '#3D3450' }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = '#EDE5F4')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+          >
+            <span className="opacity-60 group-hover:opacity-90 relative">
+              <Sparkles size={16} />
+              {whatsNewCount != null && whatsNewCount > 0 && (
+                <span
+                  className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full flex items-center justify-center text-white"
+                  style={{ background: '#C97E68', fontSize: '8px', fontWeight: 700 }}
+                >
+                  {whatsNewCount > 9 ? '9+' : whatsNewCount}
+                </span>
+              )}
+            </span>
+            <span style={{ fontSize: '13.5px' }}>What&apos;s New</span>
+            {whatsNewCount != null && whatsNewCount > 0 && (
+              <span
+                className="ml-auto text-xs font-semibold rounded-full px-1.5 py-0.5 leading-none"
+                style={{ background: '#F7E5DD', color: '#C97E68', fontSize: '11px' }}
+              >
+                {whatsNewCount}
+              </span>
+            )}
+          </button>
+        )}
+      </div>
 
       {/* Getting Started button */}
       {onGetStarted && (
@@ -423,7 +479,7 @@ function MenuContent({
 }
 
 export function Sidebar({
-  menuItems,
+  menuItems: _menuItems,
   userRole,
   userName,
   userEmail,
@@ -431,6 +487,8 @@ export function Sidebar({
   onSignOut,
   onGetStarted,
   onboardingProgress,
+  whatsNewCount,
+  onWhatsNew,
 }: SidebarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
@@ -442,6 +500,8 @@ export function Sidebar({
     onSignOut,
     onGetStarted,
     onboardingProgress,
+    whatsNewCount,
+    onWhatsNew,
   };
 
   return (

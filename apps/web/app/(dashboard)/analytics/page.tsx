@@ -3,15 +3,23 @@
 import React, { useState } from 'react';
 import { KPICard } from '../../../components/analytics/KPICard';
 import { useDashboardOverview } from '../../../lib/hooks/useAnalytics';
+import { useLocations } from '../../../lib/hooks/use-locations';
+import { useBusinessId } from '../../../lib/hooks/use-business-id';
 
 export default function AnalyticsPage() {
+  const businessId = useBusinessId();
   // Default to last 30 days
   const [dateRange, setDateRange] = useState({
     startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     endDate: new Date().toISOString().split('T')[0],
   });
+  const [locationId, setLocationId] = useState<string>('');
 
-  const { data: overview, isLoading, error } = useDashboardOverview(dateRange);
+  const { data: locations = [] } = useLocations(businessId);
+  const { data: overview, isLoading, error } = useDashboardOverview({
+    ...dateRange,
+    ...(locationId ? { locationId } : {}),
+  });
 
   const handleDateRangeChange = (range: 'week' | 'month' | 'quarter' | 'year') => {
     const endDate = new Date();
@@ -49,7 +57,7 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div className="space-y-5 max-w-6xl">
+    <div className="space-y-5 max-w-[1600px]">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
@@ -60,8 +68,22 @@ export default function AnalyticsPage() {
           </p>
         </div>
 
-        {/* Date Range Selector */}
-        <div className="flex flex-wrap gap-2">
+        {/* Filters */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Location filter */}
+          {locations.length > 0 && (
+            <select
+              value={locationId}
+              onChange={(e) => setLocationId(e.target.value)}
+              className="px-3 py-1.5 text-xs sm:text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            >
+              <option value="">All Locations</option>
+              {locations.map((loc: any) => (
+                <option key={loc.id} value={loc.id}>{loc.name}</option>
+              ))}
+            </select>
+          )}
+          {/* Date Range Selector */}
           <button
             onClick={() => handleDateRangeChange('week')}
             className="px-3 py-1.5 text-xs sm:text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"

@@ -6,6 +6,7 @@ import { CalendarFilters } from './CalendarFilters';
 import { WeekView } from './WeekView';
 import { DayView } from './DayView';
 import { MonthView } from './MonthView';
+import { StaffView } from './StaffView';
 import { useAppointments } from '@/lib/hooks/use-appointments';
 import { startOfWeek, endOfWeek, startOfDay, endOfDay, startOfMonth, endOfMonth, getWeek, format } from 'date-fns';
 import { EmptyState } from '@massage/ui';
@@ -35,7 +36,7 @@ export function AppointmentCalendar({
   onSlotClick,
 }: AppointmentCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState<'week' | 'day' | 'month'>('week');
+  const [viewMode, setViewMode] = useState<'week' | 'day' | 'month' | 'staff'>('week');
   const [selectedTherapist, setSelectedTherapist] = useState<string | null>(null);
   const [selectedStatuses, setSelectedStatuses] = useState<AppointmentStatus[]>([
     AppointmentStatus.SCHEDULED,
@@ -44,7 +45,7 @@ export function AppointmentCalendar({
   ]);
 
   const dateRange = useMemo(() => {
-    if (viewMode === 'day') {
+    if (viewMode === 'day' || viewMode === 'staff') {
       return { startDate: startOfDay(currentDate), endDate: endOfDay(currentDate) };
     }
     if (viewMode === 'month') {
@@ -57,7 +58,7 @@ export function AppointmentCalendar({
   }, [currentDate, viewMode]);
 
   const { data: appointmentsResponse, isLoading } = useAppointments(businessId, {
-    therapistId: selectedTherapist || undefined,
+    therapistId: viewMode === 'staff' ? undefined : (selectedTherapist || undefined),
     status: selectedStatuses,
     startDate: dateRange.startDate,
     endDate: dateRange.endDate,
@@ -74,7 +75,7 @@ export function AppointmentCalendar({
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 });
   const weekEnd = endOfWeek(currentDate, { weekStartsOn: 0 });
   const dateRangeLabel =
-    viewMode === 'day'
+    viewMode === 'day' || viewMode === 'staff'
       ? format(currentDate, 'EEEE, d MMMM yyyy')
       : viewMode === 'month'
       ? format(currentDate, 'MMMM yyyy')
@@ -82,6 +83,10 @@ export function AppointmentCalendar({
 
   const handleSlotClick = (date: Date, _hour: number) => {
     onSlotClick(date, selectedTherapist || undefined);
+  };
+
+  const handleStaffSlotClick = (date: Date, therapistId: string) => {
+    onSlotClick(date, therapistId);
   };
 
   const queryClient = useQueryClient();
@@ -108,6 +113,14 @@ export function AppointmentCalendar({
         <div className="h-48 rounded-xl" style={{ background: '#EDE5F4' }} />
       </div>
     </div>
+  ) : viewMode === 'staff' ? (
+    <StaffView
+      currentDate={currentDate}
+      appointments={appointments}
+      therapists={therapists}
+      onAppointmentClick={onAppointmentClick}
+      onSlotClick={handleStaffSlotClick}
+    />
   ) : appointments.length === 0 ? (
     <div
       className="rounded-2xl p-12"

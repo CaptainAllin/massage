@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Button, SearchInput, Table, Column, Skeleton } from '@massage/ui';
 import { useTreatmentNotes } from '@/lib/hooks';
 import { TreatmentNote } from '@massage/types';
@@ -46,6 +47,18 @@ export default function TreatmentNotesPage() {
       render: (note) => (note.sessionDuration ? `${note.sessionDuration} min` : '-'),
     },
     {
+      key: 'noteTemplateName',
+      header: 'Template',
+      render: (note) =>
+        note.noteTemplateName ? (
+          <span className="inline-flex items-center gap-1 text-xs bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full font-medium">
+            {note.noteTemplateName}
+          </span>
+        ) : (
+          <span className="text-gray-400 text-xs">—</span>
+        ),
+    },
+    {
       key: 'createdAt',
       header: 'Created',
       sortable: true,
@@ -69,9 +82,14 @@ export default function TreatmentNotesPage() {
           </h1>
           <p className="text-sm mt-0.5" style={{ color: '#7A7090' }}>SOAP notes and treatment documentation</p>
         </div>
-        <Button size="sm" variant="primary" onClick={() => router.push('/treatment-notes/new')}>
-          + New SOAP Note
-        </Button>
+        <div className="flex items-center gap-2">
+          <Link href="/treatment-notes/templates">
+            <Button size="sm" variant="outline">Templates</Button>
+          </Link>
+          <Button size="sm" variant="primary" onClick={() => router.push('/treatment-notes/new')}>
+            + New SOAP Note
+          </Button>
+        </div>
       </div>
 
       <SearchInput

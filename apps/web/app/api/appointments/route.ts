@@ -1,6 +1,7 @@
 import { withAuth, res } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
-import { AppointmentStatus } from '@prisma/client';
+import { AppointmentStatus, GroupBookingStatus } from '@prisma/client';
+import { checkAvailability } from '@/lib/check-availability';
 
 export const GET = withAuth(async (req, _user) => {
   const { searchParams } = new URL(req.url);
@@ -39,6 +40,7 @@ export const GET = withAuth(async (req, _user) => {
         client: true,
         therapist: { include: { user: true } },
         cancellation: true,
+        groupBookings: { include: { client: true }, orderBy: { createdAt: 'asc' } },
       },
       orderBy: { [sortBy]: sortOrder },
       skip: (page - 1) * limit,
@@ -55,10 +57,16 @@ export const GET = withAuth(async (req, _user) => {
 
 export const POST = withAuth(async (req, user) => {
   const body = await req.json();
-  const { businessId, clientId, therapistId, startTime, duration, ...rest } = body;
+  const { businessId, clientId, therapistId, startTime, duration, isGroup, capacity, groupClientIds, ...rest } = body;
 
-  if (!businessId || !clientId || !therapistId || !startTime || !duration) {
-    return res.badRequest('Missing required fields: businessId, clientId, therapistId, startTime, duration');
+  if (!businessId || !therapistId || !startTime || !duration) {
+    return res.badRequest('Missing required fields: businessId, therapistId, startTime, duration');
+  }
+
+  // For group sessions, clientId can be the first group member; for individual sessions it's required
+  const primaryClientId = clientId || (isGroup && groupClientIds?.length > 0 ? groupClientIds[0] : null);
+  if (!primaryClientId) {
+    return res.badRequest('clientId is required (or groupClientIds for group sessions)');
   }
 
   const start = new Date(startTime);
@@ -72,19 +80,35 @@ export const POST = withAuth(async (req, user) => {
   const appointment = await prisma.appointment.create({
     data: {
       businessId,
-      clientId,
+      clientId: primaryClientId,
       therapistId,
       startTime: start,
       endTime: end,
       duration,
       status: AppointmentStatus.SCHEDULED,
+      isGroup: isGroup ?? false,
+      capacity: isGroup ? (capacity ?? null) : null,
       ...rest,
     },
     include: {
       client: true,
       therapist: { include: { user: true } },
+      groupBookings: { include: { client: true } },
     },
   });
+
+  // Create GroupBooking records for all group clients
+  if (isGroup && groupClientIds?.length > 0) {
+    const clientIds: string[] = groupClientIds;
+    await prisma.groupBooking.createMany({
+      data: clientIds.map((cId: string) => ({
+        appointmentId: appointment.id,
+        clientId: cId,
+        status: GroupBookingStatus.REGISTERED,
+      })),
+      skipDuplicates: true,
+    });
+  }
 
   await prisma.auditLog.create({
     data: {
@@ -93,78 +117,10 @@ export const POST = withAuth(async (req, user) => {
       action: 'APPOINTMENT_CREATED',
       entityType: 'Appointment',
       entityId: appointment.id,
-      metadata: { clientId, therapistId, startTime: start, duration },
+      metadata: { clientId: primaryClientId, therapistId, startTime: start, duration, isGroup: isGroup ?? false },
     },
   });
 
   return res.created(appointment, 'Appointment created successfully');
 });
 
-export async function checkAvailability(
-  therapistId: string,
-  startTime: Date,
-  endTime: Date,
-  excludeAppointmentId?: string
-) {
-  const dayOfWeek = startTime.getDay();
-  const timeString = startTime.toTimeString().substring(0, 5);
-  const endTimeString = endTime.toTimeString().substring(0, 5);
-
-  const availability = await prisma.therapistAvailability.findFirst({
-    where: { therapistId, dayOfWeek, isActive: true },
-  });
-
-  if (!availability) {
-    return { available: false, reason: 'NO_AVAILABILITY', message: 'Therapist has no availability set for this day' };
-  }
-
-  if (timeString < availability.startTime || endTimeString > availability.endTime) {
-    return {
-      available: false,
-      reason: 'OUTSIDE_HOURS',
-      message: `Therapist works ${availability.startTime} - ${availability.endTime} on this day`,
-    };
-  }
-
-  const timeOff = await prisma.therapistTimeOff.findFirst({
-    where: {
-      therapistId,
-      OR: [
-        { AND: [{ startDate: { lte: startTime } }, { endDate: { gte: startTime } }] },
-        { AND: [{ startDate: { lte: endTime } }, { endDate: { gte: endTime } }] },
-        { AND: [{ startDate: { gte: startTime } }, { endDate: { lte: endTime } }] },
-      ],
-    },
-  });
-
-  if (timeOff) {
-    return { available: false, reason: 'TIME_OFF', message: 'Therapist is on time off during this period' };
-  }
-
-  const conflictWhere: any = {
-    therapistId,
-    status: { notIn: [AppointmentStatus.CANCELLED, AppointmentStatus.NO_SHOW] },
-    OR: [
-      { AND: [{ startTime: { lte: startTime } }, { endTime: { gt: startTime } }] },
-      { AND: [{ startTime: { lt: endTime } }, { endTime: { gte: endTime } }] },
-      { AND: [{ startTime: { gte: startTime } }, { endTime: { lte: endTime } }] },
-    ],
-  };
-  if (excludeAppointmentId) conflictWhere.id = { not: excludeAppointmentId };
-
-  const conflicts = await prisma.appointment.findMany({
-    where: conflictWhere,
-    include: { client: true },
-  });
-
-  if (conflicts.length > 0) {
-    return {
-      available: false,
-      reason: 'CONFLICT',
-      conflicts,
-      message: `Therapist has ${conflicts.length} conflicting appointment(s)`,
-    };
-  }
-
-  return { available: true };
-}

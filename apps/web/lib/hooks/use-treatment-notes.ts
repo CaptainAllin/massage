@@ -55,6 +55,8 @@ export function useCreateTreatmentNote(businessId: string | undefined) {
       techniques?: string[];
       sessionDuration?: number;
       followUpDate?: string;
+      noteTemplateId?: string | null;
+      noteTemplateName?: string | null;
     }) => {
       const response = await apiClient.post<ApiResponse<TreatmentNote>>('/treatment-notes', {
         businessId,

@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { requireAuth, res, AuthError } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
-import { checkAvailability } from '../route';
+import { checkAvailability } from '@/lib/check-availability';
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -15,6 +15,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         client: true,
         therapist: { include: { user: true } },
         cancellation: true,
+        groupBookings: { include: { client: true }, orderBy: { createdAt: 'asc' } },
       },
     });
     if (!appointment) return res.notFound('Appointment not found');

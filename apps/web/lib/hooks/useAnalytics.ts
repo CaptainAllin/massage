@@ -49,6 +49,7 @@ export interface DashboardOverview {
 interface DateRangeParams {
   startDate?: string;
   endDate?: string;
+  locationId?: string;
 }
 
 export function useDashboardOverview(params?: DateRangeParams) {

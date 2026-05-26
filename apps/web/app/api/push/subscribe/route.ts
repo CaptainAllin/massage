@@ -1,16 +1,10 @@
 /**
  * POST /api/push/subscribe  — register a browser push subscription
  * DELETE /api/push/subscribe — unregister
- *
- * Subscriptions are stored in-memory per process for development.
- * In production, persist to a DB table or Redis.
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
-
-// In-memory store keyed by userId → subscription[]
-// Replace with DB persistence (e.g., a PushSubscription table) for production.
-const subscriptionStore = new Map<string, any[]>();
+import { addSubscriptionForUser, removeSubscriptionForUser, getSubscriptionsForUser } from '@/lib/push-subscriptions';
 
 export async function POST(req: NextRequest) {
   let user;
@@ -27,10 +21,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid subscription object' }, { status: 400 });
   }
 
-  const existing = subscriptionStore.get(user.id) || [];
+  const existing = getSubscriptionsForUser(user.id);
   const alreadyStored = existing.some((s) => s.endpoint === subscription.endpoint);
   if (!alreadyStored) {
-    subscriptionStore.set(user.id, [...existing, subscription]);
+    addSubscriptionForUser(user.id, subscription);
   }
 
   return NextResponse.json({ success: true });
@@ -47,16 +41,7 @@ export async function DELETE(req: NextRequest) {
   const body = await req.json();
   const { endpoint } = body;
 
-  const existing = subscriptionStore.get(user.id) || [];
-  subscriptionStore.set(
-    user.id,
-    existing.filter((s) => s.endpoint !== endpoint)
-  );
+  removeSubscriptionForUser(user.id, endpoint);
 
   return NextResponse.json({ success: true });
-}
-
-/** Used by other server-side code to retrieve subscriptions for a user */
-export function getSubscriptionsForUser(userId: string) {
-  return subscriptionStore.get(userId) || [];
 }

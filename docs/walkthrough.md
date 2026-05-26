@@ -196,21 +196,21 @@ A structured guide for inducting new users into the platform. Each phase builds 
 
 > Routes: `/analytics`, `/reports`. Goal: use data to grow the practice.
 
-- [ ] **10.1** Dashboard KPIs
-  - [ ] 10.1.1 Explain the four stat cards (Sessions, Clients, Revenue, Pending Forms)
-  - [ ] 10.1.2 Walk through the Revenue chart and period toggles (30d / 90d / 1y)
-  - [ ] 10.1.3 Explain the Service Mix breakdown (top 5 services by volume)
-- [ ] **10.2** Analytics deep-dive (`/analytics`)
-  - [ ] 10.2.1 Show client retention and new-vs-returning breakdown
-  - [ ] 10.2.2 Explain therapist performance metrics
-  - [ ] 10.2.3 Walk through filtering by date range and location
-- [ ] **10.3** Reports (`/reports`)
-  - [ ] 10.3.1 Explain report types: Revenue, Appointments, Client, Therapist
-  - [ ] 10.3.2 Show how to save a custom report configuration
-  - [ ] 10.3.3 Walk through exporting a report to CSV
-- [ ] **10.4** Data Exports (`/exports`)
-  - [ ] 10.4.1 Explain full data export options (clients, appointments, payments)
-  - [ ] 10.4.2 Note compliance use cases (HIPAA, audits)
+- [x] **10.1** Dashboard KPIs
+  - [x] 10.1.1 Explain the four stat cards (Sessions, Clients, Revenue, Pending Forms)
+  - [x] 10.1.2 Walk through the Revenue chart and period toggles (30d / 90d / 1y)
+  - [x] 10.1.3 Explain the Service Mix breakdown (top 5 services by volume)
+- [x] **10.2** Analytics deep-dive (`/analytics`)
+  - [x] 10.2.1 Show client retention and new-vs-returning breakdown
+  - [x] 10.2.2 Explain therapist performance metrics
+  - [x] 10.2.3 Walk through filtering by date range and location
+- [x] **10.3** Reports (`/reports`)
+  - [x] 10.3.1 Explain report types: Revenue, Appointments, Client, Therapist
+  - [x] 10.3.2 Show how to save a custom report configuration
+  - [x] 10.3.3 Walk through exporting a report to CSV
+- [x] **10.4** Data Exports (`/exports`)
+  - [x] 10.4.1 Explain full data export options (clients, appointments, payments)
+  - [x] 10.4.2 Note compliance use cases (HIPAA, audits)
 
 ---
 
@@ -218,15 +218,15 @@ A structured guide for inducting new users into the platform. Each phase builds 
 
 > Route: `/inventory`. Goal: track products and supplies used in sessions.
 
-- [ ] **11.1** Add inventory items
-  - [ ] 11.1.1 Walk through adding a product (name, SKU, quantity, unit cost)
-  - [ ] 11.1.2 Set a low-stock threshold and explain reorder alerts
-- [ ] **11.2** Link inventory to appointments
-  - [ ] 11.2.1 Show how to log products used during a session
-  - [ ] 11.2.2 Explain how product cost affects profitability in reports
-- [ ] **11.3** Update stock levels
-  - [ ] 11.3.1 Manually adjust quantities after receiving a delivery
-  - [ ] 11.3.2 View stock history for a given item
+- [x] **11.1** Add inventory items
+  - [x] 11.1.1 Walk through adding a product (name, SKU, quantity, unit cost)
+  - [x] 11.1.2 Set a low-stock threshold and explain reorder alerts
+- [x] **11.2** Link inventory to appointments
+  - [x] 11.2.1 Show how to log products used during a session
+  - [x] 11.2.2 Explain how product cost affects profitability in reports
+- [x] **11.3** Update stock levels
+  - [x] 11.3.1 Manually adjust quantities after receiving a delivery
+  - [x] 11.3.2 View stock history for a given item
 
 ---
 
@@ -234,18 +234,18 @@ A structured guide for inducting new users into the platform. Each phase builds 
 
 > Final onboarding milestone. Goal: leave the user confident and self-sufficient.
 
-- [ ] **12.1** Mark onboarding complete
-  - [ ] 12.1.1 Show a congratulations screen when all checklist items are done
-  - [ ] 12.1.2 Summarize what has been set up (business, team, first booking, first payment)
-  - [ ] 12.1.3 Dismiss the onboarding progress bar permanently
-- [ ] **12.2** Surface contextual help going forward
-  - [ ] 12.2.1 Add "?" tooltip icons on complex fields across the app
-  - [ ] 12.2.2 Link to a Help Center / documentation from the sidebar
-  - [ ] 12.2.3 Show a "What's New" badge when a feature is updated
-- [ ] **12.3** Encourage team adoption
-  - [ ] 12.3.1 Suggest inviting therapists to log in for the first time
-  - [ ] 12.3.2 Share the public booking URL with the first real client
-  - [ ] 12.3.3 Set a reminder to review analytics after the first full week
+- [x] **12.1** Mark onboarding complete
+  - [x] 12.1.1 Show a congratulations screen when all checklist items are done
+  - [x] 12.1.2 Summarize what has been set up (business, team, first booking, first payment)
+  - [x] 12.1.3 Dismiss the onboarding progress bar permanently
+- [x] **12.2** Surface contextual help going forward
+  - [x] 12.2.1 Add "?" tooltip icons on complex fields across the app
+  - [x] 12.2.2 Link to a Help Center / documentation from the sidebar
+  - [x] 12.2.3 Show a "What's New" badge when a feature is updated
+- [x] **12.3** Encourage team adoption
+  - [x] 12.3.1 Suggest inviting therapists to log in for the first time
+  - [x] 12.3.2 Share the public booking URL with the first real client
+  - [x] 12.3.3 Set a reminder to review analytics after the first full week
 
 ---
 

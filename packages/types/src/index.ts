@@ -113,8 +113,31 @@ export interface Appointment {
   price: number | null;
   notes: string | null;
   isVirtual: boolean;
+  isGroup: boolean;
+  capacity: number | null;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export enum GroupBookingStatus {
+  REGISTERED = 'REGISTERED',
+  ATTENDED = 'ATTENDED',
+  NO_SHOW = 'NO_SHOW',
+  CANCELLED = 'CANCELLED',
+}
+
+export interface GroupBooking {
+  id: string;
+  appointmentId: string;
+  clientId: string;
+  status: GroupBookingStatus;
+  paidAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface GroupBookingWithClient extends GroupBooking {
+  client: Client;
 }
 
 // Intake Form Types
@@ -145,6 +168,8 @@ export interface TreatmentNote {
   sessionDuration: number | null;
   followUpDate: Date | null;
   aiSummary: string | null;
+  noteTemplateId: string | null;
+  noteTemplateName: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -244,6 +269,51 @@ export interface IntakeFormTemplate {
   fields: IntakeFormField[];
   isActive: boolean;
   isDefault: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Note Template Types
+export type NoteTemplateFieldType = 'text' | 'checkbox' | 'scale' | 'body-map' | 'signature';
+
+export interface NoteTemplateField {
+  label: string;
+  type: NoteTemplateFieldType;
+  required: boolean;
+  placeholder?: string;
+}
+
+export type NoteTemplateCategory = 'Massage' | 'Chiro' | 'Physio' | 'General';
+
+export interface NoteTemplate {
+  id: string;
+  businessId: string | null;
+  name: string;
+  category: string;
+  fields: NoteTemplateField[];
+  isGlobal: boolean;
+  isArchived: boolean;
+  createdBy: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Community Template Types
+export type CommunityTemplateStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+export interface CommunityTemplate {
+  id: string;
+  name: string;
+  category: string;
+  fields: NoteTemplateField[];
+  description: string | null;
+  status: CommunityTemplateStatus;
+  usageCount: number;
+  submittedByUserId: string;
+  submittedByBusinessId: string | null;
+  rejectionReason: string | null;
+  moderatedBy: string | null;
+  moderatedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -479,6 +549,7 @@ export interface AppointmentWithRelations extends Appointment {
   cancellation?: AppointmentCancellation;
   treatmentNotes?: TreatmentNote[];
   videoSession?: VideoSession;
+  groupBookings?: GroupBookingWithClient[];
   invoiceId?: string | null;
   paymentId?: string | null;
 }

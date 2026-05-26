@@ -10,8 +10,9 @@ import {
   TrendingUp,
   Edit2,
   Archive,
+  History,
 } from 'lucide-react';
-import { useInventory, useCreateProduct, useUpdateProduct, useDeleteProduct, useAdjustInventory } from '@/lib/hooks/use-inventory';
+import { useInventory, useCreateProduct, useUpdateProduct, useDeleteProduct, useAdjustInventory, useProduct } from '@/lib/hooks/use-inventory';
 import { useBusinessId } from '@/lib/hooks/use-business-id';
 
 const CATEGORIES = ['Oils', 'Lotions', 'Tools', 'Retail', 'Supplies', 'Other'];
@@ -206,11 +207,82 @@ function AdjustStockModal({
   );
 }
 
+function StockHistoryModal({ product, onClose }: { product: any; onClose: () => void }) {
+  const { data, isLoading } = useProduct(product.id);
+  const adjustments: any[] = data?.adjustments ?? [];
+
+  const typeLabel: Record<string, string> = {
+    PURCHASE: 'Received',
+    USAGE: 'Used in session',
+    ADJUSTMENT: 'Manual adjustment',
+    RETURN: 'Client return',
+    RETURN_OUT: 'Returned out',
+  };
+
+  const typeColor: Record<string, string> = {
+    PURCHASE: 'text-green-700 bg-green-50',
+    USAGE: 'text-orange-700 bg-orange-50',
+    ADJUSTMENT: 'text-blue-700 bg-blue-50',
+    RETURN: 'text-purple-700 bg-purple-50',
+    RETURN_OUT: 'text-red-700 bg-red-50',
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col">
+        <div className="p-6 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">Stock History</h2>
+            <p className="text-sm text-gray-500 mt-0.5">{product.name} · Current: <span className="font-bold text-gray-900">{product.currentStock}</span> {product.unit || 'units'}</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+        </div>
+        <div className="overflow-y-auto flex-1 p-6">
+          {isLoading && <p className="text-center text-gray-400 py-8">Loading...</p>}
+          {!isLoading && adjustments.length === 0 && (
+            <div className="text-center py-12">
+              <History className="h-10 w-10 text-gray-200 mx-auto mb-3" />
+              <p className="text-gray-500 text-sm">No stock adjustments yet</p>
+            </div>
+          )}
+          {adjustments.map((adj: any) => (
+            <div key={adj.id} className="flex items-start gap-4 py-3 border-b border-gray-50 last:border-0">
+              <div className="flex-shrink-0 mt-0.5">
+                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${typeColor[adj.type] ?? 'text-gray-700 bg-gray-100'}`}>
+                  {typeLabel[adj.type] ?? adj.type}
+                </span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className={`text-sm font-semibold ${adj.quantity > 0 ? 'text-green-700' : 'text-red-700'}`}>
+                    {adj.quantity > 0 ? `+${adj.quantity}` : adj.quantity}
+                  </span>
+                  <span className="text-xs text-gray-400">
+                    {adj.previousStock} → {adj.newStock}
+                  </span>
+                </div>
+                {adj.notes && <p className="text-xs text-gray-500 mt-0.5 truncate">{adj.notes}</p>}
+              </div>
+              <div className="text-xs text-gray-400 flex-shrink-0">
+                {new Date(adj.createdAt).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="p-4 border-t border-gray-100 flex-shrink-0">
+          <Button variant="outline" onClick={onClose} className="w-full">Close</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function InventoryPage() {
   const businessId = useBusinessId();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editProduct, setEditProduct] = useState<any>(null);
   const [adjustProduct, setAdjustProduct] = useState<any>(null);
+  const [historyProduct, setHistoryProduct] = useState<any>(null);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
 
@@ -355,6 +427,9 @@ export default function InventoryPage() {
                             <Button variant="outline" size="sm" onClick={() => setAdjustProduct(product)} title="Adjust Stock">
                               <TrendingUp className="w-3.5 h-3.5" />
                             </Button>
+                            <Button variant="outline" size="sm" onClick={() => setHistoryProduct(product)} title="Stock History">
+                              <History className="w-3.5 h-3.5" />
+                            </Button>
                             <Button variant="outline" size="sm" onClick={() => setEditProduct(product)} title="Edit">
                               <Edit2 className="w-3.5 h-3.5" />
                             </Button>
@@ -381,6 +456,9 @@ export default function InventoryPage() {
       )}
       {adjustProduct && businessId && (
         <AdjustStockModal product={adjustProduct} businessId={businessId} onClose={() => setAdjustProduct(null)} />
+      )}
+      {historyProduct && (
+        <StockHistoryModal product={historyProduct} onClose={() => setHistoryProduct(null)} />
       )}
     </div>
   );

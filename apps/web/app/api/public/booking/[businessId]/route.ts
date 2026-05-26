@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { res } from '@/lib/api-auth';
 import { AppointmentStatus } from '@prisma/client';
-import { checkAvailability } from '@/app/api/appointments/route';
+import { checkAvailability } from '@/lib/check-availability';
 import { sendBookingConfirmation } from '@/lib/email';
 import { sendBookingConfirmationSms } from '@/lib/sms';
 

@@ -48,7 +48,7 @@ export default function MessagesPage() {
     if (!messageContent.trim() || !selectedConversation) return;
     try {
       await sendMessageMutation.mutateAsync({
-        businessId,
+        businessId: businessId!,
         recipientId: selectedConversation.clientId,
         recipientType: 'CLIENT',
         type: selectedConversation.type,

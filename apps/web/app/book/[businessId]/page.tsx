@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
-import { CheckCircle, AlertCircle, Calendar, Clock, ChevronLeft, Loader2 } from 'lucide-react';
+import { CheckCircle, AlertCircle, Calendar, Clock, ChevronLeft, Loader2, Users, User } from 'lucide-react';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -26,6 +26,18 @@ interface TimeSlot {
   startTime: string;
   endTime: string;
   available: boolean;
+}
+
+interface GroupSession {
+  id: string;
+  serviceType: string | null;
+  startTime: string;
+  endTime: string;
+  duration: number;
+  price: number | null;
+  capacity: number | null;
+  spotsRemaining: number | null;
+  therapist: { id: string; name: string } | null;
 }
 
 const SERVICE_TYPES = [
@@ -106,6 +118,13 @@ export default function PublicBookingPage() {
 
   const [confirmedBooking, setConfirmedBooking] = useState<{ startTime: string; therapist: { firstName: string | null; lastName: string | null } } | null>(null);
 
+  // Group session state
+  const [bookingMode, setBookingMode] = useState<'individual' | 'group'>('individual');
+  const [groupSessions, setGroupSessions] = useState<GroupSession[]>([]);
+  const [groupSessionsLoading, setGroupSessionsLoading] = useState(false);
+  const [selectedGroupSession, setSelectedGroupSession] = useState<GroupSession | null>(null);
+  const [groupStep, setGroupStep] = useState<'select' | 'contact' | 'confirm'>('select');
+
   // Load business + therapists
   useEffect(() => {
     fetch(`/api/public/booking/${businessId}`)
@@ -121,6 +140,51 @@ export default function PublicBookingPage() {
       .catch(() => setError('Failed to load. Please try again.'))
       .finally(() => setLoading(false));
   }, [businessId]);
+
+  // Load group sessions when mode switches to group
+  useEffect(() => {
+    if (bookingMode !== 'group' || !businessId) return;
+    setGroupSessionsLoading(true);
+    fetch(`/api/public/group-sessions/${businessId}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success) setGroupSessions(d.data ?? []);
+      })
+      .catch(() => {})
+      .finally(() => setGroupSessionsLoading(false));
+  }, [bookingMode, businessId]);
+
+  const handleGroupBook = async () => {
+    if (!selectedGroupSession || !firstName || !lastName) return;
+    setSubmitting(true);
+    try {
+      const r = await fetch(`/api/public/group-sessions/${businessId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          appointmentId: selectedGroupSession.id,
+          clientFirstName: firstName,
+          clientLastName: lastName,
+          clientEmail: email || undefined,
+          clientPhone: phone || undefined,
+        }),
+      });
+      const d = await r.json();
+      if (d.success) {
+        setBooked(true);
+        setConfirmedBooking({
+          startTime: selectedGroupSession.startTime,
+          therapist: { firstName: selectedGroupSession.therapist?.name ?? null, lastName: null },
+        });
+      } else {
+        setError(d.message || 'Booking failed. Please try again.');
+      }
+    } catch {
+      setError('Network error. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   // Load slots when therapist + date + duration change
   const loadSlots = useCallback(
@@ -283,6 +347,178 @@ export default function PublicBookingPage() {
       </div>
 
       <div className="max-w-lg mx-auto px-4 py-6">
+
+        {/* Booking Mode Toggle */}
+        <div className="flex rounded-xl overflow-hidden border border-gray-200 mb-6 bg-white">
+          <button
+            onClick={() => { setBookingMode('individual'); setSelectedGroupSession(null); setGroupStep('select'); }}
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition-all"
+            style={{
+              backgroundColor: bookingMode === 'individual' ? accent : 'transparent',
+              color: bookingMode === 'individual' ? 'white' : '#6b7280',
+            }}
+          >
+            <User size={15} />
+            Individual
+          </button>
+          <button
+            onClick={() => { setBookingMode('group'); setStep(1); }}
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition-all"
+            style={{
+              backgroundColor: bookingMode === 'group' ? accent : 'transparent',
+              color: bookingMode === 'group' ? 'white' : '#6b7280',
+            }}
+          >
+            <Users size={15} />
+            Group Sessions
+          </button>
+        </div>
+
+        {/* Group Session Flow */}
+        {bookingMode === 'group' && (
+          <div>
+            {groupStep === 'select' && (
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 mb-1">Available Group Sessions</h2>
+                <p className="text-sm text-gray-500 mb-5">Select a session to book your spot.</p>
+
+                {groupSessionsLoading ? (
+                  <div className="flex justify-center py-10">
+                    <Loader2 className="h-6 w-6 animate-spin text-gray-300" />
+                  </div>
+                ) : groupSessions.length === 0 ? (
+                  <div className="text-center py-10 bg-white rounded-xl border border-gray-100">
+                    <Users className="h-10 w-10 text-gray-200 mx-auto mb-3" />
+                    <p className="text-gray-400 text-sm">No group sessions available right now.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {groupSessions.map((session) => {
+                      const isFull = session.spotsRemaining !== null && session.spotsRemaining <= 0;
+                      const isSelected = selectedGroupSession?.id === session.id;
+                      return (
+                        <button
+                          key={session.id}
+                          disabled={isFull}
+                          onClick={() => setSelectedGroupSession(session)}
+                          className="w-full text-left bg-white border-2 rounded-xl p-4 transition-all hover:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                          style={{ borderColor: isSelected ? accent : '#e5e7eb' }}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="font-semibold text-gray-900">
+                                {session.serviceType ?? 'Group Session'}
+                              </p>
+                              <p className="text-sm text-gray-500 mt-0.5">
+                                {formatDateLong(new Date(session.startTime))} · {formatTime(session.startTime)}
+                              </p>
+                              {session.therapist && (
+                                <p className="text-xs text-gray-400 mt-0.5">with {session.therapist.name}</p>
+                              )}
+                              <div className="flex items-center gap-3 mt-2">
+                                <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+                                  {session.duration} min
+                                </span>
+                                {session.price != null && (
+                                  <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+                                    ${session.price.toFixed(2)}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="shrink-0 text-right">
+                              {isFull ? (
+                                <span className="text-xs font-semibold text-red-500 bg-red-50 px-2 py-1 rounded-lg">Full</span>
+                              ) : (
+                                <span
+                                  className="text-xs font-semibold px-2 py-1 rounded-lg"
+                                  style={{ background: `${accent}20`, color: accent }}
+                                >
+                                  {session.spotsRemaining != null
+                                    ? `${session.spotsRemaining} spot${session.spotsRemaining === 1 ? '' : 's'} left`
+                                    : 'Open'}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <button
+                  disabled={!selectedGroupSession}
+                  onClick={() => setGroupStep('contact')}
+                  className="mt-6 w-full py-3 rounded-xl text-white font-semibold text-sm transition-opacity disabled:opacity-40"
+                  style={{ backgroundColor: accent }}
+                >
+                  Continue
+                </button>
+              </div>
+            )}
+
+            {groupStep === 'contact' && (
+              <div>
+                <button onClick={() => setGroupStep('select')} className="flex items-center gap-1 text-sm text-gray-400 hover:text-gray-600 mb-4">
+                  <ChevronLeft className="h-4 w-4" /> Back
+                </button>
+                <h2 className="text-xl font-bold text-gray-900 mb-1">Your Details</h2>
+                <p className="text-sm text-gray-500 mb-5">
+                  Booking: <strong>{selectedGroupSession?.serviceType ?? 'Group Session'}</strong> · {formatTime(selectedGroupSession?.startTime ?? '')}
+                </p>
+
+                <div className="bg-white rounded-xl border border-gray-100 p-5 space-y-4 mb-6">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">First Name *</label>
+                      <input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Jane"
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-400" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Last Name *</label>
+                      <input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Smith"
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-400" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Email</label>
+                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="jane@example.com"
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-400" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Phone</label>
+                    <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+61 400 000 000"
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-400" />
+                  </div>
+                </div>
+
+                {error && (
+                  <div className="flex items-center gap-2 text-red-600 bg-red-50 rounded-lg px-4 py-3 text-sm mb-4">
+                    <AlertCircle className="h-4 w-4 shrink-0" />
+                    {error}
+                  </div>
+                )}
+
+                <button
+                  disabled={!firstName.trim() || !lastName.trim() || submitting}
+                  onClick={handleGroupBook}
+                  className="w-full py-3.5 rounded-xl text-white font-semibold text-sm transition-opacity disabled:opacity-40 flex items-center justify-center gap-2"
+                  style={{ backgroundColor: accent }}
+                >
+                  {submitting ? <><Loader2 className="h-4 w-4 animate-spin" /> Confirming...</> : 'Confirm Spot'}
+                </button>
+                <p className="text-xs text-gray-400 text-center mt-3">
+                  By confirming, you agree to the cancellation policy of {business?.name}.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Individual booking steps */}
+        {bookingMode === 'individual' && (
+        <>
 
         {/* Step 1 — Choose Therapist */}
         {step === 1 && (
@@ -678,6 +914,8 @@ export default function PublicBookingPage() {
               By confirming, you agree to the cancellation policy of {business?.name}.
             </p>
           </div>
+        )}
+        </>
         )}
       </div>
     </div>

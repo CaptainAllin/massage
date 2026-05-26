@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { broadcastToSubscriptions, type PushPayload } from '@/lib/push-notifications';
-import { getSubscriptionsForUser } from '../subscribe/route';
+import { getSubscriptionsForUser } from '@/lib/push-subscriptions';
 
 export async function POST(req: NextRequest) {
   let user;

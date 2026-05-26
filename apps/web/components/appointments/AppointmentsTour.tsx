@@ -28,7 +28,7 @@ const TOUR_STEPS: TourStep[] = [
   {
     title: '"Now" indicator & status badges',
     description:
-      'A live line in Week and Day views marks the current time so you always know what's happening right now. Every appointment shows a status badge: Scheduled, Confirmed, In Progress, Completed, or Cancelled.',
+      "A live line in Week and Day views marks the current time so you always know what's happening right now. Every appointment shows a status badge: Scheduled, Confirmed, In Progress, Completed, or Cancelled.",
     tip: 'Use the status filter to focus on appointments that need action.',
   },
   {

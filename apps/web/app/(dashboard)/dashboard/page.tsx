@@ -10,6 +10,8 @@ import { useBusinessId } from '@/lib/hooks/use-business-id';
 import { apiClient } from '@/lib/api-client';
 import { useOnboardingContext } from '@/components/onboarding/OnboardingProvider';
 import { GettingStartedCard } from '@/components/onboarding/GettingStartedCard';
+import { WhatsNewPanel } from '@/components/onboarding/WhatsNewPanel';
+import { TeamAdoptionCards } from '@/components/onboarding/TeamAdoptionCards';
 
 // ── Sparkline SVG ──────────────────────────────────────────────────────────────
 
@@ -366,7 +368,19 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const businessId = useBusinessId();
   const firstName = user?.user_metadata?.first_name || '';
-  const { loaded, checkedItems, toggleItem, checklistDismissed, dismissChecklist, allDone } = useOnboardingContext();
+  const {
+    loaded,
+    checkedItems,
+    toggleItem,
+    checklistDismissed,
+    dismissChecklist,
+    allDone,
+    congratsShown,
+    whatsNewDismissed,
+    dismissWhatsNew,
+    dismissedAdoptionCards,
+    dismissAdoptionCard,
+  } = useOnboardingContext();
   const [mounted, setMounted] = useState(false);
 
   const today = new Date();
@@ -443,6 +457,19 @@ export default function DashboardPage() {
           checkedItems={checkedItems}
           onToggle={toggleItem}
           onDismiss={dismissChecklist}
+        />
+      )}
+
+      {/* ── What's New panel ── */}
+      {loaded && !whatsNewDismissed && (
+        <WhatsNewPanel onDismiss={dismissWhatsNew} />
+      )}
+
+      {/* ── Team adoption cards (shown after onboarding complete) ── */}
+      {loaded && congratsShown && (
+        <TeamAdoptionCards
+          dismissedCards={dismissedAdoptionCards}
+          onDismiss={dismissAdoptionCard}
         />
       )}
 

@@ -68,7 +68,7 @@ export default function AppointmentsPage() {
   };
 
   return (
-    <div className="space-y-5 max-w-7xl">
+    <div className="space-y-5">
       {/* Onboarding tour */}
       <AppointmentsTour businessId={businessId} />
 

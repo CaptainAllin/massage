@@ -13,6 +13,7 @@ export async function GET(req: NextRequest) {
 
     const startDateParam = searchParams.get('startDate');
     const endDateParam = searchParams.get('endDate');
+    const locationId = searchParams.get('locationId') || undefined;
 
     const endDate = endDateParam ? new Date(endDateParam) : new Date();
     const startDate = startDateParam
@@ -54,12 +55,12 @@ export async function GET(req: NextRequest) {
       prisma.client.count({ where: { businessId, createdAt: { gte: previousStartDate, lte: previousEndDate } } }),
       prisma.appointment.groupBy({
         by: ['status'],
-        where: { businessId, startTime: { gte: startDate, lte: endDate } },
+        where: { businessId, startTime: { gte: startDate, lte: endDate }, ...(locationId ? { locationId } : {}) },
         _count: true,
       }),
-      prisma.appointment.count({ where: { businessId, startTime: { gte: previousStartDate, lte: previousEndDate } } }),
+      prisma.appointment.count({ where: { businessId, startTime: { gte: previousStartDate, lte: previousEndDate }, ...(locationId ? { locationId } : {}) } }),
       prisma.therapist.count({ where: { businessId } }),
-      prisma.appointment.count({ where: { businessId, startTime: { gte: startDate, lte: endDate }, status: 'COMPLETED' } }),
+      prisma.appointment.count({ where: { businessId, startTime: { gte: startDate, lte: endDate }, status: 'COMPLETED', ...(locationId ? { locationId } : {}) } }),
     ]);
 
     const totalRevenue = currentRevenue._sum.amount || 0;

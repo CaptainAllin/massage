@@ -37,13 +37,15 @@
 
 @layer base {
   * {
-    @apply border-border;
+    border-color: #E5DEEC;
   }
   body {
-    @apply bg-background text-foreground font-body;
+    background-color: #F1ECF5;
+    color: #1E1830;
+    font-family: 'Sora', 'Inter', system-ui, sans-serif;
   }
   h1, h2, h3, h4, h5, h6 {
-    @apply font-display;
+    font-family: 'Sora', system-ui, sans-serif;
   }
 }
 

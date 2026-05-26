@@ -12,6 +12,7 @@ import { useAppointments } from '@/lib/hooks/use-appointments';
 import { OnboardingProvider, useOnboardingContext } from '@/components/onboarding/OnboardingProvider';
 import { WelcomeModal } from '@/components/onboarding/WelcomeModal';
 import { OnboardingProgressBar } from '@/components/onboarding/OnboardingProgressBar';
+import { CongratsModal } from '@/components/onboarding/CongratsModal';
 
 function PhoneCallIcon() {
   return (
@@ -64,6 +65,10 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     totalCount,
     progressPct,
     allDone,
+    congratsShown,
+    setCongratsShown,
+    whatsNewDismissed,
+    dismissWhatsNew,
   } = useOnboardingContext();
 
   // Memoized so React Query sees a stable query key — avoids re-fetching on
@@ -100,6 +105,8 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
         onSignOut={signOut}
         onGetStarted={reopenChecklist}
         onboardingProgress={progressPct}
+        whatsNewCount={whatsNewDismissed ? 0 : 4}
+        onWhatsNew={dismissWhatsNew}
       />
 
       <div className="flex flex-1 flex-col overflow-hidden lg:ml-[230px]">
@@ -146,6 +153,16 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
           firstName={firstName}
           onStart={() => { setWelcomeShown(true); router.push('/setup'); }}
           onSkip={() => setWelcomeShown(true)}
+        />
+      )}
+
+      {loaded && allDone && !congratsShown && (
+        <CongratsModal
+          firstName={firstName}
+          onClose={() => {
+            setCongratsShown(true);
+            dismissChecklist();
+          }}
         />
       )}
     </div>

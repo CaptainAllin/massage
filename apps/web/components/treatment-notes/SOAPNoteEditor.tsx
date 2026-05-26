@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, Textarea, Button, Input, DatePicker } from '@massage/ui';
+import { HelpTooltip } from '@/components/HelpTooltip';
 import { BodyMapModal, BodyMapSelection } from '@/components/body-map';
 import { AIEnhancedTextarea } from './AIEnhancedTextarea';
 import { SOAPSection } from '@/lib/hooks/use-soap-assist';
@@ -12,7 +13,7 @@ import { VoiceRecorder } from '@/components/voice-notes/VoiceRecorder';
 import { VoiceNoteList } from '@/components/voice-notes/VoiceNoteList';
 import { VoiceToSOAPGenerator } from '@/components/voice-notes/VoiceToSOAPGenerator';
 import { useVoiceNoteUpload, useVoiceNotes } from '@/components/voice-notes/hooks/useVoiceNotes';
-import { VoiceNote } from '@massage/types';
+import { NoteTemplate, VoiceNote } from '@massage/types';
 
 export interface SOAPNoteData {
   subjectiveFindings: string;
@@ -39,6 +40,21 @@ export interface SOAPNoteEditorProps {
   therapistId?: string;
   clientId?: string;
   appointmentId?: string;
+  template?: NoteTemplate | null;
+  onChangeTemplate?: () => void;
+}
+
+function getTemplatePlaceholders(template: NoteTemplate | null | undefined) {
+  if (!template) return null;
+  const fields = template.fields;
+  const find = (keywords: string[]) =>
+    fields.find((f) => keywords.some((k) => f.label.toLowerCase().includes(k)))?.placeholder || '';
+  return {
+    subjective: find(['subjective', 'chief complaint', 'presenting', 'progress since', 'complaint']),
+    objective: find(['objective', 'findings', 'observation', 'rom', 'postural', 'palpation', 'areas of focus']),
+    assessment: find(['assessment', 'clinical', 'response to treatment', 'client response']),
+    plan: find(['plan', 'treatment', 'recommendation', 'discharge', 'home care', 'return to sport']),
+  };
 }
 
 export const SOAPNoteEditor: React.FC<SOAPNoteEditorProps> = ({
@@ -50,7 +66,10 @@ export const SOAPNoteEditor: React.FC<SOAPNoteEditorProps> = ({
   therapistId: therapistIdProp,
   clientId: clientIdProp,
   appointmentId: appointmentIdProp,
+  template,
+  onChangeTemplate,
 }) => {
+  const placeholders = getTemplatePlaceholders(template);
   const [formData, setFormData] = useState<SOAPNoteData>({
     subjectiveFindings: initialData.subjectiveFindings || '',
     objectiveFindings: initialData.objectiveFindings || '',
@@ -68,7 +87,8 @@ export const SOAPNoteEditor: React.FC<SOAPNoteEditorProps> = ({
   const [showRawTextInput, setShowRawTextInput] = useState(false);
   const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
   const [selectedVoiceNote, setSelectedVoiceNote] = useState<VoiceNote | null>(null);
-  const [useAI, setUseAI] = useState(true); // Toggle AI assistance
+  const [useAI, setUseAI] = useState(true);
+  const [showSwitchConfirm, setShowSwitchConfirm] = useState(false);
 
   const formatToSOAP = useSOAPFormat();
   const uploadVoiceNote = useVoiceNoteUpload();
@@ -151,9 +171,49 @@ export const SOAPNoteEditor: React.FC<SOAPNoteEditorProps> = ({
     setSelectedVoiceNote(null);
   };
 
+  const hasContent =
+    formData.subjectiveFindings.trim() ||
+    formData.objectiveFindings.trim() ||
+    formData.assessment.trim() ||
+    formData.plan.trim();
+
+  const handleChangeTemplateClick = () => {
+    if (hasContent) {
+      setShowSwitchConfirm(true);
+    } else {
+      onChangeTemplate?.();
+    }
+  };
+
   return (
     <div className="space-y-6">
-      {/* AI Controls */}
+      {/* Switch template confirmation */}
+      {showSwitchConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm mx-4">
+            <h3 className="text-base font-semibold text-gray-900 mb-2">Switch Template?</h3>
+            <p className="text-sm text-gray-600 mb-5">
+              Switching templates will clear your current note content. This cannot be undone.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <Button variant="ghost" onClick={() => setShowSwitchConfirm(false)}>
+                Keep editing
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => {
+                  setShowSwitchConfirm(false);
+                  onChangeTemplate?.();
+                }}
+              >
+                Switch template
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Template badge + AI Controls */}
       <div className="flex items-center justify-between bg-sage-50 p-4 rounded-lg border border-sage-200">
         <div className="flex items-center gap-3">
           <label className="flex items-center gap-2 cursor-pointer">
@@ -170,6 +230,22 @@ export const SOAPNoteEditor: React.FC<SOAPNoteEditorProps> = ({
           {useAI && (
             <span className="text-xs text-sage-600 bg-sage-100 px-2 py-1 rounded">
               Real-time suggestions & improvements
+            </span>
+          )}
+          {template && (
+            <span className="flex items-center gap-1.5 text-xs bg-violet-100 text-violet-700 px-2.5 py-1 rounded-full font-medium">
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              {template.name}
+              {onChangeTemplate && (
+                <button
+                  onClick={handleChangeTemplateClick}
+                  className="ml-0.5 hover:text-violet-900 underline underline-offset-2"
+                >
+                  Change
+                </button>
+              )}
             </span>
           )}
         </div>
@@ -265,7 +341,10 @@ export const SOAPNoteEditor: React.FC<SOAPNoteEditorProps> = ({
       {/* Subjective */}
       <Card>
         <CardHeader>
-          <CardTitle>S - Subjective</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            S - Subjective
+            <HelpTooltip text="What the client tells you — pain location, onset, aggravating/relieving factors, and their own goals for the session." />
+          </CardTitle>
           <p className="text-sm text-gray-600">Patient's description of symptoms</p>
         </CardHeader>
         <CardContent>
@@ -276,7 +355,7 @@ export const SOAPNoteEditor: React.FC<SOAPNoteEditorProps> = ({
                 setFormData({ ...formData, subjectiveFindings: value })
               }
               section={SOAPSection.SUBJECTIVE}
-              placeholder="What does the client report? Pain location, intensity, what makes it better/worse..."
+              placeholder={placeholders?.subjective || 'What does the client report? Pain location, intensity, what makes it better/worse...'}
               rows={5}
               userId={userId}
             />
@@ -286,7 +365,7 @@ export const SOAPNoteEditor: React.FC<SOAPNoteEditorProps> = ({
               onChange={(e) =>
                 setFormData({ ...formData, subjectiveFindings: e.target.value })
               }
-              placeholder="What does the client report? Pain location, intensity, what makes it better/worse..."
+              placeholder={placeholders?.subjective || 'What does the client report? Pain location, intensity, what makes it better/worse...'}
               rows={5}
             />
           )}
@@ -296,7 +375,10 @@ export const SOAPNoteEditor: React.FC<SOAPNoteEditorProps> = ({
       {/* Objective */}
       <Card>
         <CardHeader>
-          <CardTitle>O - Objective</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            O - Objective
+            <HelpTooltip text="Your measurable, observable findings — postural assessment, range of motion, palpation results, and tissue quality." />
+          </CardTitle>
           <p className="text-sm text-gray-600">Observable and measurable findings</p>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -307,7 +389,7 @@ export const SOAPNoteEditor: React.FC<SOAPNoteEditorProps> = ({
                 setFormData({ ...formData, objectiveFindings: value })
               }
               section={SOAPSection.OBJECTIVE}
-              placeholder="Palpation findings, range of motion, posture observations..."
+              placeholder={placeholders?.objective || 'Palpation findings, range of motion, posture observations...'}
               rows={5}
               userId={userId}
             />
@@ -317,7 +399,7 @@ export const SOAPNoteEditor: React.FC<SOAPNoteEditorProps> = ({
               onChange={(e) =>
                 setFormData({ ...formData, objectiveFindings: e.target.value })
               }
-              placeholder="Palpation findings, range of motion, posture observations..."
+              placeholder={placeholders?.objective || 'Palpation findings, range of motion, posture observations...'}
               rows={5}
             />
           )}
@@ -341,7 +423,10 @@ export const SOAPNoteEditor: React.FC<SOAPNoteEditorProps> = ({
       {/* Assessment */}
       <Card>
         <CardHeader>
-          <CardTitle>A - Assessment</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            A - Assessment
+            <HelpTooltip text="Your clinical interpretation — what you found, how the client is responding to treatment, and any relevant patterns or concerns." />
+          </CardTitle>
           <p className="text-sm text-gray-600">Your professional evaluation</p>
         </CardHeader>
         <CardContent>
@@ -350,7 +435,7 @@ export const SOAPNoteEditor: React.FC<SOAPNoteEditorProps> = ({
               value={formData.assessment}
               onChange={(value) => setFormData({ ...formData, assessment: value })}
               section={SOAPSection.ASSESSMENT}
-              placeholder="Clinical impressions, diagnosis, progress..."
+              placeholder={placeholders?.assessment || 'Clinical impressions, diagnosis, progress...'}
               rows={5}
               userId={userId}
             />
@@ -358,7 +443,7 @@ export const SOAPNoteEditor: React.FC<SOAPNoteEditorProps> = ({
             <Textarea
               value={formData.assessment}
               onChange={(e) => setFormData({ ...formData, assessment: e.target.value })}
-              placeholder="Clinical impressions, diagnosis, progress..."
+              placeholder={placeholders?.assessment || 'Clinical impressions, diagnosis, progress...'}
               rows={5}
             />
           )}
@@ -368,7 +453,10 @@ export const SOAPNoteEditor: React.FC<SOAPNoteEditorProps> = ({
       {/* Plan */}
       <Card>
         <CardHeader>
-          <CardTitle>P - Plan</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            P - Plan
+            <HelpTooltip text="Next steps — recommended follow-up frequency, home-care advice, referrals, and specific goals for the next session." />
+          </CardTitle>
           <p className="text-sm text-gray-600">Treatment plan and recommendations</p>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -377,7 +465,7 @@ export const SOAPNoteEditor: React.FC<SOAPNoteEditorProps> = ({
               value={formData.plan}
               onChange={(value) => setFormData({ ...formData, plan: value })}
               section={SOAPSection.PLAN}
-              placeholder="Treatment recommendations, home care, follow-up..."
+              placeholder={placeholders?.plan || 'Treatment recommendations, home care, follow-up...'}
               rows={5}
               userId={userId}
             />
@@ -385,7 +473,7 @@ export const SOAPNoteEditor: React.FC<SOAPNoteEditorProps> = ({
             <Textarea
               value={formData.plan}
               onChange={(e) => setFormData({ ...formData, plan: e.target.value })}
-              placeholder="Treatment recommendations, home care, follow-up..."
+              placeholder={placeholders?.plan || 'Treatment recommendations, home care, follow-up...'}
               rows={5}
             />
           )}

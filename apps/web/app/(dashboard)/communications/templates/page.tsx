@@ -79,7 +79,7 @@ export default function TemplatesPage() {
       });
     } else {
       setEditingTemplate(null);
-      setFormData({ name: '', description: '', type: 'SMS', category: 'CUSTOM', subject: '', content: '', isDefault: false });
+      setFormData({ name: '', description: '', type: 'SMS' as MessageType, category: 'CUSTOM', subject: '', content: '', isDefault: false });
     }
     setIsDialogOpen(true);
   };
@@ -148,7 +148,7 @@ export default function TemplatesPage() {
       >
         <span className="font-medium" style={{ color: '#5D4AA8' }}>Available merge tags: </span>
         <span style={{ color: '#3D3450' }}>
-          {['{{clientName}}', '{{appointmentDate}}', '{{appointmentTime}}', '{{therapistName}}', '{{businessName}}'].map((tag, i) => (
+          {['{{clientName}}', '{{appointmentDate}}', '{{appointmentTime}}', '{{therapistName}}', '{{businessName}}'].map((tag) => (
             <code
               key={tag}
               className="font-mono text-xs px-1.5 py-0.5 rounded mx-0.5"

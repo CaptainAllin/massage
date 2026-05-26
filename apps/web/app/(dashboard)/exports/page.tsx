@@ -1,75 +1,82 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Download, FileText, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Download, FileText, CheckCircle, Clock, AlertCircle, RefreshCw } from 'lucide-react';
+import { useBusinessId } from '@/lib/hooks/use-business-id';
+import { apiClient } from '@/lib/api-client';
+
+interface ExportRecord {
+  id: string;
+  exportType: string;
+  format: string;
+  status: string;
+  fileName: string | null;
+  fileSize: number | null;
+  rowCount: number | null;
+  createdAt: string;
+  completedAt: string | null;
+  errorMessage: string | null;
+}
+
 
 export default function ExportsPage() {
+  const businessId = useBusinessId();
   const [exportType, setExportType] = useState('APPOINTMENTS');
   const [format, setFormat] = useState('CSV');
+  const [history, setHistory] = useState<ExportRecord[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [createError, setCreateError] = useState('');
 
-  // Mock export history - in real app, fetch from API
-  const exportHistory = [
-    {
-      id: '1',
-      exportType: 'APPOINTMENTS',
-      format: 'CSV',
-      status: 'COMPLETED',
-      fileName: 'appointments_2026-05-21.csv',
-      fileSize: '2.5 MB',
-      rowCount: 1250,
-      createdAt: '2026-05-21T10:30:00Z',
-    },
-    {
-      id: '2',
-      exportType: 'CLIENTS',
-      format: 'PDF',
-      status: 'COMPLETED',
-      fileName: 'clients_2026-05-20.pdf',
-      fileSize: '1.8 MB',
-      rowCount: 450,
-      createdAt: '2026-05-20T15:45:00Z',
-    },
-    {
-      id: '3',
-      exportType: 'PAYMENTS',
-      format: 'EXCEL',
-      status: 'PROCESSING',
-      fileName: null,
-      fileSize: null,
-      rowCount: null,
-      createdAt: '2026-05-21T12:00:00Z',
-    },
-  ];
+  const fetchHistory = async () => {
+    if (!businessId) return;
+    setIsLoadingHistory(true);
+    try {
+      const res = await apiClient.get(`/exports?businessId=${businessId}`);
+      setHistory(res.data.data ?? res.data ?? []);
+    } catch {
+      // silently ignore
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
 
-  const handleCreateExport = () => {
-    alert(`Creating ${format} export of ${exportType}...\n\n(This will connect to the backend API)`);
-    // TODO: Call API to create export
-    // const response = await apiClient.post('/export', { exportType, format });
+  useEffect(() => {
+    fetchHistory();
+  }, [businessId]);
+
+  const handleCreateExport = async () => {
+    if (!businessId) return;
+    setIsCreating(true);
+    setCreateError('');
+    try {
+      const res = await apiClient.post('/exports', { businessId, exportType, format });
+      const record = res.data.data ?? res.data;
+      setHistory((prev) => [record, ...prev]);
+    } catch (err: any) {
+      setCreateError(err.response?.data?.message || err.message || 'Export failed');
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'COMPLETED':
-        return <CheckCircle className="h-5 w-5 text-green-600" />;
+      case 'COMPLETED': return <CheckCircle className="h-5 w-5 text-green-600" />;
       case 'PROCESSING':
-        return <Clock className="h-5 w-5 text-yellow-600 animate-spin" />;
-      case 'FAILED':
-        return <AlertCircle className="h-5 w-5 text-red-600" />;
-      default:
-        return <Clock className="h-5 w-5 text-gray-400" />;
+      case 'PENDING': return <Clock className="h-5 w-5 text-yellow-600 animate-spin" />;
+      case 'FAILED': return <AlertCircle className="h-5 w-5 text-red-600" />;
+      default: return <Clock className="h-5 w-5 text-gray-400" />;
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'COMPLETED':
-        return 'bg-green-50 text-green-700 border-green-200';
+      case 'COMPLETED': return 'bg-green-50 text-green-700 border-green-200';
       case 'PROCESSING':
-        return 'bg-yellow-50 text-yellow-700 border-yellow-200';
-      case 'FAILED':
-        return 'bg-red-50 text-red-700 border-red-200';
-      default:
-        return 'bg-gray-50 text-gray-700 border-gray-200';
+      case 'PENDING': return 'bg-yellow-50 text-yellow-700 border-yellow-200';
+      case 'FAILED': return 'bg-red-50 text-red-700 border-red-200';
+      default: return 'bg-gray-50 text-gray-700 border-gray-200';
     }
   };
 
@@ -77,29 +84,40 @@ export default function ExportsPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Data Exports</h1>
-        <p className="text-sm text-gray-600 mt-1">
-          Export your data in various formats for analysis or backup
+        <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: '#5D4AA8', letterSpacing: '1.4px' }}>Data</p>
+        <h1 className="text-2xl font-semibold font-display" style={{ color: '#1E1830', letterSpacing: '-0.4px' }}>Exports</h1>
+        <p className="text-sm mt-0.5" style={{ color: '#7A7090' }}>
+          Export your practice data for analysis, compliance, or backup
         </p>
       </div>
 
+      {/* Compliance note */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="flex items-start gap-3">
+          <FileText className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+          <div>
+            <h3 className="text-sm font-semibold text-blue-900">HIPAA & Compliance</h3>
+            <p className="text-sm text-blue-800 mt-0.5">
+              All exports include audit logging. For HIPAA compliance, exported files containing PHI should be stored securely and access should be tracked. Exports expire after 7 days.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Create Export Card */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <Download className="h-5 w-5 text-blue-600" />
+      <div className="bg-white rounded-xl border border-gray-200 p-6" style={{ boxShadow: '0 2px 8px rgba(93,74,168,0.06)' }}>
+        <h2 className="text-base font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <Download className="h-4 w-4 text-purple-600" />
           Create New Export
         </h2>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Export Type */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Export Type
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Data Type</label>
             <select
               value={exportType}
               onChange={(e) => setExportType(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
             >
               <option value="APPOINTMENTS">Appointments</option>
               <option value="CLIENTS">Clients</option>
@@ -109,15 +127,12 @@ export default function ExportsPage() {
             </select>
           </div>
 
-          {/* Format */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Format
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Format</label>
             <select
               value={format}
               onChange={(e) => setFormat(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
             >
               <option value="CSV">CSV (.csv)</option>
               <option value="PDF">PDF (.pdf)</option>
@@ -125,143 +140,106 @@ export default function ExportsPage() {
             </select>
           </div>
 
-          {/* Action */}
           <div className="flex items-end">
             <button
               onClick={handleCreateExport}
-              className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium flex items-center justify-center gap-2"
+              disabled={isCreating || !businessId}
+              className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 font-medium text-sm flex items-center justify-center gap-2"
+              style={{ background: '#5D4AA8' }}
             >
               <Download className="h-4 w-4" />
-              Create Export
+              {isCreating ? 'Creating...' : 'Create Export'}
             </button>
           </div>
         </div>
 
-        {/* Info Note */}
-        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-          <p className="text-sm text-blue-800">
-            <strong>Note:</strong> Exports are available for 7 days. Large exports may take a few minutes to generate.
-          </p>
-        </div>
+        {createError && (
+          <p className="mt-3 text-sm text-red-600">{createError}</p>
+        )}
+
+        <p className="mt-3 text-xs text-gray-500">
+          Exports are available for download for 7 days. Large exports may take a few minutes to generate.
+        </p>
       </div>
 
       {/* Export History */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="p-6 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <FileText className="h-5 w-5 text-gray-600" />
-            Export History
-          </h2>
-          <p className="text-sm text-gray-600 mt-1">
-            Recent exports (last 50)
-          </p>
+      <div className="bg-white rounded-xl border border-gray-200" style={{ boxShadow: '0 2px 8px rgba(93,74,168,0.06)' }}>
+        <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
+              <FileText className="h-4 w-4 text-gray-500" />
+              Export History
+            </h2>
+            <p className="text-xs text-gray-500 mt-0.5">Last 50 exports</p>
+          </div>
+          <button
+            onClick={fetchHistory}
+            disabled={isLoadingHistory}
+            className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+          >
+            <RefreshCw className={`h-4 w-4 ${isLoadingHistory ? 'animate-spin' : ''}`} />
+          </button>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Type
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Format
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  File Name
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Size
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Rows
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Created
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
+                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Format</th>
+                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">File</th>
+                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rows</th>
+                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {exportHistory.map((item) => (
+            <tbody className="divide-y divide-gray-50">
+              {isLoadingHistory && (
+                <tr>
+                  <td colSpan={7} className="px-5 py-8 text-center text-gray-400 text-sm">Loading...</td>
+                </tr>
+              )}
+              {!isLoadingHistory && history.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="px-5 py-12 text-center">
+                    <FileText className="h-10 w-10 text-gray-200 mx-auto mb-3" />
+                    <p className="text-gray-500 text-sm">No exports yet</p>
+                    <p className="text-gray-400 text-xs mt-1">Create your first export above</p>
+                  </td>
+                </tr>
+              )}
+              {history.map((item) => (
                 <tr key={item.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-5 py-3.5 whitespace-nowrap">
                     <div className="flex items-center gap-2">
                       {getStatusIcon(item.status)}
-                      <span
-                        className={`px-2 py-1 text-xs font-medium rounded-full border ${getStatusColor(
-                          item.status
-                        )}`}
-                      >
+                      <span className={`px-2 py-0.5 text-xs font-medium rounded-full border ${getStatusColor(item.status)}`}>
                         {item.status}
                       </span>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {item.exportType}
+                  <td className="px-5 py-3.5 whitespace-nowrap text-gray-900 font-medium">{item.exportType}</td>
+                  <td className="px-5 py-3.5 whitespace-nowrap text-gray-600">{item.format}</td>
+                  <td className="px-5 py-3.5 text-gray-700 max-w-[200px] truncate">{item.fileName || '—'}</td>
+                  <td className="px-5 py-3.5 whitespace-nowrap text-gray-600">{item.rowCount?.toLocaleString() ?? '—'}</td>
+                  <td className="px-5 py-3.5 whitespace-nowrap text-gray-500 text-xs">
+                    {new Date(item.createdAt).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    {item.format}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-900">
-                    {item.fileName || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    {item.fileSize || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    {item.rowCount?.toLocaleString() || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    {new Date(item.createdAt).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    {item.status === 'COMPLETED' ? (
-                      <button className="text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1">
-                        <Download className="h-4 w-4" />
+                  <td className="px-5 py-3.5 whitespace-nowrap">
+                    {item.status === 'COMPLETED' && item.fileName ? (
+                      <button className="text-purple-600 hover:text-purple-800 font-medium text-xs flex items-center gap-1">
+                        <Download className="h-3.5 w-3.5" />
                         Download
                       </button>
                     ) : (
-                      <span className="text-gray-400">-</span>
+                      <span className="text-gray-300 text-xs">—</span>
                     )}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
-
-        {exportHistory.length === 0 && (
-          <div className="p-12 text-center">
-            <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500">No exports yet</p>
-            <p className="text-sm text-gray-400 mt-1">
-              Create your first export above
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* Feature Status Note */}
-      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-        <div className="flex items-start gap-3">
-          <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
-          <div>
-            <h3 className="text-sm font-semibold text-amber-900">
-              Backend Integration Ready
-            </h3>
-            <p className="text-sm text-amber-800 mt-1">
-              This page is ready to connect to the backend API. The export service is fully implemented with CSV, PDF, and Excel support. Just connect the buttons to the API endpoints and you're good to go!
-            </p>
-            <p className="text-xs text-amber-700 mt-2">
-              API: <code className="bg-amber-100 px-1 py-0.5 rounded">POST /api/v1/export</code>
-            </p>
-          </div>
         </div>
       </div>
     </div>

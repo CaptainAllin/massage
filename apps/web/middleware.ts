@@ -4,9 +4,7 @@ import type { NextRequest } from 'next/server';
 
 export async function middleware(req: NextRequest) {
   let res = NextResponse.next({
-    request: {
-      headers: req.headers,
-    },
+    request: { headers: req.headers },
   });
 
   const supabase = createServerClient(
@@ -14,58 +12,30 @@ export async function middleware(req: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return req.cookies.get(name)?.value;
+        getAll() {
+          return req.cookies.getAll();
         },
-        set(name: string, value: string, options) {
-          req.cookies.set({
-            name,
-            value,
-            ...options,
-          });
-          res = NextResponse.next({
-            request: {
-              headers: req.headers,
-            },
-          });
-          res.cookies.set({
-            name,
-            value,
-            ...options,
-          });
-        },
-        remove(name: string, options) {
-          req.cookies.set({
-            name,
-            value: '',
-            ...options,
-          });
-          res = NextResponse.next({
-            request: {
-              headers: req.headers,
-            },
-          });
-          res.cookies.set({
-            name,
-            value: '',
-            ...options,
-          });
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => req.cookies.set(name, value));
+          res = NextResponse.next({ request: { headers: req.headers } });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            res.cookies.set(name, value, options)
+          );
         },
       },
     }
   );
 
-  // Refresh session if expired
+  // Refresh session — getUser() validates the JWT server-side
   const {
-    data: { session },
+    data: { user },
     error: sessionError,
-  } = await supabase.auth.getSession();
-
+  } = await supabase.auth.getUser();
   console.log('[MIDDLEWARE]', {
     path: req.nextUrl.pathname,
-    hasSession: !!session,
+    hasSession: !!user,
     sessionError: sessionError?.message,
-    userId: session?.user?.id,
+    userId: user?.id,
   });
 
   // Public routes — API routes handle their own auth via Bearer token
@@ -81,7 +51,7 @@ export async function middleware(req: NextRequest) {
   }
 
   // Redirect to sign-in if not authenticated
-  if (!session && !isPublicRoute) {
+  if (!user && !isPublicRoute) {
     console.log('[MIDDLEWARE] No session, redirecting to sign-in');
     const redirectUrl = new URL('/sign-in', req.url);
     redirectUrl.searchParams.set('redirectTo', req.nextUrl.pathname);
@@ -89,7 +59,7 @@ export async function middleware(req: NextRequest) {
   }
 
   // Redirect to dashboard if authenticated and on auth pages
-  if (session && (req.nextUrl.pathname.startsWith('/sign-in') || req.nextUrl.pathname.startsWith('/sign-up'))) {
+  if (user && (req.nextUrl.pathname.startsWith('/sign-in') || req.nextUrl.pathname.startsWith('/sign-up'))) {
     console.log('[MIDDLEWARE] Session exists on auth page, redirecting to dashboard');
     return NextResponse.redirect(new URL('/dashboard', req.url));
   }

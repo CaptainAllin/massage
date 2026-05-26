@@ -94,6 +94,8 @@ export async function POST(req: NextRequest) {
         techniques: rest.techniques || [],
         sessionDuration: rest.sessionDuration,
         followUpDate: rest.followUpDate ? new Date(rest.followUpDate) : undefined,
+        noteTemplateId: rest.noteTemplateId ?? null,
+        noteTemplateName: rest.noteTemplateName ?? null,
       },
       include: {
         client: { select: { id: true, firstName: true, lastName: true } },

@@ -1346,6 +1346,180 @@ async function main() {
   }
   console.log('✓ Audit logs');
 
+  // ── 25. Global Note Templates ─────────────────────────────────────────────
+  const globalNoteTemplates = [
+    {
+      name: 'SOAP Note',
+      category: 'General',
+      fields: [
+        { label: 'Subjective', type: 'text', required: true, placeholder: 'Client-reported symptoms, pain level, history...' },
+        { label: 'Objective', type: 'text', required: true, placeholder: 'Observable findings, palpation, ROM...' },
+        { label: 'Assessment', type: 'text', required: true, placeholder: 'Clinical impression and analysis...' },
+        { label: 'Plan', type: 'text', required: true, placeholder: 'Treatment plan and follow-up...' },
+        { label: 'Areas Worked', type: 'checkbox', required: false, placeholder: '', options: ['Neck', 'Shoulders', 'Upper Back', 'Lower Back', 'Hips', 'Gluteals', 'Hamstrings', 'Calves', 'Arms', 'Feet'] },
+        { label: 'Techniques Used', type: 'text', required: false, placeholder: 'e.g., Deep tissue, myofascial release...' },
+        { label: 'Session Duration (min)', type: 'text', required: false, placeholder: 'e.g., 60' },
+        { label: 'Follow-up Date', type: 'text', required: false, placeholder: 'e.g., 2 weeks' },
+        { label: 'Therapist Signature', type: 'signature', required: true, placeholder: '' },
+      ],
+    },
+    {
+      name: 'Initial Assessment',
+      category: 'General',
+      fields: [
+        { label: 'Chief Complaint', type: 'text', required: true, placeholder: 'Primary reason for visit...' },
+        { label: 'History of Present Condition', type: 'text', required: true, placeholder: 'Onset, duration, mechanism...' },
+        { label: 'Relevant Medical History', type: 'text', required: false, placeholder: 'Past injuries, surgeries, conditions...' },
+        { label: 'Current Medications', type: 'text', required: false, placeholder: 'List medications and dosages...' },
+        { label: 'Pain Location', type: 'body-map', required: false, placeholder: '' },
+        { label: 'Pain Level (0-10)', type: 'scale', required: true, placeholder: '' },
+        { label: 'Functional Limitations', type: 'text', required: false, placeholder: 'Activities affected by condition...' },
+        { label: 'Client Goals', type: 'text', required: true, placeholder: 'What does the client want to achieve...' },
+        { label: 'Contraindications', type: 'checkbox', required: false, placeholder: '', options: ['Pregnancy', 'Recent surgery', 'Open wounds', 'Infectious skin condition', 'Blood clots/DVT', 'Severe osteoporosis', 'None'] },
+        { label: 'Treatment Plan', type: 'text', required: false, placeholder: 'Proposed treatment approach...' },
+        { label: 'Therapist Signature', type: 'signature', required: true, placeholder: '' },
+      ],
+    },
+    {
+      name: 'Progress Note',
+      category: 'General',
+      fields: [
+        { label: 'Progress Since Last Visit', type: 'text', required: true, placeholder: 'Changes, improvements, setbacks...' },
+        { label: 'Current Pain Level (0-10)', type: 'scale', required: true, placeholder: '' },
+        { label: 'Areas of Focus Today', type: 'body-map', required: false, placeholder: '' },
+        { label: 'Techniques Applied', type: 'text', required: false, placeholder: 'Methods used in this session...' },
+        { label: 'Client Response to Treatment', type: 'text', required: true, placeholder: 'How the client responded during and after...' },
+        { label: 'Home Care Compliance', type: 'checkbox', required: false, placeholder: '', options: ['Completed exercises', 'Used ice/heat', 'Took recommended breaks', 'Did not complete home care'] },
+        { label: 'Next Session Goals', type: 'text', required: false, placeholder: 'Focus areas for the next appointment...' },
+      ],
+    },
+    {
+      name: 'Discharge Summary',
+      category: 'General',
+      fields: [
+        { label: 'Reason for Discharge', type: 'checkbox', required: true, placeholder: '', options: ['Treatment goals met', 'Client request', 'Referral to another provider', 'Non-compliance', 'Other'] },
+        { label: 'Summary of Treatment Course', type: 'text', required: true, placeholder: 'Overview of sessions, techniques, and approach...' },
+        { label: 'Outcomes Achieved', type: 'text', required: true, placeholder: 'Measurable improvements from initial assessment...' },
+        { label: 'Final Pain Level (0-10)', type: 'scale', required: false, placeholder: '' },
+        { label: 'Recommendations', type: 'text', required: false, placeholder: 'Ongoing care, referrals, lifestyle advice...' },
+        { label: 'Home Care Instructions', type: 'text', required: false, placeholder: 'Exercises, self-care strategies...' },
+        { label: 'Therapist Signature', type: 'signature', required: true, placeholder: '' },
+      ],
+    },
+    {
+      name: 'Remedial Massage',
+      category: 'Massage',
+      fields: [
+        { label: 'Presenting Complaint', type: 'text', required: true, placeholder: 'Chief symptom and onset...' },
+        { label: 'Postural Observation', type: 'body-map', required: false, placeholder: '' },
+        { label: 'Range of Motion Assessment', type: 'text', required: false, placeholder: 'ROM findings for affected joints...' },
+        { label: 'Muscle Testing Findings', type: 'text', required: false, placeholder: 'Strength and tone observations...' },
+        { label: 'Special Tests Performed', type: 'text', required: false, placeholder: 'e.g., Orthopedic tests and results...' },
+        { label: 'Treatment Applied', type: 'text', required: true, placeholder: 'Techniques and areas treated...' },
+        { label: 'Client Response', type: 'text', required: false, placeholder: 'Immediate response and feedback...' },
+        { label: 'Homecare Advice', type: 'text', required: false, placeholder: 'Stretches, ice/heat, activity modifications...' },
+        { label: 'Therapist Signature', type: 'signature', required: true, placeholder: '' },
+      ],
+    },
+    {
+      name: 'Sports Injury',
+      category: 'Sports',
+      fields: [
+        { label: 'Sport / Activity', type: 'text', required: true, placeholder: 'e.g., Running, football, swimming...' },
+        { label: 'Mechanism of Injury', type: 'text', required: true, placeholder: 'How the injury occurred...' },
+        { label: 'Pain Level (0-10)', type: 'scale', required: true, placeholder: '' },
+        { label: 'Injury Location', type: 'body-map', required: false, placeholder: '' },
+        { label: 'Injury Status', type: 'checkbox', required: false, placeholder: '', options: ['Acute (< 72hrs)', 'Sub-acute', 'Chronic', 'Re-injury'] },
+        { label: 'Functional Testing', type: 'text', required: false, placeholder: 'Movement tests and results...' },
+        { label: 'Treatment Applied', type: 'text', required: true, placeholder: 'Techniques used, areas treated, duration...' },
+        { label: 'Return to Sport Timeline', type: 'text', required: false, placeholder: 'Estimated recovery and return milestones...' },
+        { label: 'Therapist Signature', type: 'signature', required: true, placeholder: '' },
+      ],
+    },
+    {
+      name: 'Pregnancy Massage',
+      category: 'Prenatal',
+      fields: [
+        { label: 'Weeks Gestation', type: 'text', required: true, placeholder: 'e.g., 24 weeks' },
+        { label: 'Medical Clearance Confirmed', type: 'checkbox', required: true, placeholder: '', options: ['Yes — verbal', 'Yes — written', 'Not required (under 12 weeks)', 'Pending'] },
+        { label: 'Client Position Used', type: 'checkbox', required: false, placeholder: '', options: ['Side-lying (left)', 'Side-lying (right)', 'Semi-reclined', 'Seated'] },
+        { label: 'Presenting Concerns', type: 'text', required: true, placeholder: 'Back pain, swelling, hip tension...' },
+        { label: 'Areas Treated', type: 'body-map', required: false, placeholder: '' },
+        { label: 'Techniques Used', type: 'text', required: false, placeholder: 'Light effleurage, lymphatic drainage...' },
+        { label: 'Client and Baby Response', type: 'text', required: true, placeholder: 'Client comfort level, fetal movement observed...' },
+        { label: 'Safety Considerations', type: 'text', required: false, placeholder: 'Precautions taken, contraindications noted...' },
+        { label: 'Therapist Signature', type: 'signature', required: true, placeholder: '' },
+      ],
+    },
+    {
+      name: 'Postural Assessment',
+      category: 'Assessment',
+      fields: [
+        { label: 'Anterior View Findings', type: 'body-map', required: false, placeholder: '' },
+        { label: 'Posterior View Findings', type: 'body-map', required: false, placeholder: '' },
+        { label: 'Head Position', type: 'checkbox', required: false, placeholder: '', options: ['Neutral', 'Forward head', 'Lateral tilt right', 'Lateral tilt left', 'Rotation right', 'Rotation left'] },
+        { label: 'Shoulder Level', type: 'checkbox', required: false, placeholder: '', options: ['Level', 'Right elevated', 'Left elevated', 'Both elevated'] },
+        { label: 'Spinal Curvature', type: 'checkbox', required: false, placeholder: '', options: ['Within normal limits', 'Hyperlordosis', 'Hypolordosis', 'Hyperkyphosis', 'Scoliosis (right)', 'Scoliosis (left)'] },
+        { label: 'Hip Level', type: 'checkbox', required: false, placeholder: '', options: ['Level', 'Right elevated', 'Left elevated'] },
+        { label: 'Foot Alignment', type: 'checkbox', required: false, placeholder: '', options: ['Neutral bilateral', 'Pronated bilateral', 'Supinated bilateral', 'Pronated right', 'Pronated left'] },
+        { label: 'Key Imbalances Noted', type: 'text', required: false, placeholder: 'Muscle length, strength imbalances observed...' },
+        { label: 'Treatment Implications', type: 'text', required: true, placeholder: 'How findings will shape the treatment plan...' },
+        { label: 'Therapist Signature', type: 'signature', required: true, placeholder: '' },
+      ],
+    },
+    {
+      name: 'Pain Scale',
+      category: 'Assessment',
+      fields: [
+        { label: 'Current Pain Level (0-10)', type: 'scale', required: true, placeholder: '' },
+        { label: 'Pain at Worst (0-10)', type: 'scale', required: false, placeholder: '' },
+        { label: 'Pain at Best (0-10)', type: 'scale', required: false, placeholder: '' },
+        { label: 'Pain Location', type: 'body-map', required: true, placeholder: '' },
+        { label: 'Pain Type', type: 'checkbox', required: false, placeholder: '', options: ['Sharp', 'Dull', 'Aching', 'Burning', 'Throbbing', 'Radiating', 'Stabbing', 'Tingling'] },
+        { label: 'Pain Duration', type: 'text', required: false, placeholder: 'Constant, intermittent, how long per episode...' },
+        { label: 'Aggravating Factors', type: 'text', required: false, placeholder: 'Activities or positions that worsen pain...' },
+        { label: 'Relieving Factors', type: 'text', required: false, placeholder: 'What helps reduce the pain...' },
+        { label: 'Impact on Daily Activities', type: 'text', required: false, placeholder: 'Sleep, work, exercise, daily tasks affected...' },
+      ],
+    },
+    {
+      name: 'Movement Screen',
+      category: 'Assessment',
+      fields: [
+        { label: 'Overhead Squat', type: 'checkbox', required: false, placeholder: '', options: ['Pass', 'Arms fall forward', 'Trunk lean', 'Knee valgus', 'Heel rise'] },
+        { label: 'Hurdle Step (Left)', type: 'checkbox', required: false, placeholder: '', options: ['Pass', 'Hip shift', 'Trunk lean', 'Loss of balance'] },
+        { label: 'Hurdle Step (Right)', type: 'checkbox', required: false, placeholder: '', options: ['Pass', 'Hip shift', 'Trunk lean', 'Loss of balance'] },
+        { label: 'Inline Lunge (Left)', type: 'checkbox', required: false, placeholder: '', options: ['Pass', 'Trunk rotation', 'Knee valgus', 'Loss of balance'] },
+        { label: 'Inline Lunge (Right)', type: 'checkbox', required: false, placeholder: '', options: ['Pass', 'Trunk rotation', 'Knee valgus', 'Loss of balance'] },
+        { label: 'Shoulder Mobility (Left)', type: 'checkbox', required: false, placeholder: '', options: ['Pass', 'Limited internal rotation', 'Limited external rotation', 'Pain'] },
+        { label: 'Shoulder Mobility (Right)', type: 'checkbox', required: false, placeholder: '', options: ['Pass', 'Limited internal rotation', 'Limited external rotation', 'Pain'] },
+        { label: 'Active Straight Leg Raise (Left)', type: 'checkbox', required: false, placeholder: '', options: ['Pass', 'Partial range', 'Compensatory pelvic shift'] },
+        { label: 'Active Straight Leg Raise (Right)', type: 'checkbox', required: false, placeholder: '', options: ['Pass', 'Partial range', 'Compensatory pelvic shift'] },
+        { label: 'Compensations / Asymmetries Noted', type: 'text', required: false, placeholder: 'Observations across all tests...' },
+        { label: 'Recommendations', type: 'text', required: true, placeholder: 'Priority areas to address, corrective strategies...' },
+      ],
+    },
+  ];
+
+  for (const tmpl of globalNoteTemplates) {
+    const existing = await prisma.noteTemplate.findFirst({
+      where: { isGlobal: true, name: tmpl.name },
+    });
+    if (!existing) {
+      await prisma.noteTemplate.create({
+        data: {
+          businessId: null,
+          name: tmpl.name,
+          category: tmpl.category,
+          fields: tmpl.fields,
+          isGlobal: true,
+          createdBy: null,
+        },
+      });
+    }
+  }
+  console.log('✓ Global note templates:', globalNoteTemplates.length);
+
   // ── Summary ───────────────────────────────────────────────────────────────
   console.log('\n🎉 Database seed completed successfully!');
   console.log('\n📊 Summary:');

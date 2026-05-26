@@ -50,6 +50,9 @@ export function useOnboarding() {
   const [welcomeShown, setWelcomeShownState] = useState(true);
   const [checkedItems, setCheckedItemsState] = useState<Set<ChecklistItemId>>(new Set());
   const [checklistDismissed, setChecklistDismissedState] = useState(false);
+  const [congratsShown, setCongratsShownState] = useState(false);
+  const [whatsNewDismissed, setWhatsNewDismissedState] = useState(false);
+  const [dismissedAdoptionCards, setDismissedAdoptionCardsState] = useState<Set<string>>(new Set());
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -57,10 +60,17 @@ export function useOnboarding() {
     const dismissed = localStorage.getItem(key(userId, 'checklist_dismissed')) === 'true';
     const raw = localStorage.getItem(key(userId, 'checked_items'));
     const checked = raw ? (new Set(JSON.parse(raw)) as Set<ChecklistItemId>) : new Set<ChecklistItemId>();
+    const congrats = localStorage.getItem(key(userId, 'congrats_shown')) === 'true';
+    const whatsNew = localStorage.getItem(key(userId, 'whats_new_dismissed')) === 'true';
+    const adoptionRaw = localStorage.getItem(key(userId, 'dismissed_adoption_cards'));
+    const adoption = adoptionRaw ? (new Set(JSON.parse(adoptionRaw)) as Set<string>) : new Set<string>();
 
     setWelcomeShownState(shown);
     setChecklistDismissedState(dismissed);
     setCheckedItemsState(checked);
+    setCongratsShownState(congrats);
+    setWhatsNewDismissedState(whatsNew);
+    setDismissedAdoptionCardsState(adoption);
     setLoaded(true);
   }, [userId]);
 
@@ -95,6 +105,25 @@ export function useOnboarding() {
     setChecklistDismissedState(false);
   }, [userId]);
 
+  const setCongratsShown = useCallback((value: boolean) => {
+    localStorage.setItem(key(userId, 'congrats_shown'), String(value));
+    setCongratsShownState(value);
+  }, [userId]);
+
+  const dismissWhatsNew = useCallback(() => {
+    localStorage.setItem(key(userId, 'whats_new_dismissed'), 'true');
+    setWhatsNewDismissedState(true);
+  }, [userId]);
+
+  const dismissAdoptionCard = useCallback((cardId: string) => {
+    setDismissedAdoptionCardsState(prev => {
+      const next = new Set(prev);
+      next.add(cardId);
+      localStorage.setItem(key(userId, 'dismissed_adoption_cards'), JSON.stringify([...next]));
+      return next;
+    });
+  }, [userId]);
+
   const completedCount = checkedItems.size;
   const totalCount = CHECKLIST_ITEMS.length;
   const progressPct = Math.round((completedCount / totalCount) * 100);
@@ -113,5 +142,11 @@ export function useOnboarding() {
     totalCount,
     progressPct,
     allDone,
+    congratsShown,
+    setCongratsShown,
+    whatsNewDismissed,
+    dismissWhatsNew,
+    dismissedAdoptionCards,
+    dismissAdoptionCard,
   };
 }

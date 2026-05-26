@@ -8,6 +8,8 @@ import {
   UpdateAppointmentDto,
   CancelAppointmentDto,
   AvailabilityCheck,
+  GroupBookingWithClient,
+  GroupBookingStatus,
 } from '@massage/types';
 import { apiClient } from '@/lib/api-client';
 
@@ -201,6 +203,81 @@ export function useCancelAppointment(businessId: string | undefined) {
     },
     onSuccess: (_, { appointmentId }) => {
       queryClient.invalidateQueries({ queryKey: ['appointment', appointmentId, businessId] });
+      queryClient.invalidateQueries({ queryKey: ['appointments', businessId] });
+    },
+  });
+}
+
+/**
+ * Fetch group bookings for a group appointment
+ */
+export function useGroupBookings(appointmentId: string | undefined, businessId: string | undefined) {
+  return useQuery({
+    queryKey: ['group-bookings', appointmentId, businessId],
+    queryFn: async () => {
+      const response = await apiClient.get<ApiResponse<GroupBookingWithClient[]>>(
+        `/appointments/${appointmentId}/group-bookings?businessId=${businessId}`
+      );
+      return response.data.data ?? [];
+    },
+    enabled: !!appointmentId && !!businessId,
+  });
+}
+
+/**
+ * Add a client to a group session
+ */
+export function useAddGroupBooking(appointmentId: string, businessId: string | undefined) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (clientId: string) => {
+      const response = await apiClient.post<ApiResponse<GroupBookingWithClient>>(
+        `/appointments/${appointmentId}/group-bookings`,
+        { businessId, clientId }
+      );
+      return response.data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['group-bookings', appointmentId, businessId] });
+      queryClient.invalidateQueries({ queryKey: ['appointments', businessId] });
+    },
+  });
+}
+
+/**
+ * Update a group booking status (attended / no-show / cancelled)
+ */
+export function useUpdateGroupBooking(appointmentId: string, businessId: string | undefined) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ bookingId, status }: { bookingId: string; status: GroupBookingStatus }) => {
+      const response = await apiClient.patch<ApiResponse<GroupBookingWithClient>>(
+        `/appointments/${appointmentId}/group-bookings/${bookingId}`,
+        { businessId, status }
+      );
+      return response.data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['group-bookings', appointmentId, businessId] });
+      queryClient.invalidateQueries({ queryKey: ['appointments', businessId] });
+    },
+  });
+}
+
+/**
+ * Remove a client from a group session
+ */
+export function useRemoveGroupBooking(appointmentId: string, businessId: string | undefined) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (bookingId: string) => {
+      await apiClient.delete(`/appointments/${appointmentId}/group-bookings/${bookingId}?businessId=${businessId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['group-bookings', appointmentId, businessId] });
       queryClient.invalidateQueries({ queryKey: ['appointments', businessId] });
     },
   });

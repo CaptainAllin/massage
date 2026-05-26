@@ -6,8 +6,10 @@ import { Select } from '@massage/ui';
 import { useCreateTreatmentNote } from '@/lib/hooks';
 import { useAppointments } from '@/lib/hooks/use-appointments';
 import { SOAPNoteEditor, SOAPNoteData } from '@/components/treatment-notes/SOAPNoteEditor';
+import { TemplatePickerModal } from '@/components/treatment-notes/TemplatePickerModal';
 import { useBusinessId } from '@/lib/hooks/use-business-id';
 import { useAuth } from '@massage/auth';
+import { NoteTemplate } from '@massage/types';
 
 export default function NewTreatmentNotePage() {
   const router = useRouter();
@@ -16,6 +18,8 @@ export default function NewTreatmentNotePage() {
   const createNote = useCreateTreatmentNote(businessId);
 
   const [selectedAppointmentId, setSelectedAppointmentId] = useState('');
+  const [showTemplatePicker, setShowTemplatePicker] = useState(true);
+  const [selectedTemplate, setSelectedTemplate] = useState<NoteTemplate | null>(null);
 
   const today = new Date();
   const startOfWeek = new Date(today);
@@ -28,7 +32,6 @@ export default function NewTreatmentNotePage() {
   });
 
   const appointments = (appointmentsData?.data ?? []) as any[];
-
   const selectedAppointment = appointments.find((a) => a.id === selectedAppointmentId);
 
   const appointmentOptions = [
@@ -48,12 +51,23 @@ export default function NewTreatmentNotePage() {
     }),
   ];
 
+  const handleTemplateSelect = (template: NoteTemplate | null) => {
+    setSelectedTemplate(template);
+    setShowTemplatePicker(false);
+  };
+
+  const handleChangeTemplate = () => {
+    setShowTemplatePicker(true);
+  };
+
   const handleSave = async (data: SOAPNoteData) => {
     if (!selectedAppointmentId || !selectedAppointment) return;
     await createNote.mutateAsync({
       appointmentId: selectedAppointment.id,
       clientId: selectedAppointment.clientId,
       therapistId: selectedAppointment.therapistId,
+      noteTemplateId: selectedTemplate?.id ?? null,
+      noteTemplateName: selectedTemplate?.name ?? null,
       ...data,
       sessionDuration: data.sessionDuration ?? undefined,
     });
@@ -62,10 +76,17 @@ export default function NewTreatmentNotePage() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
+      {showTemplatePicker && (
+        <TemplatePickerModal
+          onSelect={handleTemplateSelect}
+          onClose={() => setShowTemplatePicker(false)}
+        />
+      )}
+
       <div>
         <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: '#5D4AA8', letterSpacing: '1.4px' }}>Practice</p>
         <h1 className="text-2xl font-semibold font-display" style={{ color: '#1E1830', letterSpacing: '-0.4px' }}>
-          New SOAP Note
+          New Treatment Note
         </h1>
         <p className="text-sm mt-0.5" style={{ color: '#7A7090' }}>
           Document the treatment session with SOAP format
@@ -96,6 +117,8 @@ export default function NewTreatmentNotePage() {
         therapistId={selectedAppointment?.therapistId}
         clientId={selectedAppointment?.clientId}
         appointmentId={selectedAppointment?.id}
+        template={selectedTemplate}
+        onChangeTemplate={handleChangeTemplate}
       />
     </div>
   );

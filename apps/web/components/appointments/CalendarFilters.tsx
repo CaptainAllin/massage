@@ -13,8 +13,8 @@ interface CalendarFiltersProps {
   selectedStatuses: AppointmentStatus[];
   onStatusesChange: (statuses: AppointmentStatus[]) => void;
   therapists: Therapist[];
-  viewMode: 'week' | 'day' | 'month';
-  onViewModeChange: (mode: 'week' | 'day' | 'month') => void;
+  viewMode: 'week' | 'day' | 'month' | 'staff';
+  onViewModeChange: (mode: 'week' | 'day' | 'month' | 'staff') => void;
 }
 
 export function CalendarFilters({
@@ -22,20 +22,20 @@ export function CalendarFilters({
   onDateChange,
   selectedTherapist,
   onTherapistChange,
-  selectedStatuses,
-  onStatusesChange,
+  selectedStatuses: _selectedStatuses,
+  onStatusesChange: _onStatusesChange,
   therapists,
   viewMode,
   onViewModeChange,
 }: CalendarFiltersProps) {
   const handlePrev = () => {
-    if (viewMode === 'day') onDateChange(subDays(currentDate, 1));
+    if (viewMode === 'day' || viewMode === 'staff') onDateChange(subDays(currentDate, 1));
     else if (viewMode === 'month') onDateChange(subMonths(currentDate, 1));
     else onDateChange(subDays(currentDate, 7));
   };
 
   const handleNext = () => {
-    if (viewMode === 'day') onDateChange(addDays(currentDate, 1));
+    if (viewMode === 'day' || viewMode === 'staff') onDateChange(addDays(currentDate, 1));
     else if (viewMode === 'month') onDateChange(addMonths(currentDate, 1));
     else onDateChange(addDays(currentDate, 7));
   };
@@ -47,7 +47,7 @@ export function CalendarFilters({
   const weekNum = getWeek(currentDate, { weekStartsOn: 0 });
 
   const dateLabel =
-    viewMode === 'day'
+    viewMode === 'day' || viewMode === 'staff'
       ? format(currentDate, 'EEE, d MMM yyyy')
       : viewMode === 'month'
       ? format(currentDate, 'MMMM yyyy')
@@ -62,7 +62,7 @@ export function CalendarFilters({
           className="flex items-center gap-1 p-1 rounded-xl"
           style={{ background: '#EDE5F4' }}
         >
-          {(['day', 'week', 'month'] as const).map((mode) => {
+          {(['day', 'week', 'month', 'staff'] as const).map((mode) => {
             const active = viewMode === mode;
             return (
               <button
@@ -126,8 +126,8 @@ export function CalendarFilters({
         </div>
       </div>
 
-      {/* Row 2: Therapist filter strip */}
-      {therapists.length > 0 && (
+      {/* Row 2: Therapist filter strip — hidden in staff view since all therapists are columns */}
+      {therapists.length > 0 && viewMode !== 'staff' && (
         <div className="flex flex-wrap items-center gap-2">
           {/* All chip */}
           <button
@@ -149,8 +149,9 @@ export function CalendarFilters({
           {therapists.map((therapist, idx) => {
             const color = APT_COLORS[idx % APT_COLORS.length];
             const isSelected = selectedTherapist === therapist.id;
-            const name = therapist.user
-              ? `${therapist.user.firstName || ''} ${therapist.user.lastName || ''}`.trim()
+            const tAny = therapist as any;
+            const name = tAny.user
+              ? `${tAny.user.firstName || ''} ${tAny.user.lastName || ''}`.trim()
               : 'Unknown';
 
             return (

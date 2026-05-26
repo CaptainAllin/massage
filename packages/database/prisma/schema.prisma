@@ -19,10 +19,13 @@ model User {
   profileImageUrl String?
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
-  auditLogs       AuditLog[]
-  ownedBusiness   Business?  @relation("BusinessOwner")
-  client          Client?
-  therapist       Therapist?
+  auditLogs        AuditLog[]
+  ownedBusiness    Business?      @relation("BusinessOwner")
+  client           Client?
+  therapist        Therapist?
+  noteTemplates              NoteTemplate[]     @relation("NoteTemplateCreator")
+  submittedCommunityTemplates CommunityTemplate[] @relation("CommunityTemplateSubmitter")
+  moderatedCommunityTemplates CommunityTemplate[] @relation("CommunityTemplateModerator")
 
   @@index([email])
   @@index([authUserId])
@@ -82,6 +85,8 @@ model Business {
   memberships                Membership[]
   messageTemplates           MessageTemplate[]
   messages                   Message[]
+  noteTemplates              NoteTemplate[]
+  communityTemplates         CommunityTemplate[]
   packagePurchases           PackagePurchase[]
   packageSessions            PackageSession[]
   payments                   Payment[]
@@ -193,6 +198,7 @@ model Client {
   videoSessions              VideoSession[]
   voiceNotes                 VoiceNote[]
   insuranceClaims            InsuranceClaim[]
+  groupBookings              GroupBooking[]
 
   @@index([businessId])
   @@index([locationId])
@@ -226,8 +232,11 @@ model Appointment {
   updatedAt         DateTime                    @updatedAt
   recurringSeriesId String?
   isVirtual         Boolean                     @default(false)
+  isGroup           Boolean                     @default(false)
+  capacity          Int?
   cancellation      AppointmentCancellation?
   reminders         AppointmentReminder[]
+  groupBookings     GroupBooking[]
   business          Business                    @relation(fields: [businessId], references: [id], onDelete: Cascade)
   client            Client                      @relation(fields: [clientId], references: [id], onDelete: Cascade)
   location          Location?                   @relation(fields: [locationId], references: [id])
@@ -290,6 +299,8 @@ model TreatmentNote {
   sessionDuration    Int?
   followUpDate       DateTime?
   aiSummary          String?
+  noteTemplateId     String?
+  noteTemplateName   String?
   createdAt          DateTime    @default(now())
   updatedAt          DateTime    @updatedAt
   bodyMaps           BodyMap[]
@@ -326,6 +337,58 @@ model IntakeFormTemplate {
   @@index([isActive])
   @@index([isDefault])
   @@map("intake_form_templates")
+}
+
+model NoteTemplate {
+  id         String    @id @default(cuid())
+  businessId String?
+  name       String
+  category   String
+  fields     Json
+  isGlobal   Boolean   @default(false)
+  isArchived Boolean   @default(false)
+  createdBy  String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  business   Business? @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  creator    User?     @relation("NoteTemplateCreator", fields: [createdBy], references: [id])
+
+  @@index([businessId])
+  @@index([isGlobal])
+  @@index([category])
+  @@map("note_templates")
+}
+
+model CommunityTemplate {
+  id                    String                  @id @default(cuid())
+  name                  String
+  category              String
+  fields                Json
+  description           String?
+  status                CommunityTemplateStatus @default(PENDING)
+  usageCount            Int                     @default(0)
+  submittedByUserId     String
+  submittedByBusinessId String?
+  rejectionReason       String?
+  moderatedBy           String?
+  moderatedAt           DateTime?
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+
+  submittedByUser     User      @relation("CommunityTemplateSubmitter", fields: [submittedByUserId], references: [id])
+  submittedByBusiness Business? @relation(fields: [submittedByBusinessId], references: [id], onDelete: SetNull)
+  moderator           User?     @relation("CommunityTemplateModerator", fields: [moderatedBy], references: [id])
+
+  @@index([status])
+  @@index([category])
+  @@index([submittedByUserId])
+  @@map("community_templates")
+}
+
+enum CommunityTemplateStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 model BodyMap {
@@ -1612,4 +1675,28 @@ enum ReimbursementStatus {
   PENDING
   RECEIVED
   RECONCILED
+}
+
+model GroupBooking {
+  id            String             @id @default(cuid())
+  appointmentId String
+  clientId      String
+  status        GroupBookingStatus @default(REGISTERED)
+  paidAt        DateTime?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  appointment   Appointment        @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  client        Client             @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([appointmentId, clientId])
+  @@index([appointmentId])
+  @@index([clientId])
+  @@map("group_bookings")
+}
+
+enum GroupBookingStatus {
+  REGISTERED
+  ATTENDED
+  NO_SHOW
+  CANCELLED
 }
