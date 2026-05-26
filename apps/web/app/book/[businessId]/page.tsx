@@ -125,6 +125,10 @@ export default function PublicBookingPage() {
   const [selectedGroupSession, setSelectedGroupSession] = useState<GroupSession | null>(null);
   const [groupStep, setGroupStep] = useState<'select' | 'contact' | 'confirm'>('select');
 
+  // Waitlist state
+  const [waitlistStep, setWaitlistStep] = useState<'idle' | 'form' | 'success'>('idle');
+  const [waitlistSubmitting, setWaitlistSubmitting] = useState(false);
+
   // Load business + therapists
   useEffect(() => {
     fetch(`/api/public/booking/${businessId}`)
@@ -245,6 +249,36 @@ export default function PublicBookingPage() {
       setError('Network error. Please try again.');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleJoinWaitlist = async () => {
+    if (!firstName || !lastName || (!email && !phone)) return;
+    setWaitlistSubmitting(true);
+    try {
+      const r = await fetch('/api/public/waitlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          businessId,
+          firstName,
+          lastName,
+          email: email || undefined,
+          phoneNumber: phone || undefined,
+          serviceType: selectedService || undefined,
+          therapistId: selectedTherapist?.id || undefined,
+        }),
+      });
+      const d = await r.json();
+      if (d.success) {
+        setWaitlistStep('success');
+      } else {
+        setError(d.error || 'Failed to join waitlist');
+      }
+    } catch {
+      setError('Network error. Please try again.');
+    } finally {
+      setWaitlistSubmitting(false);
     }
   };
 
@@ -716,7 +750,16 @@ export default function PublicBookingPage() {
                     <Loader2 className="h-5 w-5 animate-spin text-gray-300" />
                   </div>
                 ) : slots.length === 0 ? (
-                  <p className="text-sm text-gray-400 text-center py-6">No available slots on this day.</p>
+                  <div className="text-center py-6">
+                    <p className="text-sm text-gray-400 mb-3">No available slots on this day.</p>
+                    <button
+                      onClick={() => setWaitlistStep('form')}
+                      className="px-4 py-2 rounded-xl text-sm font-semibold text-white"
+                      style={{ backgroundColor: accent }}
+                    >
+                      Join Waitlist
+                    </button>
+                  </div>
                 ) : (
                   <div className="grid grid-cols-3 gap-2">
                     {slots.map((slot) => {
@@ -918,6 +961,107 @@ export default function PublicBookingPage() {
         </>
         )}
       </div>
+
+      {/* Waitlist overlay */}
+      {waitlistStep === 'form' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+            <h3 className="text-base font-semibold text-gray-900 mb-1">Join the Waitlist</h3>
+            <p className="text-sm text-gray-500 mb-4">
+              We'll notify you when a slot opens for {selectedService || 'your preferred service'}.
+            </p>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">First Name *</label>
+                  <input
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    placeholder="Jane"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-400"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Last Name *</label>
+                  <input
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    placeholder="Smith"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-400"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Email</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="jane@example.com"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-400"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Phone</label>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="+61 400 000 000"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-400"
+                />
+              </div>
+              {error && (
+                <div className="flex items-center gap-2 text-red-600 text-xs bg-red-50 rounded-lg px-3 py-2">
+                  <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                  {error}
+                </div>
+              )}
+              <div className="flex gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setWaitlistStep('idle')}
+                  className="flex-1 px-4 py-2 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleJoinWaitlist}
+                  disabled={waitlistSubmitting || !firstName || !lastName || (!email && !phone)}
+                  className="flex-1 px-4 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-50 flex items-center justify-center gap-2"
+                  style={{ backgroundColor: accent }}
+                >
+                  {waitlistSubmitting ? <><Loader2 className="h-4 w-4 animate-spin" /> Joining…</> : 'Join Waitlist'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {waitlistStep === 'success' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-8 text-center">
+            <div
+              className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
+              style={{ backgroundColor: `${accent}25` }}
+            >
+              <CheckCircle className="h-7 w-7" style={{ color: accent }} />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 mb-2">You're on the waitlist!</h3>
+            <p className="text-sm text-gray-500 mb-6">
+              We'll reach out as soon as a slot opens up for {selectedService || 'your preferred service'} at {business?.name}.
+            </p>
+            <button
+              onClick={() => setWaitlistStep('idle')}
+              className="w-full py-2.5 rounded-xl text-sm font-semibold text-white"
+              style={{ backgroundColor: accent }}
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

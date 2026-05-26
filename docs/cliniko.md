@@ -87,27 +87,27 @@
 
 > When a slot is full or cancelled, Cliniko automatically offers it to waitlisted clients. We have no waitlist.
 
-- [ ] **1.3.1 — Data Model**
-  - [ ] Add `Waitlist` model: `id`, `businessId`, `clientId`, `therapistId` (nullable), `serviceType`, `preferredDates` (JSON), `preferredTimes` (JSON), `status` (`WAITING` | `OFFERED` | `BOOKED` | `EXPIRED`), `createdAt`
-  - [ ] Create Prisma migration
+- [x] **1.3.1 — Data Model**
+  - [x] Add `Waitlist` model: `id`, `businessId`, `clientId`, `therapistId` (nullable), `serviceType`, `preferredDates` (JSON), `preferredTimes` (JSON), `status` (`WAITING` | `OFFERED` | `BOOKED` | `EXPIRED`), `createdAt`
+  - [x] Create Prisma migration
 
-- [ ] **1.3.2 — Waitlist API**
-  - [ ] `POST /api/waitlist` — add client to waitlist
-  - [ ] `GET /api/waitlist` — list waitlisted clients for business
-  - [ ] `DELETE /api/waitlist/:id` — remove from waitlist
-  - [ ] Auto-trigger: when appointment is cancelled, query waitlist for matching criteria and notify matching clients
+- [x] **1.3.2 — Waitlist API**
+  - [x] `POST /api/waitlist` — add client to waitlist
+  - [x] `GET /api/waitlist` — list waitlisted clients for business
+  - [x] `DELETE /api/waitlist/:id` — remove from waitlist
+  - [x] Auto-trigger: when appointment is cancelled, query waitlist for matching criteria and notify matching clients
 
-- [ ] **1.3.3 — Staff UI**
-  - [ ] Waitlist tab on appointments page
-  - [ ] Table: client name, requested service, therapist preference, date preference, wait duration
-  - [ ] "Offer slot" action — sends SMS/email to waitlisted client with booking link
-  - [ ] Auto-offer toggle (send automatically on cancellation, first-come-first-served)
-  - [ ] Expiry setting: offer link expires after N hours (configurable)
+- [x] **1.3.3 — Staff UI**
+  - [x] Waitlist tab on appointments page
+  - [x] Table: client name, requested service, therapist preference, date preference, wait duration
+  - [x] "Offer slot" action — sends SMS/email to waitlisted client with booking link
+  - [x] Auto-offer toggle (send automatically on cancellation, first-come-first-served)
+  - [x] Expiry setting: offer link expires after N hours (configurable)
 
-- [ ] **1.3.4 — Client-facing Waitlist**
-  - [ ] "Join waitlist" button on public booking page when no slots are available
-  - [ ] Client receives SMS/email when a matching slot opens
-  - [ ] One-click booking link in notification (pre-filled, no re-entry needed)
+- [x] **1.3.4 — Client-facing Waitlist**
+  - [x] "Join waitlist" button on public booking page when no slots are available
+  - [x] Client receives SMS/email when a matching slot opens
+  - [x] One-click booking link in notification (pre-filled, no re-entry needed)
 
 ---
 

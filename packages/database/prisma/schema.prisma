@@ -105,6 +105,7 @@ model Business {
   treatmentNotes             TreatmentNote[]
   videoSessions              VideoSession[]
   voiceNotes                 VoiceNote[]
+  waitlist                   Waitlist[]
 
   @@index([ownerId])
   @@map("businesses")
@@ -136,6 +137,7 @@ model Therapist {
   videoSessions              VideoSession[]
   voiceNotes                 VoiceNote[]
   payrollRecords             PayrollRecord[]
+  waitlist                   Waitlist[]
 
   @@index([userId])
   @@index([businessId])
@@ -199,6 +201,7 @@ model Client {
   voiceNotes                 VoiceNote[]
   insuranceClaims            InsuranceClaim[]
   groupBookings              GroupBooking[]
+  waitlist                   Waitlist[]
 
   @@index([businessId])
   @@index([locationId])
@@ -1699,4 +1702,38 @@ enum GroupBookingStatus {
   ATTENDED
   NO_SHOW
   CANCELLED
+}
+
+model Waitlist {
+  id             String        @id @default(cuid())
+  businessId     String
+  clientId       String
+  therapistId    String?
+  serviceType    String?
+  preferredDates Json          @default("[]")
+  preferredTimes Json          @default("[]")
+  status         WaitlistStatus @default(WAITING)
+  offerToken     String?       @unique
+  offerExpiresAt DateTime?
+  notes          String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  business       Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  client         Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  therapist      Therapist?    @relation(fields: [therapistId], references: [id])
+
+  @@index([businessId])
+  @@index([clientId])
+  @@index([therapistId])
+  @@index([status])
+  @@index([businessId, status])
+  @@index([offerToken])
+  @@map("waitlist")
+}
+
+enum WaitlistStatus {
+  WAITING
+  OFFERED
+  BOOKED
+  EXPIRED
 }
