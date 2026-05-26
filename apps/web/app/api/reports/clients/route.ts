@@ -78,9 +78,50 @@ export async function GET(req: NextRequest) {
       ),
     }));
 
+    const returningClients = returningClientsData.length;
+    const retentionRate =
+      newClients + returningClients > 0
+        ? Math.round((returningClients / (newClients + returningClients)) * 10000) / 100
+        : 0;
+
+    // Monthly new vs returning breakdown
+    const allAptsInPeriod = await prisma.appointment.findMany({
+      where: {
+        businessId,
+        status: 'COMPLETED',
+        startTime: { gte: startDate, lte: endDate },
+      },
+      select: { startTime: true, client: { select: { id: true, createdAt: true } } },
+    });
+
+    const monthlyMap = new Map<string, { newClients: Set<string>; returningClients: Set<string> }>();
+    allAptsInPeriod.forEach(apt => {
+      const key = `${apt.startTime.getFullYear()}-${String(apt.startTime.getMonth() + 1).padStart(2, '0')}`;
+      if (!monthlyMap.has(key)) {
+        monthlyMap.set(key, { newClients: new Set(), returningClients: new Set() });
+      }
+      const bucket = monthlyMap.get(key)!;
+      const monthStart = new Date(apt.startTime.getFullYear(), apt.startTime.getMonth(), 1);
+      if (apt.client.createdAt >= monthStart) {
+        bucket.newClients.add(apt.client.id);
+      } else {
+        bucket.returningClients.add(apt.client.id);
+      }
+    });
+
+    const monthlyNewVsReturning = Array.from(monthlyMap.entries())
+      .map(([month, data]) => ({
+        month,
+        newClients: data.newClients.size,
+        returningClients: data.returningClients.size,
+      }))
+      .sort((a, b) => a.month.localeCompare(b.month));
+
     return res.ok({
       newClients,
-      returningClients: returningClientsData.length,
+      returningClients,
+      retentionRate,
+      monthlyNewVsReturning,
       clientLifetimeValue,
       topClients,
       inactiveClients,

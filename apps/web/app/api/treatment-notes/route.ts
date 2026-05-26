@@ -16,6 +16,9 @@ const noteInclude = {
   appointment: {
     select: { id: true, startTime: true, endTime: true },
   },
+  reviewer: {
+    select: { id: true, firstName: true, lastName: true },
+  },
   bodyMaps: true,
 };
 
@@ -32,16 +35,54 @@ export async function GET(req: NextRequest) {
     const therapistId = searchParams.get('therapistId');
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
+    const statusFilter = searchParams.get('status');
+    const reviewerId = searchParams.get('reviewerId');
     const page = parseInt(searchParams.get('page') || '1', 10);
     const limit = parseInt(searchParams.get('limit') || '20', 10);
 
     const where: any = { businessId };
     if (clientId) where.clientId = clientId;
     if (therapistId) where.therapistId = therapistId;
+    if (statusFilter) where.status = statusFilter;
+    if (reviewerId) where.reviewerId = reviewerId;
     if (startDate || endDate) {
       where.createdAt = {};
       if (startDate) where.createdAt.gte = new Date(startDate);
       if (endDate) where.createdAt.lte = new Date(endDate);
+    }
+
+    // Enforce draft note visibility rules
+    const isOwner = await prisma.business.findFirst({
+      where: { id: businessId, ownerId: user.id },
+      select: { id: true, draftNoteVisibility: true },
+    });
+
+    if (!isOwner) {
+      // Business owner always sees all drafts — only apply rules for non-owners
+      const business = await prisma.business.findUnique({
+        where: { id: businessId },
+        select: { draftNoteVisibility: true },
+      });
+
+      const visibility = business?.draftNoteVisibility ?? 'ALL_THERAPISTS';
+
+      if (visibility === 'ONLY_AUTHOR') {
+        // Therapist only sees their own drafts; can see approved/non-draft notes from others
+        const therapistRecord = await prisma.therapist.findFirst({
+          where: { businessId, userId: user.id },
+          select: { id: true },
+        });
+        if (therapistRecord) {
+          where.OR = [
+            { status: { not: 'DRAFT' } },
+            { therapistId: therapistRecord.id },
+          ];
+        }
+      } else if (visibility === 'BUSINESS_OWNER_ONLY') {
+        // Non-owners cannot see any drafts at all
+        where.status = { not: 'DRAFT' };
+      }
+      // ALL_THERAPISTS: no extra filter — everyone sees all notes
     }
 
     const skip = (page - 1) * limit;

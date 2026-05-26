@@ -1,4 +1,5 @@
 export * from './use-business-id';
+export * from './use-business';
 export * from './use-clients';
 export * from './use-intake-forms';
 export * from './use-body-maps';

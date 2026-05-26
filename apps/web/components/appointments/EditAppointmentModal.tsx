@@ -4,6 +4,9 @@ import { useState, useEffect } from 'react';
 import { Modal, Button, Input, Select, Textarea } from '@massage/ui';
 import { Client, Therapist, AppointmentWithRelations } from '@massage/types';
 import { useUpdateAppointment, useCheckAvailability } from '@/lib/hooks/use-appointments';
+import { useRooms } from '@/lib/hooks/use-rooms';
+
+type RecurringEditScope = 'this_only' | 'this_and_following' | 'all';
 import { format } from 'date-fns';
 
 interface EditAppointmentModalProps {
@@ -31,11 +34,14 @@ export function EditAppointmentModal({
   const [serviceType, setServiceType] = useState('');
   const [price, setPrice] = useState('');
   const [notes, setNotes] = useState('');
+  const [roomId, setRoomId] = useState('');
+  const [recurringScope, setRecurringScope] = useState<RecurringEditScope>('this_only');
 
   const updateAppointment = useUpdateAppointment(
     appointment?.id || '',
     businessId
   );
+  const { data: rooms = [] } = useRooms(businessId, true);
 
   // Populate form when appointment changes
   useEffect(() => {
@@ -49,6 +55,7 @@ export function EditAppointmentModal({
       setServiceType(appointment.serviceType || '');
       setPrice(appointment.price ? String(appointment.price) : '');
       setNotes(appointment.notes || '');
+      setRoomId((appointment as any).roomId || '');
     }
   }, [appointment]);
 
@@ -86,7 +93,9 @@ export function EditAppointmentModal({
         serviceType: serviceType || undefined,
         price: price ? parseFloat(price) : undefined,
         notes: notes || undefined,
-      });
+        roomId: roomId || undefined,
+        ...(appointment.recurringSeriesId ? { recurringScope } : {}),
+      } as any);
 
       onClose();
     } catch (error: any) {
@@ -121,9 +130,37 @@ export function EditAppointmentModal({
     { value: '120', label: '120 minutes' },
   ];
 
+  const recurringEditOptions = [
+    { value: 'this_only', label: 'This appointment only' },
+    { value: 'this_and_following', label: 'This and all following appointments' },
+    { value: 'all', label: 'All appointments in this series' },
+  ];
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Edit Appointment" size="lg">
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Recurring scope picker */}
+        {appointment.recurringSeriesId && (
+          <div className="rounded-xl p-3" style={{ background: '#F5F0FF', border: '1px solid #DDD0F0' }}>
+            <p className="text-sm font-medium mb-2" style={{ color: '#5D4AA8' }}>This is a recurring appointment</p>
+            <div className="space-y-1.5">
+              {recurringEditOptions.map((opt) => (
+                <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="recurringEditScope"
+                    value={opt.value}
+                    checked={recurringScope === opt.value}
+                    onChange={() => setRecurringScope(opt.value as RecurringEditScope)}
+                    className="text-[#5D4AA8]"
+                  />
+                  <span className="text-sm text-gray-700">{opt.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Client Select */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -229,6 +266,21 @@ export function EditAppointmentModal({
             />
           </div>
         </div>
+
+        {/* Room */}
+        {(rooms as any[]).length > 0 && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Room (optional)</label>
+            <Select
+              value={roomId}
+              onChange={(e) => setRoomId(e.target.value)}
+              options={[
+                { value: '', label: 'No room assigned' },
+                ...(rooms as any[]).map((r: any) => ({ value: r.id, label: r.name })),
+              ]}
+            />
+          </div>
+        )}
 
         {/* Notes */}
         <div>

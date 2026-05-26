@@ -31,7 +31,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const user = await requireAuth(req);
     const id = params.id;
     const body = await req.json();
-    const { businessId, startTime, duration, therapistId, ...rest } = body;
+    const { businessId, startTime, duration, therapistId, recurringScope, ...rest } = body;
     if (!businessId) return res.badRequest('businessId is required');
 
     const existing = await prisma.appointment.findFirst({ where: { id, businessId } });
@@ -58,11 +58,33 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       include: { client: true, therapist: { include: { user: true } } },
     });
 
+    // Propagate non-time fields to other appointments in the series if scope requested
+    if (existing.recurringSeriesId && recurringScope && recurringScope !== 'this_only') {
+      const bulkData: any = {};
+      if (rest.serviceType !== undefined) bulkData.serviceType = rest.serviceType;
+      if (rest.price !== undefined) bulkData.price = rest.price;
+      if (rest.notes !== undefined) bulkData.notes = rest.notes;
+      if (therapistId) bulkData.therapistId = therapistId;
+      if (duration) bulkData.duration = parseInt(duration);
+
+      if (Object.keys(bulkData).length > 0) {
+        const futureWhere: any = {
+          recurringSeriesId: existing.recurringSeriesId,
+          id: { not: id },
+          status: { in: ['SCHEDULED', 'CONFIRMED'] },
+        };
+        if (recurringScope === 'this_and_following') {
+          futureWhere.startTime = { gte: existing.startTime };
+        }
+        await prisma.appointment.updateMany({ where: futureWhere, data: bulkData });
+      }
+    }
+
     await prisma.auditLog.create({
       data: {
         userId: user.id, businessId, action: 'APPOINTMENT_UPDATED',
         entityType: 'Appointment', entityId: id,
-        metadata: { updatedFields: Object.keys(body) },
+        metadata: { updatedFields: Object.keys(body), recurringScope },
       },
     });
 

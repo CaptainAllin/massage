@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
       ...(serviceType && { serviceType }),
     };
 
-    const [totalAppointments, byStatusData, byServiceTypeData, appointments, avgDurationResult] =
+    const [totalAppointments, byStatusData, byServiceTypeData, appointments, avgDurationResult, avgDurationByServiceData] =
       await Promise.all([
         prisma.appointment.count({ where: baseWhere }),
         prisma.appointment.groupBy({
@@ -44,11 +44,22 @@ export async function GET(req: NextRequest) {
         }),
         prisma.appointment.findMany({
           where: baseWhere,
-          select: { startTime: true },
+          select: {
+            startTime: true,
+            status: true,
+            therapistId: true,
+            therapist: { select: { user: { select: { firstName: true, lastName: true } } } },
+          },
         }),
         prisma.appointment.aggregate({
           where: baseWhere,
           _avg: { duration: true },
+        }),
+        prisma.appointment.groupBy({
+          by: ['serviceType'],
+          where: { ...baseWhere, serviceType: { not: null }, duration: { gt: 0 } },
+          _avg: { duration: true },
+          _count: true,
         }),
       ]);
 
@@ -65,7 +76,13 @@ export async function GET(req: NextRequest) {
       count: item._count,
     }));
 
-    // Peak times
+    const avgDurationByServiceType = avgDurationByServiceData.map(item => ({
+      serviceType: item.serviceType || 'Unknown',
+      avgDuration: Math.round(item._avg.duration || 0),
+      count: item._count,
+    }));
+
+    // Peak times — all slots for heatmap
     const peakTimesMap = new Map<string, number>();
     appointments.forEach(apt => {
       const hour = apt.startTime.getHours();
@@ -74,19 +91,58 @@ export async function GET(req: NextRequest) {
       peakTimesMap.set(key, (peakTimesMap.get(key) || 0) + 1);
     });
 
-    const peakTimes = Array.from(peakTimesMap.entries())
-      .map(([key, count]) => {
-        const [dayOfWeek, hour] = key.split('-').map(Number);
-        return { hour, dayOfWeek, count };
-      })
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 10);
+    const peakTimes = Array.from(peakTimesMap.entries()).map(([key, count]) => {
+      const [dayOfWeek, hour] = key.split('-').map(Number);
+      return { hour, dayOfWeek, count };
+    });
+
+    // No-show and cancellation rate per therapist
+    const therapistStatsMap = new Map<string, {
+      name: string;
+      total: number;
+      noShows: number;
+      cancellations: number;
+      completed: number;
+    }>();
+
+    appointments.forEach(apt => {
+      const name =
+        `${apt.therapist?.user?.firstName || ''} ${apt.therapist?.user?.lastName || ''}`.trim() || 'Unknown';
+      const existing = therapistStatsMap.get(apt.therapistId);
+      if (existing) {
+        existing.total++;
+        if (apt.status === 'NO_SHOW') existing.noShows++;
+        if (apt.status === 'CANCELLED') existing.cancellations++;
+        if (apt.status === 'COMPLETED') existing.completed++;
+      } else {
+        therapistStatsMap.set(apt.therapistId, {
+          name,
+          total: 1,
+          noShows: apt.status === 'NO_SHOW' ? 1 : 0,
+          cancellations: apt.status === 'CANCELLED' ? 1 : 0,
+          completed: apt.status === 'COMPLETED' ? 1 : 0,
+        });
+      }
+    });
+
+    const noShowByTherapist = Array.from(therapistStatsMap.entries()).map(([therapistId, data]) => ({
+      therapistId,
+      therapistName: data.name,
+      total: data.total,
+      noShows: data.noShows,
+      cancellations: data.cancellations,
+      completed: data.completed,
+      noShowRate: data.total > 0 ? Math.round((data.noShows / data.total) * 10000) / 100 : 0,
+      cancellationRate: data.total > 0 ? Math.round((data.cancellations / data.total) * 10000) / 100 : 0,
+    }));
 
     return res.ok({
       totalAppointments,
       byStatus,
       byServiceType,
       peakTimes,
+      noShowByTherapist,
+      avgDurationByServiceType,
       averageDuration: avgDurationResult._avg.duration || 0,
     });
   } catch (err) {

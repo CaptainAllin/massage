@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useParams } from 'next/navigation';
-import { Sparkles, CalendarDays } from 'lucide-react';
+import { Sparkles, CalendarDays, Mail, MessageSquare, Smartphone, CheckCircle2, XCircle, Clock, CheckCheck } from 'lucide-react';
 import { Skeleton } from '@massage/ui';
 import { useClient } from '@/lib/hooks';
 import { usePayments } from '@/lib/hooks/use-payments';
@@ -15,6 +15,7 @@ import { SavedPaymentMethods } from '@/components/payments/SavedPaymentMethods';
 import { SessionTimeline } from '@/components/clients/SessionTimeline';
 import { TreatmentSuggestionsPanel } from '@/components/ai';
 import { useBusinessId } from '@/lib/hooks/use-business-id';
+import { useMessageLogs } from '@/lib/hooks/use-message-logs';
 
 // ── Iris tab styling ─────────────────────────────────────────────────────────
 
@@ -24,6 +25,7 @@ const TABS = [
   { id: 'notes', label: 'Notes', badge: true },
   { id: 'intake', label: 'Intake forms' },
   { id: 'payments', label: 'Payments' },
+  { id: 'communications', label: 'Communications' },
   { id: 'ai', label: 'AI Suggestions' },
 ];
 
@@ -194,6 +196,85 @@ function AIUpsellBanner({ clientName }: { clientName: string }) {
   );
 }
 
+// ── Communications panel ─────────────────────────────────────────────────────
+
+const MSG_STATUS_CONFIG: Record<string, { label: string; bg: string; color: string; Icon: any }> = {
+  DELIVERED: { label: 'Delivered', bg: '#E8F5E9', color: '#2E7D32', Icon: CheckCircle2 },
+  SENT: { label: 'Sent', bg: '#E3F2FD', color: '#1565C0', Icon: CheckCheck },
+  QUEUED: { label: 'Queued', bg: '#FFF3E0', color: '#E65100', Icon: Clock },
+  FAILED: { label: 'Failed', bg: '#FFEBEE', color: '#C62828', Icon: XCircle },
+  UNDELIVERED: { label: 'Undelivered', bg: '#FCE4EC', color: '#880E4F', Icon: XCircle },
+};
+
+const MSG_CHANNEL_ICONS: Record<string, any> = {
+  EMAIL: Mail,
+  SMS: MessageSquare,
+  WHATSAPP: Smartphone,
+};
+
+const MSG_TYPE_LABELS: Record<string, string> = {
+  APPOINTMENT_REMINDER: 'Appointment Reminder',
+  BOOKING_CONFIRMATION: 'Booking Confirmation',
+  INVOICE: 'Invoice',
+  PAYMENT_CONFIRMATION: 'Payment Confirmation',
+  PAYMENT_OVERDUE: 'Payment Overdue',
+  WAITLIST_OFFER: 'Waitlist Offer',
+};
+
+function ClientCommunicationsPanel({ businessId, clientId }: { businessId: string; clientId: string }) {
+  const { data, isLoading } = useMessageLogs(businessId, { clientId, limit: 50 });
+  const logs: any[] = data?.data ?? [];
+
+  if (isLoading) {
+    return <p className="text-[13px] text-iris-muted py-6 text-center">Loading communications…</p>;
+  }
+
+  if (logs.length === 0) {
+    return (
+      <div className="text-center py-10">
+        <p className="text-[13px] text-iris-muted">No messages sent to this client yet.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {logs.map((log: any) => {
+        const cfg = MSG_STATUS_CONFIG[log.status] ?? { label: log.status, bg: '#F3F4F6', color: '#6B7280', Icon: Clock };
+        const ChannelIcon = MSG_CHANNEL_ICONS[log.channel] ?? Mail;
+        const { Icon: StatusIcon } = cfg;
+        const sentAt = log.sentAt ?? log.createdAt;
+
+        return (
+          <div
+            key={log.id}
+            className="flex items-start gap-3 bg-iris-soft1 rounded-[12px] px-4 py-3"
+          >
+            <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: '#EDE5F4' }}>
+              <ChannelIcon className="w-3.5 h-3.5" style={{ color: '#5D4AA8' }} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[13px] font-medium text-iris-ink truncate">
+                {MSG_TYPE_LABELS[log.messageType] ?? log.messageType}
+              </p>
+              <p className="text-[11.5px] text-iris-muted mt-0.5">
+                {log.channel} · {log.recipient} · {new Date(sentAt).toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' })}
+              </p>
+            </div>
+            <span
+              className="inline-flex items-center gap-1 px-2.5 py-[3px] rounded-full text-[11px] font-medium flex-shrink-0"
+              style={{ background: cfg.bg, color: cfg.color }}
+            >
+              <StatusIcon className="w-3 h-3" />
+              {cfg.label}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Main page ────────────────────────────────────────────────────────────────
 
 export default function ClientProfilePage() {
@@ -256,6 +337,7 @@ export default function ClientProfilePage() {
       <ClientHeader
         client={client}
         lifetimeSpent={lifetimeSpent}
+        businessId={businessId || undefined}
         onMessage={() => {}}
         onBook={() => {}}
       />
@@ -454,6 +536,11 @@ export default function ClientProfilePage() {
                 <PaymentsList payments={payments} isLoading={false} onFilterChange={() => {}} />
               </SectionCard>
             </div>
+          )}
+
+          {/* ── Communications ── */}
+          {activeTab === 'communications' && businessId && (
+            <ClientCommunicationsPanel businessId={businessId} clientId={clientId} />
           )}
 
           {/* ── AI Suggestions ── */}

@@ -3,7 +3,10 @@ import { TreatmentNote, TreatmentNoteFilters, ApiResponse } from '@massage/types
 import { apiClient } from '@/lib/api-client';
 
 // Fetch all treatment notes
-export function useTreatmentNotes(businessId: string | undefined, filters?: TreatmentNoteFilters) {
+export function useTreatmentNotes(
+  businessId: string | undefined,
+  filters?: TreatmentNoteFilters & { status?: string; reviewerId?: string }
+) {
   return useQuery({
     queryKey: ['treatment-notes', businessId, filters],
     queryFn: async () => {
@@ -13,6 +16,8 @@ export function useTreatmentNotes(businessId: string | undefined, filters?: Trea
         ...(filters?.therapistId && { therapistId: filters.therapistId }),
         ...(filters?.startDate && { startDate: filters.startDate.toISOString() }),
         ...(filters?.endDate && { endDate: filters.endDate.toISOString() }),
+        ...(filters?.status && { status: filters.status }),
+        ...(filters?.reviewerId && { reviewerId: filters.reviewerId }),
         ...(filters?.page && { page: String(filters.page) }),
         ...(filters?.limit && { limit: String(filters.limit) }),
       });
@@ -157,6 +162,63 @@ export function useUpdateAISummary(noteId: string, businessId: string | undefine
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['treatment-note', noteId, businessId] });
+    },
+  });
+}
+
+// Submit note for supervisor review
+export function useSubmitNoteForReview(noteId: string, businessId: string | undefined) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (reviewerId: string) => {
+      const response = await apiClient.post<ApiResponse<TreatmentNote>>(
+        `/treatment-notes/${noteId}/submit-review`,
+        { businessId, reviewerId }
+      );
+      return response.data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['treatment-note', noteId, businessId] });
+      queryClient.invalidateQueries({ queryKey: ['treatment-notes', businessId] });
+    },
+  });
+}
+
+// Approve a note (supervisor action)
+export function useApproveNote(noteId: string, businessId: string | undefined) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const response = await apiClient.post<ApiResponse<TreatmentNote>>(
+        `/treatment-notes/${noteId}/approve`,
+        { businessId }
+      );
+      return response.data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['treatment-note', noteId, businessId] });
+      queryClient.invalidateQueries({ queryKey: ['treatment-notes', businessId] });
+    },
+  });
+}
+
+// Reject a note with comment (supervisor action)
+export function useRejectNote(noteId: string, businessId: string | undefined) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (comment?: string) => {
+      const response = await apiClient.post<ApiResponse<TreatmentNote>>(
+        `/treatment-notes/${noteId}/reject`,
+        { businessId, comment }
+      );
+      return response.data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['treatment-note', noteId, businessId] });
+      queryClient.invalidateQueries({ queryKey: ['treatment-notes', businessId] });
     },
   });
 }

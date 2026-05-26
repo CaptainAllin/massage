@@ -4,6 +4,7 @@ import { apiClient } from '../api-client';
 export interface ReportFilters {
   startDate: Date;
   endDate: Date;
+  businessId?: string;
   therapistId?: string;
   serviceType?: string;
   clientId?: string;
@@ -28,6 +29,12 @@ export interface RevenueReportData {
     amount: number;
     count: number;
   }>;
+  monthlyRevenue: Array<{
+    month: string;
+    revenue: number;
+    prevYearRevenue: number;
+  }>;
+  averageInvoiceValue: number;
   tipsTotal: number;
   refundsTotal: number;
 }
@@ -35,6 +42,12 @@ export interface RevenueReportData {
 export interface ClientReportData {
   newClients: number;
   returningClients: number;
+  retentionRate: number;
+  monthlyNewVsReturning: Array<{
+    month: string;
+    newClients: number;
+    returningClients: number;
+  }>;
   clientLifetimeValue: Array<{
     clientId: string;
     clientName: string;
@@ -81,7 +94,44 @@ export interface AppointmentReportData {
     dayOfWeek: number;
     count: number;
   }>;
+  noShowByTherapist: Array<{
+    therapistId: string;
+    therapistName: string;
+    total: number;
+    noShows: number;
+    cancellations: number;
+    completed: number;
+    noShowRate: number;
+    cancellationRate: number;
+  }>;
+  avgDurationByServiceType: Array<{
+    serviceType: string;
+    avgDuration: number;
+    count: number;
+  }>;
   averageDuration: number;
+}
+
+export interface InvoiceReportData {
+  ageing: {
+    current: { count: number; amount: number };
+    days30: { count: number; amount: number };
+    days60: { count: number; amount: number };
+    days90: { count: number; amount: number };
+    over90: { count: number; amount: number };
+  };
+  outstandingByClient: Array<{
+    clientName: string;
+    amount: number;
+    daysPastDue: number;
+    status: string;
+  }>;
+  totalOutstanding: number;
+  avgInvoiceValue: number;
+  avgInvoiceValueTrend: Array<{
+    month: string;
+    avgValue: number;
+  }>;
 }
 
 export interface FinancialSummaryReportData {
@@ -97,7 +147,7 @@ export interface FinancialSummaryReportData {
   chargebacks: number;
 }
 
-export type ReportType = 'REVENUE' | 'CLIENTS' | 'THERAPISTS' | 'APPOINTMENTS' | 'FINANCIAL_SUMMARY';
+export type ReportType = 'REVENUE' | 'CLIENTS' | 'THERAPISTS' | 'APPOINTMENTS' | 'FINANCIAL_SUMMARY' | 'INVOICE_AGEING';
 export type ReportSchedule = 'DAILY' | 'WEEKLY' | 'MONTHLY';
 
 export interface SavedReport {
@@ -124,6 +174,7 @@ export function useReports() {
       const params = new URLSearchParams({
         startDate: filters.startDate.toISOString(),
         endDate: filters.endDate.toISOString(),
+        ...(filters.businessId && { businessId: filters.businessId }),
         ...(filters.therapistId && { therapistId: filters.therapistId }),
         ...(filters.serviceType && { serviceType: filters.serviceType }),
       });
@@ -144,6 +195,7 @@ export function useReports() {
       const params = new URLSearchParams({
         startDate: filters.startDate.toISOString(),
         endDate: filters.endDate.toISOString(),
+        ...(filters.businessId && { businessId: filters.businessId }),
       });
       const response = await apiClient.get(`/reports/clients?${params}`);
       return response.data;
@@ -162,6 +214,7 @@ export function useReports() {
       const params = new URLSearchParams({
         startDate: filters.startDate.toISOString(),
         endDate: filters.endDate.toISOString(),
+        ...(filters.businessId && { businessId: filters.businessId }),
         ...(filters.therapistId && { therapistId: filters.therapistId }),
       });
       const response = await apiClient.get(`/reports/therapists?${params}`);
@@ -181,6 +234,7 @@ export function useReports() {
       const params = new URLSearchParams({
         startDate: filters.startDate.toISOString(),
         endDate: filters.endDate.toISOString(),
+        ...(filters.businessId && { businessId: filters.businessId }),
         ...(filters.therapistId && { therapistId: filters.therapistId }),
         ...(filters.serviceType && { serviceType: filters.serviceType }),
       });
@@ -201,11 +255,29 @@ export function useReports() {
       const params = new URLSearchParams({
         startDate: filters.startDate.toISOString(),
         endDate: filters.endDate.toISOString(),
+        ...(filters.businessId && { businessId: filters.businessId }),
       });
       const response = await apiClient.get(`/reports/financial-summary?${params}`);
       return response.data;
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to generate financial summary report');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const generateInvoiceReport = async (filters: ReportFilters): Promise<InvoiceReportData> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const params = new URLSearchParams({
+        ...(filters.businessId && { businessId: filters.businessId }),
+      });
+      const response = await apiClient.get(`/reports/invoices?${params}`);
+      return response.data;
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to generate invoice report');
       throw err;
     } finally {
       setLoading(false);
@@ -330,6 +402,7 @@ export function useReports() {
     generateTherapistReport,
     generateAppointmentReport,
     generateFinancialSummaryReport,
+    generateInvoiceReport,
     getSavedReports,
     saveReport,
     updateSavedReport,

@@ -1,10 +1,14 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useParams } from 'next/navigation';
-import { CheckCircle, AlertCircle, Calendar, Clock, ChevronLeft, Loader2, Users, User } from 'lucide-react';
+import { useParams, useSearchParams } from 'next/navigation';
+import { CheckCircle, AlertCircle, Calendar, Clock, ChevronLeft, Loader2, Users, User, RefreshCw, Lock, Mail, Phone } from 'lucide-react';
+
+const RECURRING_DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 // ── Types ────────────────────────────────────────────────────────────────────
+
+type BookingAccessMode = 'PUBLIC' | 'EXISTING_CLIENTS_ONLY' | 'INVITE_ONLY';
 
 interface Business {
   id: string;
@@ -12,6 +16,7 @@ interface Business {
   logo: string | null;
   primaryColor: string | null;
   secondaryColor: string | null;
+  bookingMode: BookingAccessMode;
 }
 
 interface Therapist {
@@ -90,7 +95,9 @@ function toLocalDateString(date: Date) {
 
 export default function PublicBookingPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const businessId = params.businessId as string;
+  const inviteToken = searchParams.get('token');
 
   const [step, setStep] = useState(1); // 1=therapist, 2=service, 3=datetime, 4=contact, 5=confirm
   const [business, setBusiness] = useState<Business | null>(null);
@@ -99,6 +106,13 @@ export default function PublicBookingPage() {
   const [error, setError] = useState<string | null>(null);
   const [booked, setBooked] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  // Access control state
+  const [accessGranted, setAccessGranted] = useState(false);
+  const [accessLoading, setAccessLoading] = useState(false);
+  const [accessError, setAccessError] = useState<string | null>(null);
+  const [gateEmail, setGateEmail] = useState('');
+  const [gatePhone, setGatePhone] = useState('');
 
   // Selections
   const [selectedTherapist, setSelectedTherapist] = useState<Therapist | null>(null);
@@ -116,6 +130,9 @@ export default function PublicBookingPage() {
   const [phone, setPhone] = useState('');
   const [notes, setNotes] = useState('');
 
+  // Invite token (stored for submission)
+  const [activeInviteToken, setActiveInviteToken] = useState<string | null>(null);
+
   const [confirmedBooking, setConfirmedBooking] = useState<{ startTime: string; therapist: { firstName: string | null; lastName: string | null } } | null>(null);
 
   // Group session state
@@ -129,21 +146,50 @@ export default function PublicBookingPage() {
   const [waitlistStep, setWaitlistStep] = useState<'idle' | 'form' | 'success'>('idle');
   const [waitlistSubmitting, setWaitlistSubmitting] = useState(false);
 
-  // Load business + therapists
+  // Recurring booking state
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurringFrequency, setRecurringFrequency] = useState<'WEEKLY' | 'FORTNIGHTLY' | 'MONTHLY'>('WEEKLY');
+  const [recurringDays, setRecurringDays] = useState<number[]>([]);
+  const [recurringEndCondition, setRecurringEndCondition] = useState<'occurrences' | 'date'>('occurrences');
+  const [recurringOccurrences, setRecurringOccurrences] = useState('8');
+  const [recurringEndDate, setRecurringEndDate] = useState('');
+  const [recurringPreviewDates, setRecurringPreviewDates] = useState<string[]>([]);
+
+  // Load business + therapists, then handle access control
   useEffect(() => {
     fetch(`/api/public/booking/${businessId}`)
       .then((r) => r.json())
-      .then((d) => {
-        if (d.success) {
-          setBusiness(d.data.business);
-          setTherapists(d.data.therapists);
-        } else {
-          setError('This booking page is unavailable.');
+      .then(async (d) => {
+        if (!d.success) { setError('This booking page is unavailable.'); return; }
+        const biz: Business = d.data.business;
+        setBusiness(biz);
+        setTherapists(d.data.therapists);
+
+        if (biz.bookingMode === 'PUBLIC') {
+          setAccessGranted(true);
+        } else if (biz.bookingMode === 'INVITE_ONLY') {
+          if (inviteToken) {
+            // Validate token and pre-fill client details
+            const vr = await fetch(`/api/public/booking/${businessId}/verify-invite?token=${inviteToken}`);
+            const vd = await vr.json();
+            if (vd.success && vd.data.valid) {
+              setFirstName(vd.data.client.firstName || '');
+              setLastName(vd.data.client.lastName || '');
+              setEmail(vd.data.client.email || '');
+              setPhone(vd.data.client.phone || '');
+              setActiveInviteToken(inviteToken);
+              setAccessGranted(true);
+            } else {
+              setError(vd.message || 'This invitation is invalid or has expired.');
+            }
+          }
+          // else: no token → gate will show the "contact us" message
         }
+        // EXISTING_CLIENTS_ONLY: gate stays, user enters email/phone manually
       })
       .catch(() => setError('Failed to load. Please try again.'))
       .finally(() => setLoading(false));
-  }, [businessId]);
+  }, [businessId, inviteToken]);
 
   // Load group sessions when mode switches to group
   useEffect(() => {
@@ -218,32 +264,112 @@ export default function PublicBookingPage() {
     }
   }, [selectedTherapist, selectedDate, selectedDuration, loadSlots]);
 
+  // Load recurring preview dates
+  useEffect(() => {
+    if (!isRecurring || !selectedDate || !selectedSlot) return;
+    if (recurringEndCondition === 'date' && !recurringEndDate) return;
+    if (recurringEndCondition === 'occurrences' && (!recurringOccurrences || parseInt(recurringOccurrences) < 1)) return;
+
+    const slotTime = new Date(selectedSlot.startTime).toTimeString().slice(0, 5);
+    const body: any = {
+      frequency: recurringFrequency,
+      interval: 1,
+      startDate: toLocalDateString(selectedDate),
+      startTime: slotTime,
+      ...(recurringEndCondition === 'occurrences'
+        ? { occurrences: parseInt(recurringOccurrences) }
+        : { endDate: recurringEndDate }),
+    };
+    if ((recurringFrequency === 'WEEKLY' || recurringFrequency === 'FORTNIGHTLY') && recurringDays.length > 0) {
+      body.daysOfWeek = recurringDays;
+    }
+
+    const timeout = setTimeout(async () => {
+      try {
+        const r = await fetch('/api/recurring-appointments/preview', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const d = await r.json();
+        if (d.success) setRecurringPreviewDates(d.data.dates.slice(0, 10));
+      } catch {
+        // silently fail
+      }
+    }, 400);
+
+    return () => clearTimeout(timeout);
+  }, [isRecurring, recurringFrequency, recurringDays, recurringEndCondition, recurringOccurrences, recurringEndDate, selectedDate, selectedSlot]);
+
   const handleBook = async () => {
     if (!selectedTherapist || !selectedSlot || !firstName || !lastName) return;
     setSubmitting(true);
     try {
-      const r = await fetch(`/api/public/booking/${businessId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      if (isRecurring) {
+        const selectedDate2 = selectedDate ? toLocalDateString(selectedDate) : '';
+        const slotTime = selectedSlot.startTime
+          ? new Date(selectedSlot.startTime).toTimeString().slice(0, 5)
+          : '09:00';
+        const body: any = {
           therapistId: selectedTherapist.id,
-          startTime: selectedSlot.startTime,
+          startDate: selectedDate2,
+          startTime: slotTime,
           duration: selectedDuration,
           serviceType: selectedService,
+          frequency: recurringFrequency,
           clientFirstName: firstName,
           clientLastName: lastName,
           clientEmail: email || undefined,
           clientPhone: phone || undefined,
           notes: notes || undefined,
-        }),
-      });
-      const d = await r.json();
-      if (d.success) {
-        setConfirmedBooking(d.data);
-        setBooked(true);
+          ...(recurringEndCondition === 'occurrences'
+            ? { occurrences: parseInt(recurringOccurrences) }
+            : { endDate: recurringEndDate }),
+        };
+        if (recurringFrequency === 'WEEKLY' || recurringFrequency === 'FORTNIGHTLY') {
+          if (recurringDays.length > 0) body.daysOfWeek = recurringDays;
+        }
+        const r = await fetch(`/api/public/booking/${businessId}/recurring`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const d = await r.json();
+        if (d.success) {
+          setConfirmedBooking({
+            startTime: d.data.firstAppointment.startTime,
+            therapist: d.data.firstAppointment.therapist,
+          });
+          setBooked(true);
+        } else {
+          setError(d.error || d.message || 'Booking failed. Please try again.');
+          setStep(3);
+        }
       } else {
-        setError(d.error || 'Booking failed. Please try again.');
-        setStep(3); // go back to time selection
+        const r = await fetch(`/api/public/booking/${businessId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            therapistId: selectedTherapist.id,
+            startTime: selectedSlot.startTime,
+            duration: selectedDuration,
+            serviceType: selectedService,
+            clientFirstName: firstName,
+            clientLastName: lastName,
+            clientEmail: email || undefined,
+            clientPhone: phone || undefined,
+            notes: notes || undefined,
+            inviteToken: activeInviteToken || undefined,
+          }),
+        });
+        const d = await r.json();
+        if (d.success) {
+          setConfirmedBooking(d.data);
+          setBooked(true);
+        } else {
+          setError(d.error || 'Booking failed. Please try again.');
+          setStep(3);
+        }
       }
     } catch {
       setError('Network error. Please try again.');
@@ -318,18 +444,130 @@ export default function PublicBookingPage() {
           >
             <CheckCircle className="h-8 w-8" style={{ color: accent }} />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Booking Confirmed!</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            {isRecurring ? 'Recurring Series Booked!' : 'Booking Confirmed!'}
+          </h2>
           <p className="text-gray-500 mb-6">
-            Your appointment has been booked at {business?.name}.
+            {isRecurring
+              ? `Your recurring ${recurringFrequency.toLowerCase()} appointments at ${business?.name} have been scheduled.`
+              : `Your appointment has been booked at ${business?.name}.`}
             {email && ' A confirmation email is on its way.'}
           </p>
           <div className="bg-gray-50 rounded-xl p-5 text-left text-sm space-y-2 mb-6">
             <p><span className="text-gray-400">Service</span><span className="float-right font-medium text-gray-800">{selectedService}</span></p>
             <p><span className="text-gray-400">Duration</span><span className="float-right font-medium text-gray-800">{selectedDuration} min</span></p>
-            <p><span className="text-gray-400">Date & Time</span><span className="float-right font-medium text-gray-800">{formatTime(confirmedBooking.startTime)}, {formatDateLong(new Date(confirmedBooking.startTime))}</span></p>
+            {isRecurring ? (
+              <>
+                <p><span className="text-gray-400">Repeats</span><span className="float-right font-medium text-gray-800 capitalize">{recurringFrequency.toLowerCase()}</span></p>
+                <p><span className="text-gray-400">First session</span><span className="float-right font-medium text-gray-800">{formatTime(confirmedBooking.startTime)}, {formatDateLong(new Date(confirmedBooking.startTime))}</span></p>
+              </>
+            ) : (
+              <p><span className="text-gray-400">Date & Time</span><span className="float-right font-medium text-gray-800">{formatTime(confirmedBooking.startTime)}, {formatDateLong(new Date(confirmedBooking.startTime))}</span></p>
+            )}
             <p><span className="text-gray-400">Therapist</span><span className="float-right font-medium text-gray-800">{confirmedBooking.therapist.firstName} {confirmedBooking.therapist.lastName}</span></p>
           </div>
           <p className="text-xs text-gray-400">To cancel or reschedule, contact {business?.name} directly.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Access gate for EXISTING_CLIENTS_ONLY ────────────────────────────────
+
+  const handleVerifyClient = async () => {
+    if (!gateEmail && !gatePhone) return;
+    setAccessLoading(true);
+    setAccessError(null);
+    try {
+      const r = await fetch(`/api/public/booking/${businessId}/verify-client`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: gateEmail || undefined, phone: gatePhone || undefined }),
+      });
+      const d = await r.json();
+      if (d.success && d.data.exists) {
+        setEmail(gateEmail);
+        setPhone(gatePhone);
+        setAccessGranted(true);
+      } else {
+        setAccessError('We don\'t have a record matching those details. Please contact us to register as a new client.');
+      }
+    } catch {
+      setAccessError('Verification failed. Please try again.');
+    } finally {
+      setAccessLoading(false);
+    }
+  };
+
+  if (!accessGranted && business) {
+    const isInviteOnly = business.bookingMode === 'INVITE_ONLY';
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+          {/* Header */}
+          {business.logo && (
+            <img src={business.logo} alt={business.name} className="h-10 mx-auto mb-4 object-contain" />
+          )}
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <Lock className="h-5 w-5" style={{ color: accent }} />
+            <h2 className="text-xl font-semibold text-gray-800">
+              {isInviteOnly ? 'Invitation Required' : 'Existing Clients Only'}
+            </h2>
+          </div>
+          {isInviteOnly ? (
+            <div className="text-center">
+              <p className="text-gray-500 text-sm mt-2 mb-6">
+                Online booking at <strong>{business.name}</strong> is by invitation only.
+              </p>
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
+                This booking link is invalid or has expired. Please contact <strong>{business.name}</strong> to receive a valid invitation.
+              </div>
+            </div>
+          ) : (
+            <div>
+              <p className="text-gray-500 text-sm mt-2 mb-6 text-center">
+                Online booking at <strong>{business.name}</strong> is available to existing clients only. Enter your email or phone to continue.
+              </p>
+              <div className="space-y-3">
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="email"
+                    placeholder="Email address"
+                    value={gateEmail}
+                    onChange={(e) => setGateEmail(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:border-transparent"
+                    style={{ '--tw-ring-color': accent } as any}
+                  />
+                </div>
+                <div className="text-center text-xs text-gray-400">or</div>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="tel"
+                    placeholder="Phone number"
+                    value={gatePhone}
+                    onChange={(e) => setGatePhone(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:border-transparent"
+                    style={{ '--tw-ring-color': accent } as any}
+                  />
+                </div>
+                {accessError && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+                    {accessError}
+                  </div>
+                )}
+                <button
+                  onClick={handleVerifyClient}
+                  disabled={accessLoading || (!gateEmail && !gatePhone)}
+                  className="w-full py-2.5 rounded-lg text-white text-sm font-medium transition-opacity disabled:opacity-50"
+                  style={{ backgroundColor: accent }}
+                >
+                  {accessLoading ? <Loader2 className="h-4 w-4 animate-spin mx-auto" /> : 'Continue'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -785,6 +1023,149 @@ export default function PublicBookingPage() {
               </div>
             )}
 
+            {/* Recurring option (shown after slot selected) */}
+            {selectedSlot && (
+              <div className="bg-white rounded-xl border border-gray-100 p-4 mb-4 space-y-4">
+                <label className="flex items-center justify-between gap-3 cursor-pointer">
+                  <div className="flex items-center gap-2">
+                    <RefreshCw className="h-4 w-4" style={{ color: isRecurring ? accent : '#9ca3af' }} />
+                    <div>
+                      <p className="text-sm font-semibold text-gray-800">Book as recurring series</p>
+                      <p className="text-xs text-gray-400">Repeat this appointment regularly</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsRecurring((v) => !v);
+                      if (!isRecurring && selectedDate) {
+                        setRecurringDays([selectedDate.getDay()]);
+                      }
+                    }}
+                    className="relative w-10 h-5 rounded-full transition-colors flex-shrink-0"
+                    style={{ backgroundColor: isRecurring ? accent : '#e5e7eb' }}
+                  >
+                    <div
+                      className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${isRecurring ? 'translate-x-5' : 'translate-x-0.5'}`}
+                    />
+                  </button>
+                </label>
+
+                {isRecurring && (
+                  <div className="space-y-4 pt-2 border-t border-gray-50">
+                    {/* Frequency */}
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Frequency</label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {(['WEEKLY', 'FORTNIGHTLY', 'MONTHLY'] as const).map((f) => (
+                          <button
+                            key={f}
+                            type="button"
+                            onClick={() => setRecurringFrequency(f)}
+                            className="py-2 rounded-lg text-xs font-medium border transition-all"
+                            style={{
+                              borderColor: recurringFrequency === f ? accent : '#e5e7eb',
+                              backgroundColor: recurringFrequency === f ? `${accent}15` : 'white',
+                              color: recurringFrequency === f ? '#1a1a1a' : '#6b7280',
+                            }}
+                          >
+                            {f === 'FORTNIGHTLY' ? 'Fortnightly' : f.charAt(0) + f.slice(1).toLowerCase()}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Day picker for weekly/fortnightly */}
+                    {(recurringFrequency === 'WEEKLY' || recurringFrequency === 'FORTNIGHTLY') && (
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Day(s)</label>
+                        <div className="flex gap-1.5">
+                          {RECURRING_DAY_LABELS.map((label, dow) => (
+                            <button
+                              key={dow}
+                              type="button"
+                              onClick={() => setRecurringDays((prev) =>
+                                prev.includes(dow) ? prev.filter((d) => d !== dow) : [...prev, dow]
+                              )}
+                              className="w-9 h-9 rounded-full text-xs font-medium transition-colors"
+                              style={{
+                                backgroundColor: recurringDays.includes(dow) ? accent : '#f3f4f6',
+                                color: recurringDays.includes(dow) ? 'white' : '#374151',
+                              }}
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* End condition */}
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Ends</label>
+                      <div className="space-y-2">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="publicEndCondition"
+                            checked={recurringEndCondition === 'occurrences'}
+                            onChange={() => setRecurringEndCondition('occurrences')}
+                          />
+                          <span className="text-sm text-gray-700">After</span>
+                          <input
+                            type="number"
+                            min="1"
+                            max="52"
+                            value={recurringOccurrences}
+                            onChange={(e) => setRecurringOccurrences(e.target.value)}
+                            disabled={recurringEndCondition !== 'occurrences'}
+                            className="w-16 border border-gray-200 rounded px-2 py-1 text-sm text-center focus:outline-none focus:border-gray-400"
+                          />
+                          <span className="text-sm text-gray-700">sessions</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="publicEndCondition"
+                            checked={recurringEndCondition === 'date'}
+                            onChange={() => setRecurringEndCondition('date')}
+                          />
+                          <span className="text-sm text-gray-700">On date</span>
+                          <input
+                            type="date"
+                            value={recurringEndDate}
+                            onChange={(e) => setRecurringEndDate(e.target.value)}
+                            disabled={recurringEndCondition !== 'date'}
+                            className="flex-1 border border-gray-200 rounded px-2 py-1 text-sm focus:outline-none focus:border-gray-400"
+                          />
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Schedule preview */}
+                    {recurringPreviewDates.length > 0 && (
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                          Your schedule ({recurringPreviewDates.length}+ sessions)
+                        </label>
+                        <div className="space-y-1 max-h-32 overflow-y-auto">
+                          {recurringPreviewDates.slice(0, 8).map((iso, i) => (
+                            <div key={i} className="flex items-center gap-2 text-xs text-gray-600">
+                              <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: accent }} />
+                              {new Date(iso).toLocaleDateString('en-AU', {
+                                weekday: 'short', day: 'numeric', month: 'short',
+                              })}{' '}
+                              at {new Date(iso).toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             <button
               disabled={!selectedDate || !selectedSlot}
               onClick={() => setStep(4)}
@@ -901,10 +1282,25 @@ export default function PublicBookingPage() {
                 <p className="text-gray-800 font-medium text-right">{selectedService}</p>
                 <p className="text-gray-400">Duration</p>
                 <p className="text-gray-800 font-medium text-right">{selectedDuration} minutes</p>
-                <p className="text-gray-400">Date</p>
-                <p className="text-gray-800 font-medium text-right">{selectedDate ? formatDateLong(selectedDate) : ''}</p>
-                <p className="text-gray-400">Time</p>
-                <p className="text-gray-800 font-medium text-right">{selectedSlot ? formatTime(selectedSlot.startTime) : ''}</p>
+                {isRecurring ? (
+                  <>
+                    <p className="text-gray-400">Repeats</p>
+                    <p className="text-gray-800 font-medium text-right capitalize">{recurringFrequency.toLowerCase()}</p>
+                    <p className="text-gray-400">Starting</p>
+                    <p className="text-gray-800 font-medium text-right">{selectedDate ? formatDateLong(selectedDate) : ''}</p>
+                    <p className="text-gray-400">Sessions</p>
+                    <p className="text-gray-800 font-medium text-right">
+                      {recurringEndCondition === 'occurrences' ? `${recurringOccurrences} sessions` : `Until ${recurringEndDate}`}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-gray-400">Date</p>
+                    <p className="text-gray-800 font-medium text-right">{selectedDate ? formatDateLong(selectedDate) : ''}</p>
+                    <p className="text-gray-400">Time</p>
+                    <p className="text-gray-800 font-medium text-right">{selectedSlot ? formatTime(selectedSlot.startTime) : ''}</p>
+                  </>
+                )}
               </div>
 
               <div className="pt-3 border-t border-gray-50 grid grid-cols-2 gap-y-2">

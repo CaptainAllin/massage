@@ -21,6 +21,8 @@ export interface User {
 }
 
 // Business Types
+export type BookingMode = 'PUBLIC' | 'EXISTING_CLIENTS_ONLY' | 'INVITE_ONLY';
+
 export interface Business {
   id: string;
   name: string;
@@ -37,9 +39,20 @@ export interface Business {
   secondaryColor: string | null;
   subscriptionTier: string | null;
   subscriptionStatus: string | null;
+  bookingMode: BookingMode;
   ownerId: string;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface BookingInvite {
+  id: string;
+  businessId: string;
+  clientId: string;
+  token: string;
+  expiresAt: Date | null;
+  usedAt: Date | null;
+  createdAt: Date;
 }
 
 // Therapist Types
@@ -115,6 +128,7 @@ export interface Appointment {
   isVirtual: boolean;
   isGroup: boolean;
   capacity: number | null;
+  recurringSeriesId: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -153,12 +167,15 @@ export interface IntakeForm {
 }
 
 // Treatment Note Types
+export type TreatmentNoteStatus = 'DRAFT' | 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED';
+
 export interface TreatmentNote {
   id: string;
   businessId: string;
   appointmentId: string;
   clientId: string;
   therapistId: string;
+  status: TreatmentNoteStatus;
   subjectiveFindings: string | null;
   objectiveFindings: string | null;
   assessment: string | null;
@@ -170,6 +187,10 @@ export interface TreatmentNote {
   aiSummary: string | null;
   noteTemplateId: string | null;
   noteTemplateName: string | null;
+  reviewerId: string | null;
+  reviewComment: string | null;
+  reviewedAt: Date | null;
+  submittedForReviewAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }

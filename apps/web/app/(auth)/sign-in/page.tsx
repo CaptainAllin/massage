@@ -3,11 +3,15 @@
 import { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { signInWithPasskey } from '@/lib/supabase/passkeys';
+
+const isWebAuthnSupported = typeof window !== 'undefined' && 'credentials' in navigator && typeof PublicKeyCredential !== 'undefined';
 
 function SignInForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [passkeyLoading, setPasskeyLoading] = useState(false);
   const [error, setError] = useState('');
 
   const supabase = createClient();
@@ -24,6 +28,17 @@ function SignInForm() {
       setLoading(false);
     }
     // Success — let AuthProvider's onStateChange trigger navigation
+  };
+
+  const handlePasskeySignIn = async () => {
+    setPasskeyLoading(true);
+    setError('');
+    try {
+      await signInWithPasskey();
+    } catch (e: any) {
+      setError(e.message || 'Passkey sign-in failed. Please use your password instead.');
+      setPasskeyLoading(false);
+    }
   };
 
   return (
@@ -65,6 +80,43 @@ function SignInForm() {
             >
               {error}
             </div>
+          )}
+
+          {/* Passkey sign-in */}
+          {isWebAuthnSupported && (
+            <>
+              <button
+                type="button"
+                onClick={handlePasskeySignIn}
+                disabled={passkeyLoading}
+                className="w-full flex items-center justify-center gap-2.5 py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-50 mb-4"
+                style={{
+                  background: '#F4F0FB',
+                  color: '#5D4AA8',
+                  border: '1px solid rgba(93,74,168,0.2)',
+                }}
+              >
+                {passkeyLoading ? (
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="32" strokeLinecap="round" />
+                  </svg>
+                ) : (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="8" cy="8" r="4" />
+                    <path d="M16 20v-2a4 4 0 0 0-4-4H4a4 4 0 0 0-4 4v2" />
+                    <line x1="19" y1="8" x2="19" y2="14" />
+                    <line x1="22" y1="11" x2="16" y2="11" />
+                  </svg>
+                )}
+                {passkeyLoading ? 'Authenticating…' : 'Sign in with passkey'}
+              </button>
+
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex-1 h-px" style={{ background: '#EFE9F2' }} />
+                <span className="text-xs" style={{ color: '#B0A8C0' }}>or</span>
+                <div className="flex-1 h-px" style={{ background: '#EFE9F2' }} />
+              </div>
+            </>
           )}
 
           <form className="space-y-4" onSubmit={handleSignIn}>

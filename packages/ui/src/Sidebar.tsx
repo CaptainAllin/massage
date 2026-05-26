@@ -29,6 +29,8 @@ import {
   LogOut,
   HelpCircle,
   Sparkles,
+  MailCheck,
+  CheckSquare,
 } from 'lucide-react';
 
 export interface MenuItem {
@@ -92,6 +94,18 @@ const defaultMenuGroups: MenuGroup[] = [
         icon: MessageSquare,
         badge: 3,
         allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER', 'RECEPTIONIST'],
+      },
+      {
+        label: 'Delivery Reports',
+        href: '/communications/delivery-reports',
+        icon: MailCheck,
+        allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER', 'RECEPTIONIST'],
+      },
+      {
+        label: 'Tasks',
+        href: '/tasks',
+        icon: CheckSquare,
+        allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER', 'RECEPTIONIST', 'THERAPIST'],
       },
     ],
   },

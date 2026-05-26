@@ -5,8 +5,11 @@ import { Modal, Button, Input, Select, Textarea } from '@massage/ui';
 import { Client, Therapist } from '@massage/types';
 import { useCreateAppointment, useCheckAvailability } from '@/lib/hooks/use-appointments';
 import { useOnboardingContext } from '@/components/onboarding/OnboardingProvider';
+import { useRooms } from '@/lib/hooks/use-rooms';
 import { format } from 'date-fns';
-import { Users, User, Plus, X } from 'lucide-react';
+import { Users, User, Plus, X, RefreshCw, Calendar } from 'lucide-react';
+
+const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 interface AddAppointmentModalProps {
   isOpen: boolean;
@@ -41,6 +44,7 @@ export function AddAppointmentModal({
   const [notes, setNotes] = useState('');
   const [isVirtual, setIsVirtual] = useState(false);
   const [sendReminder, setSendReminder] = useState(true);
+  const [roomId, setRoomId] = useState('');
 
   // Group session state
   const [isGroup, setIsGroup] = useState(false);
@@ -48,8 +52,19 @@ export function AddAppointmentModal({
   const [groupClientIds, setGroupClientIds] = useState<string[]>([]);
   const [addClientSearch, setAddClientSearch] = useState('');
 
+  // Recurring state
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [frequency, setFrequency] = useState<'WEEKLY' | 'FORTNIGHTLY' | 'MONTHLY' | 'DAILY'>('WEEKLY');
+  const [selectedDays, setSelectedDays] = useState<number[]>([]);
+  const [endCondition, setEndCondition] = useState<'occurrences' | 'date'>('occurrences');
+  const [occurrences, setOccurrences] = useState('8');
+  const [endDate, setEndDate] = useState('');
+  const [previewDates, setPreviewDates] = useState<string[]>([]);
+  const [loadingPreview, setLoadingPreview] = useState(false);
+
   const createAppointment = useCreateAppointment(businessId);
   const { checkedItems, toggleItem } = useOnboardingContext();
+  const { data: rooms = [] } = useRooms(businessId, true);
 
   const startTime = date && time ? new Date(`${date}T${time}`) : null;
   const endTime =
@@ -58,12 +73,12 @@ export function AddAppointmentModal({
       : null;
 
   const { data: availabilityCheck } = useCheckAvailability(
-    therapistId,
+    !isRecurring ? therapistId : '',
     startTime,
     endTime
   );
 
-  const hasConflict = availabilityCheck && !availabilityCheck.available;
+  const hasConflict = !isRecurring && availabilityCheck && !availabilityCheck.available;
 
   const filteredClients = addClientSearch
     ? clients.filter((c) => {
@@ -73,9 +88,7 @@ export function AddAppointmentModal({
     : [];
 
   const handleAddGroupClient = (id: string) => {
-    if (!groupClientIds.includes(id)) {
-      setGroupClientIds((prev) => [...prev, id]);
-    }
+    if (!groupClientIds.includes(id)) setGroupClientIds((prev) => [...prev, id]);
     setAddClientSearch('');
   };
 
@@ -87,6 +100,56 @@ export function AddAppointmentModal({
     const c = clients.find((cl) => cl.id === id);
     return c ? `${c.firstName} ${c.lastName}` : id;
   };
+
+  const toggleDay = (dow: number) => {
+    setSelectedDays((prev) =>
+      prev.includes(dow) ? prev.filter((d) => d !== dow) : [...prev, dow]
+    );
+  };
+
+  // Auto-select the day of week from the chosen date when frequency changes to weekly/fortnightly
+  useEffect(() => {
+    if ((frequency === 'WEEKLY' || frequency === 'FORTNIGHTLY') && date) {
+      const dow = new Date(date + 'T12:00:00').getDay();
+      setSelectedDays([dow]);
+    }
+  }, [frequency]);
+
+  // Preview recurring dates
+  useEffect(() => {
+    if (!isRecurring || !date || !time) return;
+    if (endCondition === 'date' && !endDate) return;
+    if (endCondition === 'occurrences' && (!occurrences || parseInt(occurrences) < 1)) return;
+
+    const timeout = setTimeout(async () => {
+      setLoadingPreview(true);
+      try {
+        const body: any = {
+          frequency,
+          interval: 1,
+          startDate: date,
+          startTime: time,
+          ...(endCondition === 'occurrences' ? { occurrences: parseInt(occurrences) } : { endDate }),
+        };
+        if (frequency === 'WEEKLY' || frequency === 'FORTNIGHTLY') {
+          if (selectedDays.length > 0) body.daysOfWeek = selectedDays;
+        }
+        const r = await fetch('/api/recurring-appointments/preview', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const d = await r.json();
+        if (d.success) setPreviewDates(d.data.dates.slice(0, 10));
+      } catch {
+        // ignore preview errors
+      } finally {
+        setLoadingPreview(false);
+      }
+    }, 400);
+
+    return () => clearTimeout(timeout);
+  }, [isRecurring, frequency, selectedDays, date, time, endCondition, occurrences, endDate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,25 +169,63 @@ export function AddAppointmentModal({
       return;
     }
 
+    if (isRecurring) {
+      if ((frequency === 'WEEKLY' || frequency === 'FORTNIGHTLY') && selectedDays.length === 0) {
+        alert('Please select at least one day of the week');
+        return;
+      }
+      if (endCondition === 'date' && !endDate) {
+        alert('Please select an end date');
+        return;
+      }
+    }
+
     try {
-      await createAppointment.mutateAsync({
-        businessId: businessId!,
-        clientId: isGroup ? groupClientIds[0] : clientId,
-        therapistId,
-        startTime: `${date}T${time}`,
-        duration: parseInt(duration),
-        serviceType: serviceType || undefined,
-        price: price ? parseFloat(price) : undefined,
-        notes: notes || undefined,
-        isVirtual: isGroup ? false : isVirtual,
-        sendReminder,
-        isGroup,
-        capacity: isGroup && capacity ? parseInt(capacity) : undefined,
-        groupClientIds: isGroup ? groupClientIds : undefined,
-      } as any);
+      if (isRecurring) {
+        const body: any = {
+          businessId,
+          clientId: isGroup ? groupClientIds[0] : clientId,
+          therapistId,
+          frequency,
+          interval: 1,
+          startTime: time,
+          duration: parseInt(duration),
+          startDate: date,
+          serviceType: serviceType || undefined,
+          price: price ? parseFloat(price) : undefined,
+          notes: notes || undefined,
+          ...(endCondition === 'occurrences' ? { occurrences: parseInt(occurrences) } : { endDate }),
+        };
+        if (frequency === 'WEEKLY' || frequency === 'FORTNIGHTLY') {
+          if (selectedDays.length > 0) body.daysOfWeek = selectedDays;
+        }
+        const r = await fetch('/api/recurring-appointments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const d = await r.json();
+        if (!d.success) throw new Error(d.message || 'Failed to create recurring series');
+      } else {
+        await createAppointment.mutateAsync({
+          businessId: businessId!,
+          clientId: isGroup ? groupClientIds[0] : clientId,
+          therapistId,
+          startTime: `${date}T${time}`,
+          duration: parseInt(duration),
+          serviceType: serviceType || undefined,
+          price: price ? parseFloat(price) : undefined,
+          notes: notes || undefined,
+          isVirtual: isGroup ? false : isVirtual,
+          sendReminder,
+          isGroup,
+          capacity: isGroup && capacity ? parseInt(capacity) : undefined,
+          groupClientIds: isGroup ? groupClientIds : undefined,
+          roomId: roomId || undefined,
+        } as any);
+      }
 
       if (!checkedItems.has('book_appointment')) toggleItem('book_appointment');
-
       onClose();
       resetForm();
     } catch (error: any) {
@@ -147,6 +248,14 @@ export function AddAppointmentModal({
     setCapacity('');
     setGroupClientIds([]);
     setAddClientSearch('');
+    setIsRecurring(false);
+    setFrequency('WEEKLY');
+    setSelectedDays([]);
+    setEndCondition('occurrences');
+    setOccurrences('8');
+    setEndDate('');
+    setPreviewDates([]);
+    setRoomId('');
   };
 
   useEffect(() => {
@@ -177,6 +286,15 @@ export function AddAppointmentModal({
     { value: '90', label: '90 minutes' },
     { value: '120', label: '120 minutes' },
   ];
+
+  const frequencyOptions = [
+    { value: 'WEEKLY', label: 'Weekly' },
+    { value: 'FORTNIGHTLY', label: 'Fortnightly (every 2 weeks)' },
+    { value: 'MONTHLY', label: 'Monthly' },
+    { value: 'DAILY', label: 'Daily' },
+  ];
+
+  const isPending = createAppointment.isPending;
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Schedule Appointment" size="lg">
@@ -247,7 +365,6 @@ export function AddAppointmentModal({
               )}
             </div>
 
-            {/* Selected clients */}
             {groupClientIds.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {groupClientIds.map((id) => (
@@ -257,11 +374,7 @@ export function AddAppointmentModal({
                     style={{ background: '#EFE9F2', color: '#5D4AA8' }}
                   >
                     <span>{getClientName(id)}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveGroupClient(id)}
-                      className="hover:opacity-70"
-                    >
+                    <button type="button" onClick={() => handleRemoveGroupClient(id)} className="hover:opacity-70">
                       <X size={12} />
                     </button>
                   </div>
@@ -269,7 +382,6 @@ export function AddAppointmentModal({
               </div>
             )}
 
-            {/* Client search / add */}
             <div className="relative">
               <Input
                 type="text"
@@ -292,11 +404,7 @@ export function AddAppointmentModal({
                       <span className="flex items-center gap-2">
                         <Plus size={14} style={{ color: '#5D4AA8' }} />
                         {c.firstName} {c.lastName}
-                        {c.email && (
-                          <span style={{ color: '#7A7090' }} className="text-xs">
-                            {c.email}
-                          </span>
-                        )}
+                        {c.email && <span style={{ color: '#7A7090' }} className="text-xs">{c.email}</span>}
                       </span>
                     </button>
                   ))}
@@ -304,7 +412,6 @@ export function AddAppointmentModal({
               )}
             </div>
 
-            {/* Capacity */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Max capacity (optional)
@@ -338,7 +445,7 @@ export function AddAppointmentModal({
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Date <span className="text-red-500">*</span>
+              {isRecurring ? 'Start Date' : 'Date'} <span className="text-red-500">*</span>
             </label>
             <Input
               type="date"
@@ -373,7 +480,7 @@ export function AddAppointmentModal({
           />
         </div>
 
-        {/* Conflict Warning */}
+        {/* Conflict Warning (single appointments only) */}
         {hasConflict && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-3">
             <p className="text-sm text-red-800 font-medium">
@@ -390,9 +497,7 @@ export function AddAppointmentModal({
         {/* Service Type and Price */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Service Type
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Service Type</label>
             <Input
               type="text"
               placeholder="e.g., Yoga Class"
@@ -414,11 +519,24 @@ export function AddAppointmentModal({
           </div>
         </div>
 
+        {/* Room */}
+        {(rooms as any[]).length > 0 && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Room (optional)</label>
+            <Select
+              value={roomId}
+              onChange={(e) => setRoomId(e.target.value)}
+              options={[
+                { value: '', label: 'No room assigned' },
+                ...(rooms as any[]).map((r: any) => ({ value: r.id, label: r.name })),
+              ]}
+            />
+          </div>
+        )}
+
         {/* Notes */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Notes
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
           <Textarea
             placeholder="Additional notes or instructions..."
             value={notes}
@@ -427,46 +545,187 @@ export function AddAppointmentModal({
           />
         </div>
 
-        {/* Toggles: reminder + virtual (only for individual) */}
+        {/* Toggles */}
         <div
           className="rounded-xl p-3 space-y-3"
           style={{ background: '#FAFAFA', border: '1px solid #EFE9F2' }}
         >
+          {/* Recurring Toggle */}
           <label className="flex items-center justify-between gap-3 cursor-pointer">
-            <div>
-              <p className="text-sm font-medium" style={{ color: '#1E1830' }}>Send reminder on booking</p>
-              <p className="text-xs mt-0.5" style={{ color: '#7A7090' }}>Notify the client as soon as this appointment is created</p>
+            <div className="flex items-center gap-2">
+              <RefreshCw size={16} style={{ color: isRecurring ? '#5D4AA8' : '#7A7090' }} />
+              <div>
+                <p className="text-sm font-medium" style={{ color: '#1E1830' }}>Repeat appointment</p>
+                <p className="text-xs mt-0.5" style={{ color: '#7A7090' }}>Book a recurring series</p>
+              </div>
             </div>
             <div
-              className={`relative w-10 h-5 rounded-full transition-colors flex-shrink-0 ${sendReminder ? 'bg-[#5D4AA8]' : 'bg-gray-200'}`}
-              onClick={() => setSendReminder(v => !v)}
+              className={`relative w-10 h-5 rounded-full transition-colors flex-shrink-0 ${isRecurring ? 'bg-[#5D4AA8]' : 'bg-gray-200'}`}
+              onClick={() => setIsRecurring((v) => !v)}
             >
               <div
-                className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${sendReminder ? 'translate-x-5' : 'translate-x-0.5'}`}
+                className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${isRecurring ? 'translate-x-5' : 'translate-x-0.5'}`}
               />
             </div>
           </label>
 
-          {!isGroup && (
+          {!isRecurring && (
             <>
               <div className="border-t" style={{ borderColor: '#EFE9F2' }} />
               <label className="flex items-center justify-between gap-3 cursor-pointer">
                 <div>
-                  <p className="text-sm font-medium" style={{ color: '#1E1830' }}>Virtual appointment</p>
-                  <p className="text-xs mt-0.5" style={{ color: '#7A7090' }}>Create a secure video consultation link</p>
+                  <p className="text-sm font-medium" style={{ color: '#1E1830' }}>Send reminder on booking</p>
+                  <p className="text-xs mt-0.5" style={{ color: '#7A7090' }}>Notify the client as soon as this appointment is created</p>
                 </div>
                 <div
-                  className={`relative w-10 h-5 rounded-full transition-colors flex-shrink-0 ${isVirtual ? 'bg-[#5D4AA8]' : 'bg-gray-200'}`}
-                  onClick={() => setIsVirtual(v => !v)}
+                  className={`relative w-10 h-5 rounded-full transition-colors flex-shrink-0 ${sendReminder ? 'bg-[#5D4AA8]' : 'bg-gray-200'}`}
+                  onClick={() => setSendReminder(v => !v)}
                 >
                   <div
-                    className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${isVirtual ? 'translate-x-5' : 'translate-x-0.5'}`}
+                    className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${sendReminder ? 'translate-x-5' : 'translate-x-0.5'}`}
                   />
                 </div>
               </label>
+
+              {!isGroup && (
+                <>
+                  <div className="border-t" style={{ borderColor: '#EFE9F2' }} />
+                  <label className="flex items-center justify-between gap-3 cursor-pointer">
+                    <div>
+                      <p className="text-sm font-medium" style={{ color: '#1E1830' }}>Virtual appointment</p>
+                      <p className="text-xs mt-0.5" style={{ color: '#7A7090' }}>Create a secure video consultation link</p>
+                    </div>
+                    <div
+                      className={`relative w-10 h-5 rounded-full transition-colors flex-shrink-0 ${isVirtual ? 'bg-[#5D4AA8]' : 'bg-gray-200'}`}
+                      onClick={() => setIsVirtual(v => !v)}
+                    >
+                      <div
+                        className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${isVirtual ? 'translate-x-5' : 'translate-x-0.5'}`}
+                      />
+                    </div>
+                  </label>
+                </>
+              )}
             </>
           )}
         </div>
+
+        {/* Recurring Options */}
+        {isRecurring && (
+          <div className="rounded-xl p-4 space-y-4" style={{ background: '#F5F0FF', border: '1px solid #DDD0F0' }}>
+            <p className="text-sm font-semibold" style={{ color: '#5D4AA8' }}>Repeat settings</p>
+
+            {/* Frequency */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Frequency</label>
+              <Select
+                value={frequency}
+                onChange={(e) => setFrequency(e.target.value as any)}
+                options={frequencyOptions}
+              />
+            </div>
+
+            {/* Day-of-week picker for weekly/fortnightly */}
+            {(frequency === 'WEEKLY' || frequency === 'FORTNIGHTLY') && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Day(s) of the week</label>
+                <div className="flex gap-1.5">
+                  {DAY_LABELS.map((label, dow) => (
+                    <button
+                      key={dow}
+                      type="button"
+                      onClick={() => toggleDay(dow)}
+                      className="w-9 h-9 rounded-full text-xs font-medium transition-colors"
+                      style={{
+                        background: selectedDays.includes(dow) ? '#5D4AA8' : '#EFE9F2',
+                        color: selectedDays.includes(dow) ? '#fff' : '#5D4AA8',
+                      }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* End Condition */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Ends</label>
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="endCondition"
+                    value="occurrences"
+                    checked={endCondition === 'occurrences'}
+                    onChange={() => setEndCondition('occurrences')}
+                    className="text-[#5D4AA8]"
+                  />
+                  <span className="text-sm text-gray-700">After</span>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="104"
+                    value={occurrences}
+                    onChange={(e) => setOccurrences(e.target.value)}
+                    disabled={endCondition !== 'occurrences'}
+                    className="w-20 text-center"
+                  />
+                  <span className="text-sm text-gray-700">sessions</span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="endCondition"
+                    value="date"
+                    checked={endCondition === 'date'}
+                    onChange={() => setEndCondition('date')}
+                    className="text-[#5D4AA8]"
+                  />
+                  <span className="text-sm text-gray-700">On date</span>
+                  <Input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    disabled={endCondition !== 'date'}
+                    className="flex-1"
+                  />
+                </label>
+              </div>
+            </div>
+
+            {/* Date Preview */}
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Calendar size={14} style={{ color: '#5D4AA8' }} />
+                <p className="text-sm font-medium" style={{ color: '#5D4AA8' }}>
+                  {loadingPreview ? 'Calculating...' : previewDates.length > 0 ? `${previewDates.length}+ sessions` : 'Preview'}
+                </p>
+              </div>
+              {previewDates.length > 0 && (
+                <div className="space-y-1 max-h-36 overflow-y-auto">
+                  {previewDates.map((iso, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-[#5D4AA8] flex-shrink-0" />
+                      <span className="text-xs text-gray-600">
+                        {new Date(iso).toLocaleDateString('en-AU', {
+                          weekday: 'short', day: 'numeric', month: 'short', year: 'numeric',
+                        })}{' '}
+                        at {new Date(iso).toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                      </span>
+                    </div>
+                  ))}
+                  {parseInt(occurrences) > 10 && endCondition === 'occurrences' && (
+                    <p className="text-xs text-gray-400 pl-3.5">
+                      + {parseInt(occurrences) - 10} more sessions
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Actions */}
         <div className="flex justify-end gap-3 pt-4">
@@ -476,9 +735,15 @@ export function AddAppointmentModal({
           <Button
             type="submit"
             variant="primary"
-            disabled={createAppointment.isPending || !!hasConflict}
+            disabled={isPending || (!isRecurring && !!hasConflict)}
           >
-            {createAppointment.isPending ? 'Scheduling...' : isGroup ? 'Create Group Session' : 'Schedule Appointment'}
+            {isPending
+              ? 'Scheduling...'
+              : isRecurring
+              ? 'Create Recurring Series'
+              : isGroup
+              ? 'Create Group Session'
+              : 'Schedule Appointment'}
           </Button>
         </div>
       </form>

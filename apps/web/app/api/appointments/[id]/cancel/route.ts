@@ -12,7 +12,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (!businessId) return res.badRequest('businessId is required');
 
     const body = await req.json().catch(() => ({}));
-    const { reason, cancellationType } = body;
+    const { reason, cancellationType, recurringScope } = body;
+    // recurringScope: 'this_only' | 'this_and_following' | 'all'
 
     const appointment = await prisma.appointment.findFirst({ where: { id, businessId } });
     if (!appointment) return res.notFound('Appointment not found');
@@ -36,10 +37,32 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         data: {
           userId: user.id, businessId,
           action: 'APPOINTMENT_CANCELLED', entityType: 'Appointment', entityId: id,
-          metadata: { reason, type: cancellationType },
+          metadata: { reason, type: cancellationType, recurringScope },
         },
       }),
     ]);
+
+    // Handle recurring scope cancellation
+    if (appointment.recurringSeriesId && recurringScope && recurringScope !== 'this_only') {
+      const futureWhere: any = {
+        recurringSeriesId: appointment.recurringSeriesId,
+        status: { in: [AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED] },
+        id: { not: id },
+      };
+      if (recurringScope === 'this_and_following') {
+        futureWhere.startTime = { gte: appointment.startTime };
+      }
+      await prisma.appointment.updateMany({
+        where: futureWhere,
+        data: { status: AppointmentStatus.CANCELLED },
+      });
+      if (recurringScope === 'all') {
+        await prisma.recurringAppointmentSeries.update({
+          where: { id: appointment.recurringSeriesId },
+          data: { isActive: false },
+        });
+      }
+    }
 
     // Auto-notify matching waitlisted clients
     notifyWaitlist(businessId, appointment, user.id).catch(() => {});

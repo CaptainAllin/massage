@@ -15,6 +15,7 @@ const REPORT_TYPE_LABELS: Record<ReportType, string> = {
   THERAPISTS: 'Therapists',
   APPOINTMENTS: 'Appointments',
   FINANCIAL_SUMMARY: 'Financial Summary',
+  INVOICE_AGEING: 'Invoice Ageing',
 };
 
 const SCHEDULE_LABELS: Record<string, string> = {
@@ -37,6 +38,7 @@ export function SavedReportsList({ businessId, onRunReport }: SavedReportsListPr
     generateTherapistReport,
     generateAppointmentReport,
     generateFinancialSummaryReport,
+    generateInvoiceReport,
   } = useReports();
 
   const fetchReports = useCallback(async () => {
@@ -79,6 +81,9 @@ export function SavedReportsList({ businessId, onRunReport }: SavedReportsListPr
           break;
         case 'FINANCIAL_SUMMARY':
           data = await generateFinancialSummaryReport(normalizedFilters);
+          break;
+        case 'INVOICE_AGEING':
+          data = await generateInvoiceReport(normalizedFilters);
           break;
       }
       onRunReport(data, report.type, selectedFields);

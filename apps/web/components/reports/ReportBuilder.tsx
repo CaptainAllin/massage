@@ -16,8 +16,11 @@ const REPORT_FIELDS: Record<ReportType, { key: string; label: string }[]> = {
     { key: 'byTherapist', label: 'Revenue by Therapist' },
     { key: 'byServiceType', label: 'Revenue by Service Type' },
     { key: 'byPaymentMethod', label: 'Revenue by Payment Method' },
+    { key: 'monthlyTrend', label: 'Monthly Trend & YoY' },
   ],
   CLIENTS: [
+    { key: 'retentionRate', label: 'Retention Rate' },
+    { key: 'monthlyTrend', label: 'New vs. Returning by Month' },
     { key: 'topClients', label: 'Top Clients by Revenue' },
     { key: 'inactiveClients', label: 'Inactive Clients' },
     { key: 'clientLifetimeValue', label: 'Client Lifetime Value' },
@@ -28,10 +31,17 @@ const REPORT_FIELDS: Record<ReportType, { key: string; label: string }[]> = {
   APPOINTMENTS: [
     { key: 'byStatus', label: 'By Status' },
     { key: 'byServiceType', label: 'By Service Type' },
-    { key: 'peakTimes', label: 'Peak Times' },
+    { key: 'peakTimes', label: 'Peak Hours Heatmap' },
+    { key: 'noShowByTherapist', label: 'No-show & Cancellation by Therapist' },
+    { key: 'avgDurationByServiceType', label: 'Avg Duration by Service Type' },
   ],
   FINANCIAL_SUMMARY: [
     { key: 'paymentMethodBreakdown', label: 'Payment Method Breakdown' },
+  ],
+  INVOICE_AGEING: [
+    { key: 'ageing', label: 'Invoice Ageing Buckets' },
+    { key: 'outstandingByClient', label: 'Outstanding by Client' },
+    { key: 'avgInvoiceValue', label: 'Avg Invoice Value Trend' },
   ],
 };
 
@@ -47,6 +57,7 @@ export function ReportBuilder({
   const [filters, setFilters] = useState<ReportFilters>({
     startDate: new Date(new Date().setDate(new Date().getDate() - 30)),
     endDate: new Date(),
+    businessId,
   });
   const [selectedFields, setSelectedFields] = useState<Record<ReportType, string[]>>({
     REVENUE: ALL_FIELDS_FOR('REVENUE'),
@@ -54,6 +65,7 @@ export function ReportBuilder({
     THERAPISTS: ALL_FIELDS_FOR('THERAPISTS'),
     APPOINTMENTS: ALL_FIELDS_FOR('APPOINTMENTS'),
     FINANCIAL_SUMMARY: ALL_FIELDS_FOR('FINANCIAL_SUMMARY'),
+    INVOICE_AGEING: ALL_FIELDS_FOR('INVOICE_AGEING'),
   });
 
   const [saveOpen, setSaveOpen] = useState(false);
@@ -70,28 +82,33 @@ export function ReportBuilder({
     generateTherapistReport,
     generateAppointmentReport,
     generateFinancialSummaryReport,
+    generateInvoiceReport,
     saveReport,
   } = useReports();
 
   const handleGenerateReport = async () => {
+    const filtersWithBiz = { ...filters, businessId };
     try {
       let reportData: any;
 
       switch (reportType) {
         case 'REVENUE':
-          reportData = await generateRevenueReport(filters);
+          reportData = await generateRevenueReport(filtersWithBiz);
           break;
         case 'CLIENTS':
-          reportData = await generateClientReport(filters);
+          reportData = await generateClientReport(filtersWithBiz);
           break;
         case 'THERAPISTS':
-          reportData = await generateTherapistReport(filters);
+          reportData = await generateTherapistReport(filtersWithBiz);
           break;
         case 'APPOINTMENTS':
-          reportData = await generateAppointmentReport(filters);
+          reportData = await generateAppointmentReport(filtersWithBiz);
           break;
         case 'FINANCIAL_SUMMARY':
-          reportData = await generateFinancialSummaryReport(filters);
+          reportData = await generateFinancialSummaryReport(filtersWithBiz);
+          break;
+        case 'INVOICE_AGEING':
+          reportData = await generateInvoiceReport(filtersWithBiz);
           break;
         default:
           throw new Error('Invalid report type');
@@ -106,28 +123,35 @@ export function ReportBuilder({
   const handleDatePreset = (preset: string) => {
     const now = new Date();
     let startDate: Date;
+    let endDate = new Date();
 
     switch (preset) {
       case 'today':
-        startDate = new Date(now.setHours(0, 0, 0, 0));
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         break;
       case 'week':
-        startDate = new Date(now.setDate(now.getDate() - 7));
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
         break;
-      case 'month':
-        startDate = new Date(now.setMonth(now.getMonth() - 1));
+      case 'this_month':
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
         break;
+      case 'last_month': {
+        const d = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        startDate = d;
+        endDate = new Date(now.getFullYear(), now.getMonth(), 0);
+        break;
+      }
       case 'quarter':
-        startDate = new Date(now.setMonth(now.getMonth() - 3));
+        startDate = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
         break;
       case 'year':
-        startDate = new Date(now.setFullYear(now.getFullYear() - 1));
+        startDate = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
         break;
       default:
-        startDate = new Date(now.setDate(now.getDate() - 30));
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 30);
     }
 
-    setFilters({ ...filters, startDate, endDate: new Date() });
+    setFilters({ ...filters, businessId, startDate, endDate });
   };
 
   const toggleField = (type: ReportType, key: string) => {
@@ -188,6 +212,7 @@ export function ReportBuilder({
               <option value="THERAPISTS">Therapist Performance</option>
               <option value="APPOINTMENTS">Appointment Report</option>
               <option value="FINANCIAL_SUMMARY">Financial Summary</option>
+              <option value="INVOICE_AGEING">Invoice Ageing</option>
             </select>
           </div>
 
@@ -195,12 +220,16 @@ export function ReportBuilder({
           <div className="space-y-2">
             <label className="block text-sm font-medium text-gray-700">Quick Date Ranges</label>
             <div className="flex flex-wrap gap-2">
-              {['today', 'week', 'month', 'quarter', 'year'].map((preset) => (
-                <Button key={preset} variant="outline" size="sm" onClick={() => handleDatePreset(preset)}>
-                  {preset === 'today' ? 'Today' :
-                   preset === 'week' ? 'Last 7 Days' :
-                   preset === 'month' ? 'Last 30 Days' :
-                   preset === 'quarter' ? 'Last Quarter' : 'Last Year'}
+              {[
+                { id: 'today', label: 'Today' },
+                { id: 'week', label: 'Last 7 Days' },
+                { id: 'this_month', label: 'This Month' },
+                { id: 'last_month', label: 'Last Month' },
+                { id: 'quarter', label: 'Last Quarter' },
+                { id: 'year', label: 'Last Year' },
+              ].map((preset) => (
+                <Button key={preset.id} variant="outline" size="sm" onClick={() => handleDatePreset(preset.id)}>
+                  {preset.label}
                 </Button>
               ))}
             </div>

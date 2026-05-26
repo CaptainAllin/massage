@@ -8,16 +8,42 @@ import { useTreatmentNotes } from '@/lib/hooks';
 import { TreatmentNote } from '@massage/types';
 import { useBusinessId } from '@/lib/hooks/use-business-id';
 import { TreatmentNotesTour } from '@/components/treatment-notes/TreatmentNotesTour';
+import { NoteStatusBadge } from '@/components/treatment-notes/NoteStatusBadge';
+
+type Tab = 'all' | 'pending';
 
 export default function TreatmentNotesPage() {
   const router = useRouter();
   const businessId = useBusinessId();
   const [search, setSearch] = useState('');
+  const [tab, setTab] = useState<Tab>('all');
 
-  const { data: notesData, isLoading } = useTreatmentNotes(businessId);
-  const notes = notesData?.data || [];
+  const { data: allNotesData, isLoading: allLoading } = useTreatmentNotes(businessId);
+  const { data: pendingData, isLoading: pendingLoading } = useTreatmentNotes(businessId, {
+    status: 'PENDING_REVIEW',
+  });
+
+  const isLoading = tab === 'all' ? allLoading : pendingLoading;
+  const rawNotes = tab === 'all'
+    ? (allNotesData?.data || [])
+    : (pendingData?.data || []);
+
+  const notes = search
+    ? rawNotes.filter((n: any) => {
+        const clientName = `${n.client?.firstName ?? ''} ${n.client?.lastName ?? ''}`.toLowerCase();
+        const therapistName = `${n.therapist?.user?.firstName ?? ''} ${n.therapist?.user?.lastName ?? ''}`.toLowerCase();
+        return clientName.includes(search.toLowerCase()) || therapistName.includes(search.toLowerCase());
+      })
+    : rawNotes;
+
+  const pendingCount = pendingData?.data?.length ?? 0;
 
   const columns: Column<any>[] = [
+    {
+      key: 'status',
+      header: 'Status',
+      render: (note) => <NoteStatusBadge status={note.status ?? 'DRAFT'} />,
+    },
     {
       key: 'client',
       header: 'Client',
@@ -92,6 +118,35 @@ export default function TreatmentNotesPage() {
         </div>
       </div>
 
+      {/* Tabs */}
+      <div className="flex gap-1 border-b border-gray-200">
+        <button
+          onClick={() => setTab('all')}
+          className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
+            tab === 'all'
+              ? 'border-violet-600 text-violet-700'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          All Notes
+        </button>
+        <button
+          onClick={() => setTab('pending')}
+          className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px flex items-center gap-2 ${
+            tab === 'pending'
+              ? 'border-violet-600 text-violet-700'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Pending Review
+          {pendingCount > 0 && (
+            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-white text-xs font-semibold">
+              {pendingCount}
+            </span>
+          )}
+        </button>
+      </div>
+
       <SearchInput
         value={search}
         onChange={(e) => setSearch(e.target.value)}
@@ -106,7 +161,11 @@ export default function TreatmentNotesPage() {
           data={notes}
           columns={columns}
           onRowClick={handleRowClick}
-          emptyMessage="No treatment notes found. Create your first SOAP note to get started."
+          emptyMessage={
+            tab === 'pending'
+              ? 'No notes pending review.'
+              : 'No treatment notes found. Create your first SOAP note to get started.'
+          }
         />
       )}
     </div>

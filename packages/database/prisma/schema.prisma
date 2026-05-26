@@ -26,6 +26,9 @@ model User {
   noteTemplates              NoteTemplate[]     @relation("NoteTemplateCreator")
   submittedCommunityTemplates CommunityTemplate[] @relation("CommunityTemplateSubmitter")
   moderatedCommunityTemplates CommunityTemplate[] @relation("CommunityTemplateModerator")
+  tasksAssigned    Task[]         @relation("TaskAssignee")
+  tasksCreated     Task[]         @relation("TaskCreator")
+  notesForReview   TreatmentNote[] @relation("NoteReviewer")
 
   @@index([email])
   @@index([authUserId])
@@ -48,6 +51,8 @@ model Business {
   secondaryColor             String?                      @default("#E7D8C9")
   subscriptionTier           String?                      @default("FREE")
   subscriptionStatus         String?                      @default("ACTIVE")
+  bookingMode                BookingMode                  @default(PUBLIC)
+  draftNoteVisibility        DraftNoteVisibility          @default(ALL_THERAPISTS)
   ownerId                    String                       @unique
   createdAt                  DateTime                     @default(now())
   updatedAt                  DateTime                     @updatedAt
@@ -106,6 +111,13 @@ model Business {
   videoSessions              VideoSession[]
   voiceNotes                 VoiceNote[]
   waitlist                   Waitlist[]
+  bookingInvites             BookingInvite[]
+  rooms                      Room[]
+  availabilityRules          AvailabilityRule[]
+  messageLogs                MessageLog[]
+  accountingIntegrations     AccountingIntegration[]
+  accountingSyncLogs         AccountingSyncLog[]
+  tasks                      Task[]
 
   @@index([ownerId])
   @@map("businesses")
@@ -138,6 +150,7 @@ model Therapist {
   voiceNotes                 VoiceNote[]
   payrollRecords             PayrollRecord[]
   waitlist                   Waitlist[]
+  availabilityRules          AvailabilityRule[]
 
   @@index([userId])
   @@index([businessId])
@@ -202,6 +215,9 @@ model Client {
   insuranceClaims            InsuranceClaim[]
   groupBookings              GroupBooking[]
   waitlist                   Waitlist[]
+  bookingInvites             BookingInvite[]
+  messageLogs                MessageLog[]
+  relatedTasks               Task[]
 
   @@index([businessId])
   @@index([locationId])
@@ -224,6 +240,7 @@ model Appointment {
   clientId          String
   therapistId       String
   locationId        String?
+  roomId            String?
   startTime         DateTime
   endTime           DateTime
   status            AppointmentStatus           @default(SCHEDULED)
@@ -243,6 +260,7 @@ model Appointment {
   business          Business                    @relation(fields: [businessId], references: [id], onDelete: Cascade)
   client            Client                      @relation(fields: [clientId], references: [id], onDelete: Cascade)
   location          Location?                   @relation(fields: [locationId], references: [id])
+  room              Room?                       @relation(fields: [roomId], references: [id])
   recurringSeries   RecurringAppointmentSeries? @relation(fields: [recurringSeriesId], references: [id])
   therapist         Therapist                   @relation(fields: [therapistId], references: [id], onDelete: Cascade)
   bodyMaps          BodyMap[]
@@ -253,11 +271,13 @@ model Appointment {
   videoSession      VideoSession?
   voiceNotes        VoiceNote[]
   insuranceClaims   InsuranceClaim[]
+  relatedTasks      Task[]
 
   @@index([businessId])
   @@index([clientId])
   @@index([therapistId])
   @@index([locationId])
+  @@index([roomId])
   @@index([recurringSeriesId])
   @@index([startTime])
   @@index([status])
@@ -288,30 +308,36 @@ model IntakeForm {
 }
 
 model TreatmentNote {
-  id                 String      @id @default(cuid())
-  businessId         String
-  appointmentId      String
-  clientId           String
-  therapistId        String
-  subjectiveFindings String?
-  objectiveFindings  String?
-  assessment         String?
-  plan               String?
-  areasWorked        String[]    @default([])
-  techniques         String[]    @default([])
-  sessionDuration    Int?
-  followUpDate       DateTime?
-  aiSummary          String?
-  noteTemplateId     String?
-  noteTemplateName   String?
-  createdAt          DateTime    @default(now())
-  updatedAt          DateTime    @updatedAt
-  bodyMaps           BodyMap[]
-  appointment        Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
-  business           Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  client             Client      @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  therapist          Therapist   @relation(fields: [therapistId], references: [id], onDelete: Cascade)
-  voiceNotes         VoiceNote[]
+  id                    String              @id @default(cuid())
+  businessId            String
+  appointmentId         String
+  clientId              String
+  therapistId           String
+  status                TreatmentNoteStatus @default(DRAFT)
+  subjectiveFindings    String?
+  objectiveFindings     String?
+  assessment            String?
+  plan                  String?
+  areasWorked           String[]            @default([])
+  techniques            String[]            @default([])
+  sessionDuration       Int?
+  followUpDate          DateTime?
+  aiSummary             String?
+  noteTemplateId        String?
+  noteTemplateName      String?
+  reviewerId            String?
+  reviewComment         String?
+  reviewedAt            DateTime?
+  submittedForReviewAt  DateTime?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  bodyMaps              BodyMap[]
+  appointment           Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  business              Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  client                Client      @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  therapist             Therapist   @relation(fields: [therapistId], references: [id], onDelete: Cascade)
+  reviewer              User?       @relation("NoteReviewer", fields: [reviewerId], references: [id])
+  voiceNotes            VoiceNote[]
 
   @@index([businessId])
   @@index([appointmentId])
@@ -551,6 +577,7 @@ model RecurringAppointmentSeries {
   interval     Int           @default(1)
   dayOfWeek    Int?
   dayOfMonth   Int?
+  daysOfWeek   Json?
   startTime    String
   duration     Int
   startDate    DateTime
@@ -1422,6 +1449,7 @@ enum ReportType {
   THERAPISTS
   APPOINTMENTS
   FINANCIAL_SUMMARY
+  INVOICE_AGEING
 }
 
 enum ReportSchedule {
@@ -1736,4 +1764,247 @@ enum WaitlistStatus {
   OFFERED
   BOOKED
   EXPIRED
+}
+
+enum BookingMode {
+  PUBLIC
+  EXISTING_CLIENTS_ONLY
+  INVITE_ONLY
+}
+
+model BookingInvite {
+  id         String    @id @default(cuid())
+  businessId String
+  clientId   String
+  token      String    @unique @default(cuid())
+  expiresAt  DateTime?
+  usedAt     DateTime?
+  createdAt  DateTime  @default(now())
+  business   Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  client     Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+  @@index([clientId])
+  @@index([token])
+  @@map("booking_invites")
+}
+
+model Room {
+  id           String            @id @default(cuid())
+  businessId   String
+  name         String
+  color        String?           @default("#8B5CF6")
+  capacity     Int?              @default(1)
+  isActive     Boolean           @default(true)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  business     Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  appointments Appointment[]
+  availabilityRules AvailabilityRule[]
+
+  @@index([businessId])
+  @@index([isActive])
+  @@map("rooms")
+}
+
+model AvailabilityRule {
+  id          String     @id @default(cuid())
+  businessId  String
+  therapistId String?
+  roomId      String?
+  serviceType String?
+  daysOfWeek  Json
+  startTime   String
+  endTime     String
+  priority    Int        @default(0)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  business    Business   @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  therapist   Therapist? @relation(fields: [therapistId], references: [id], onDelete: Cascade)
+  room        Room?      @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+  @@index([therapistId])
+  @@index([roomId])
+  @@map("availability_rules")
+}
+
+model AccountingIntegration {
+  id             String             @id @default(cuid())
+  businessId     String
+  provider       AccountingProvider
+  status         AccountingStatus   @default(DISCONNECTED)
+  accessToken    String?
+  refreshToken   String?
+  tenantId       String?
+  tenantName     String?
+  tokenExpiresAt DateTime?
+  webhookKey     String?
+  lastSyncAt     DateTime?
+  syncEnabled    Boolean            @default(true)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  business       Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  syncLogs       AccountingSyncLog[]
+
+  @@unique([businessId, provider])
+  @@index([businessId])
+  @@map("accounting_integrations")
+}
+
+model AccountingSyncLog {
+  id               String             @id @default(cuid())
+  integrationId    String
+  businessId       String
+  entityType       String
+  entityId         String
+  externalId       String?
+  direction        SyncDirection
+  status           SyncLogStatus      @default(PENDING)
+  errorMessage     String?
+  localSnapshot    Json?
+  externalSnapshot Json?
+  resolvedBy       String?
+  resolvedAt       DateTime?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  integration      AccountingIntegration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  business         Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([integrationId])
+  @@index([businessId])
+  @@index([entityType, entityId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("accounting_sync_logs")
+}
+
+enum AccountingProvider {
+  XERO
+  QUICKBOOKS
+}
+
+enum AccountingStatus {
+  CONNECTED
+  DISCONNECTED
+  ERROR
+}
+
+enum SyncDirection {
+  OUTBOUND
+  INBOUND
+}
+
+enum SyncLogStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  CONFLICT
+  RESOLVED
+}
+
+model MessageLog {
+  id                String           @id @default(cuid())
+  businessId        String
+  clientId          String?
+  appointmentId     String?
+  channel           MessageChannel   @default(EMAIL)
+  messageType       String
+  recipient         String
+  subject           String?
+  status            MessageLogStatus @default(QUEUED)
+  providerMessageId String?
+  errorCode         String?
+  sentAt            DateTime?
+  deliveredAt       DateTime?
+  retryCount        Int              @default(0)
+  lastRetriedAt     DateTime?
+  metadata          Json?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  business          Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  client            Client?          @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  @@index([businessId])
+  @@index([clientId])
+  @@index([appointmentId])
+  @@index([status])
+  @@index([channel])
+  @@index([createdAt])
+  @@index([businessId, status])
+  @@index([businessId, channel])
+  @@index([providerMessageId])
+  @@map("message_logs")
+}
+
+enum MessageChannel {
+  SMS
+  EMAIL
+  WHATSAPP
+}
+
+enum MessageLogStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  FAILED
+  UNDELIVERED
+}
+
+model Task {
+  id                   String       @id @default(cuid())
+  businessId           String
+  assignedToId         String?
+  createdById          String
+  title                String
+  description          String?
+  dueDate              DateTime?
+  priority             TaskPriority @default(MEDIUM)
+  status               TaskStatus   @default(TODO)
+  relatedClientId      String?
+  relatedAppointmentId String?
+  completedAt          DateTime?
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+  business             Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  assignedTo           User?        @relation("TaskAssignee", fields: [assignedToId], references: [id])
+  createdBy            User         @relation("TaskCreator", fields: [createdById], references: [id])
+  relatedClient        Client?      @relation(fields: [relatedClientId], references: [id])
+  relatedAppointment   Appointment? @relation(fields: [relatedAppointmentId], references: [id])
+
+  @@index([businessId])
+  @@index([assignedToId])
+  @@index([createdById])
+  @@index([status])
+  @@index([priority])
+  @@index([dueDate])
+  @@index([businessId, status])
+  @@index([businessId, assignedToId])
+  @@map("tasks")
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
+enum DraftNoteVisibility {
+  ONLY_AUTHOR
+  ALL_THERAPISTS
+  BUSINESS_OWNER_ONLY
+}
+
+enum TreatmentNoteStatus {
+  DRAFT
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
 }

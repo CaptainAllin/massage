@@ -1,4 +1,5 @@
 import { Resend } from 'resend';
+import { createMessageLog, markMessageLogSent, markMessageLogFailed, MessageChannel } from './message-log';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = process.env.RESEND_FROM_EMAIL ?? 'onboarding@resend.dev';
@@ -145,6 +146,8 @@ export async function sendBookingConfirmation(params: {
   appointment: { id: string; startTime: Date; endTime: Date; duration: number; serviceType: string };
   client: { firstName: string; lastName: string; email: string | null };
   therapist: { firstName: string; lastName: string; email: string | null };
+  businessId?: string;
+  clientId?: string;
 }) {
   const { businessName, appointment, client, therapist } = params;
   const dateStr = formatDateTime(appointment.startTime);
@@ -205,14 +208,31 @@ export async function sendBookingConfirmation(params: {
   const sends: Promise<any>[] = [];
 
   if (client.email) {
-    sends.push(
-      resend.emails.send({
-        from: FROM,
-        to: [client.email],
-        subject: `Booking Confirmed — ${appointment.serviceType} at ${businessName}`,
-        html: clientHtml,
-      })
-    );
+    const subject = `Booking Confirmed — ${appointment.serviceType} at ${businessName}`;
+    if (params.businessId) {
+      const log = await createMessageLog({
+        businessId: params.businessId,
+        clientId: params.clientId,
+        appointmentId: appointment.id,
+        channel: MessageChannel.EMAIL,
+        messageType: 'BOOKING_CONFIRMATION',
+        recipient: client.email,
+        subject,
+      });
+      sends.push(
+        resend.emails
+          .send({ from: FROM, to: [client.email], subject, html: clientHtml })
+          .then((r) => {
+            if (r.data?.id) markMessageLogSent(log.id, r.data.id);
+            else markMessageLogFailed(log.id);
+          })
+          .catch((err) => markMessageLogFailed(log.id, err?.message)),
+      );
+    } else {
+      sends.push(
+        resend.emails.send({ from: FROM, to: [client.email], subject, html: clientHtml }),
+      );
+    }
   }
 
   if (therapist.email) {
@@ -222,7 +242,7 @@ export async function sendBookingConfirmation(params: {
         to: [therapist.email],
         subject: `New Booking: ${clientName} — ${dateStr}`,
         html: therapistHtml,
-      })
+      }),
     );
   }
 
@@ -409,4 +429,65 @@ export async function sendReportEmail(params: {
 
   if (error) throw new Error(`Resend error: ${error.message}`);
   return result;
+}
+
+export async function sendAppointmentReminderEmail(params: {
+  to: string;
+  businessName: string;
+  client: { firstName: string; lastName: string };
+  therapist: { firstName: string; lastName: string };
+  appointment: { startTime: Date; endTime: Date; duration: number; serviceType: string | null };
+  businessId?: string;
+  clientId?: string;
+  appointmentId?: string;
+}) {
+  const { to, businessName, client, therapist, appointment } = params;
+  const dateStr = formatDateTime(appointment.startTime);
+  const clientName = `${client.firstName} ${client.lastName}`;
+  const therapistName = `${therapist.firstName} ${therapist.lastName}`;
+  const serviceLabel = appointment.serviceType || 'Appointment';
+
+  const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; margin: 0; padding: 24px; color: #1a1a1a; }
+  .card { background: #fff; border-radius: 8px; max-width: 560px; margin: 0 auto; padding: 32px; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+  h1 { font-size: 22px; font-weight: 700; margin: 0 0 8px; }
+  .sub { color: #555; font-size: 14px; margin: 0 0 24px; }
+  .detail { background: #f9f9f9; border-radius: 6px; padding: 16px 20px; margin-bottom: 20px; }
+  .detail p { margin: 6px 0; font-size: 14px; }
+  .detail strong { display: inline-block; min-width: 120px; color: #444; }
+  .footer { margin-top: 24px; font-size: 12px; color: #999; }
+</style></head>
+<body>
+<div class="card">
+  <h1>Appointment Reminder</h1>
+  <p class="sub">Hi ${clientName}, this is a reminder of your upcoming appointment at ${businessName}.</p>
+  <div class="detail">
+    <p><strong>Service:</strong> ${serviceLabel}</p>
+    <p><strong>Date & Time:</strong> ${dateStr}</p>
+    <p><strong>Duration:</strong> ${appointment.duration} minutes</p>
+    <p><strong>Therapist:</strong> ${therapistName}</p>
+  </div>
+  <p style="font-size:14px;color:#555">If you need to cancel or reschedule, please contact ${businessName} as soon as possible.</p>
+  <p class="footer">Powered by Wellness CRM</p>
+</div>
+</body></html>`;
+
+  const subject = `Reminder: ${serviceLabel} tomorrow at ${businessName}`;
+  if (params.businessId) {
+    const log = await createMessageLog({
+      businessId: params.businessId,
+      clientId: params.clientId,
+      appointmentId: params.appointmentId,
+      channel: MessageChannel.EMAIL,
+      messageType: 'APPOINTMENT_REMINDER',
+      recipient: to,
+      subject,
+    });
+    const r = await resend.emails.send({ from: FROM, to: [to], subject, html });
+    if (r.data?.id) await markMessageLogSent(log.id, r.data.id);
+    else await markMessageLogFailed(log.id);
+  } else {
+    await resend.emails.send({ from: FROM, to: [to], subject, html });
+  }
 }

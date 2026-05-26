@@ -52,6 +52,26 @@ export async function GET(
       orderBy: { startTime: 'asc' },
     });
 
+    // Load availability rules for this therapist/service to narrow slots further
+    const serviceType = searchParams.get('serviceType') || undefined;
+    const availabilityRules = await prisma.availabilityRule.findMany({
+      where: {
+        businessId,
+        OR: [
+          { therapistId: therapistId },
+          ...(serviceType ? [{ serviceType }] : []),
+        ],
+      },
+    });
+
+    // Build restricted windows from rules that match this day
+    const ruleWindows = availabilityRules
+      .filter((r) => {
+        const days = r.daysOfWeek as number[];
+        return days.includes(dayOfWeek);
+      })
+      .map((r) => ({ startTime: r.startTime, endTime: r.endTime }));
+
     const slots: Array<{ startTime: string; endTime: string; available: boolean }> = [];
     const [startHour, startMinute] = availability.startTime.split(':').map(Number);
     const [endHour, endMinute] = availability.endTime.split(':').map(Number);
@@ -74,6 +94,14 @@ export async function GET(
         continue;
       }
 
+      const slotStartStr = slotStart.toTimeString().substring(0, 5);
+      const slotEndStr = slotEnd.toTimeString().substring(0, 5);
+
+      // If there are availability rules, the slot must fall within at least one rule window
+      const violatesRules = ruleWindows.length > 0 && !ruleWindows.some(
+        (w) => slotStartStr >= w.startTime && slotEndStr <= w.endTime
+      );
+
       const hasConflict = appointments.some(
         (apt) =>
           (slotStart >= apt.startTime && slotStart < apt.endTime) ||
@@ -84,7 +112,7 @@ export async function GET(
       slots.push({
         startTime: slotStart.toISOString(),
         endTime: slotEnd.toISOString(),
-        available: !hasConflict,
+        available: !hasConflict && !violatesRules,
       });
 
       current = new Date(current.getTime() + 30 * 60000);

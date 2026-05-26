@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, Button, Input, Badge } from '@massage/ui';
-import { Building2, Users, Bell, Palette, Save, Upload, Loader2, Check, BellRing, MapPin } from 'lucide-react';
+import { Building2, Users, Bell, Palette, Save, Upload, Loader2, Check, BellRing, MapPin, CalendarCheck, Globe, Lock, UserCheck, Clock, ShieldCheck, KeyRound, Trash2, Plus, Link2, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { useBusinessId } from '@/lib/hooks/use-business-id';
 import { useBusiness, useUpdateBusiness } from '@/lib/hooks/use-business';
@@ -11,14 +11,18 @@ import { useCommunicationSettings, useUpdateCommunicationSettings } from '@/lib/
 import { uploadFile, getPublicUrl, brandingPath, uniqueFileName, BUCKETS } from '@/lib/storage';
 import { apiClient } from '@/lib/api-client';
 import { usePushNotifications } from '@/lib/hooks/use-push-notifications';
+import { listPasskeys, enrollPasskey, revokePasskey, type PasskeyFactor } from '@/lib/supabase/passkeys';
 
-type Tab = 'business' | 'team' | 'notifications' | 'branding';
+type Tab = 'business' | 'team' | 'notifications' | 'branding' | 'booking' | 'clinical' | 'security';
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: 'business', label: 'Business', icon: <Building2 className="h-4 w-4" /> },
   { id: 'team', label: 'Team', icon: <Users className="h-4 w-4" /> },
   { id: 'notifications', label: 'Notifications', icon: <Bell className="h-4 w-4" /> },
   { id: 'branding', label: 'Branding', icon: <Palette className="h-4 w-4" /> },
+  { id: 'booking', label: 'Booking', icon: <CalendarCheck className="h-4 w-4" /> },
+  { id: 'clinical', label: 'Clinical Notes', icon: <FileText className="h-4 w-4" /> },
+  { id: 'security', label: 'Security', icon: <ShieldCheck className="h-4 w-4" /> },
 ];
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
@@ -644,6 +648,406 @@ function BrandingTab({ businessId }: { businessId: string }) {
   );
 }
 
+// ─── Booking Tab ──────────────────────────────────────────────────────────────
+
+const BOOKING_MODE_OPTIONS = [
+  {
+    value: 'PUBLIC',
+    icon: <Globe className="h-5 w-5" />,
+    label: 'Public',
+    description: 'Anyone can discover and book through your public booking page.',
+  },
+  {
+    value: 'EXISTING_CLIENTS_ONLY',
+    icon: <UserCheck className="h-5 w-5" />,
+    label: 'Existing clients only',
+    description: 'Clients must verify their email or phone before seeing availability. New clients are turned away.',
+  },
+  {
+    value: 'INVITE_ONLY',
+    icon: <Lock className="h-5 w-5" />,
+    label: 'Invite only',
+    description: 'Only clients with a personal invitation link can book. You send invites from the client profile.',
+  },
+] as const;
+
+function BookingTab({ businessId }: { businessId: string }) {
+  const { data: business, isLoading } = useBusiness(businessId);
+  const updateBusiness = useUpdateBusiness(businessId);
+  const [saved, setSaved] = useState(false);
+  const [mode, setMode] = useState<'PUBLIC' | 'EXISTING_CLIENTS_ONLY' | 'INVITE_ONLY'>('PUBLIC');
+
+  useEffect(() => {
+    if (business) setMode((business as any).bookingMode || 'PUBLIC');
+  }, [business]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await updateBusiness.mutateAsync({ bookingMode: mode } as any);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
+  if (isLoading) return <div className="text-sm text-muted-foreground">Loading…</div>;
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <SectionHeader
+        title="Online Booking Access"
+        description="Control who can book appointments through your public booking page."
+      />
+      <div className="space-y-3">
+        {BOOKING_MODE_OPTIONS.map((opt) => {
+          const selected = mode === opt.value;
+          return (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setMode(opt.value)}
+              className="w-full flex items-start gap-4 p-4 rounded-xl border text-left transition-all"
+              style={
+                selected
+                  ? { borderColor: '#5D4AA8', backgroundColor: '#F4F0FB' }
+                  : { borderColor: '#E5E7EB', backgroundColor: 'transparent' }
+              }
+            >
+              <div
+                className="mt-0.5 flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center"
+                style={{ background: selected ? '#EDE5F4' : '#F3F4F6', color: selected ? '#5D4AA8' : '#6B7280' }}
+              >
+                {opt.icon}
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium" style={{ color: selected ? '#5D4AA8' : '#111827' }}>
+                  {opt.label}
+                </p>
+                <p className="text-xs mt-0.5 text-gray-500">{opt.description}</p>
+              </div>
+              <div
+                className="mt-1 flex-shrink-0 w-4 h-4 rounded-full border-2 flex items-center justify-center"
+                style={{ borderColor: selected ? '#5D4AA8' : '#D1D5DB' }}
+              >
+                {selected && <div className="w-2 h-2 rounded-full" style={{ background: '#5D4AA8' }} />}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+      <div className="flex justify-end pt-2">
+        <SaveButton isSaving={updateBusiness.isPending} saved={saved} />
+      </div>
+    </form>
+  );
+}
+
+// ─── Security Tab ────────────────────────────────────────────────────────────
+
+function SecurityTab() {
+  const [passkeys, setPasskeys] = useState<PasskeyFactor[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [enrolling, setEnrolling] = useState(false);
+  const [revokingId, setRevokingId] = useState<string | null>(null);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [newName, setNewName] = useState('');
+  const [showNameInput, setShowNameInput] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      setPasskeys(await listPasskeys());
+    } catch (e: any) {
+      setError(e.message || 'Failed to load passkeys');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleEnroll = async () => {
+    setEnrolling(true);
+    setError('');
+    setSuccess('');
+    try {
+      const name = newName.trim() || `Passkey ${new Date().toLocaleDateString()}`;
+      await enrollPasskey(name);
+      setSuccess('Passkey registered successfully.');
+      setShowNameInput(false);
+      setNewName('');
+      await load();
+    } catch (e: any) {
+      setError(e.message || 'Failed to register passkey');
+    } finally {
+      setEnrolling(false);
+    }
+  };
+
+  const handleRevoke = async (factorId: string) => {
+    if (!confirm('Remove this passkey? You will need to use your password to sign in.')) return;
+    setRevokingId(factorId);
+    setError('');
+    setSuccess('');
+    try {
+      await revokePasskey(factorId);
+      setSuccess('Passkey removed.');
+      await load();
+    } catch (e: any) {
+      setError(e.message || 'Failed to remove passkey');
+    } finally {
+      setRevokingId(null);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <SectionHeader
+        title="Security"
+        description="Manage passkeys and two-factor authentication for your account."
+      />
+
+      {error && (
+        <div className="rounded-xl p-3 text-sm" style={{ background: '#F5E5E5', color: '#922020', border: '1px solid #F5CECE' }}>
+          {error}
+        </div>
+      )}
+      {success && (
+        <div className="rounded-xl p-3 text-sm" style={{ background: '#E8F5E9', color: '#1B5E20', border: '1px solid #C8E6C9' }}>
+          {success}
+        </div>
+      )}
+
+      {/* Passkeys section */}
+      <div className="rounded-xl border border-border p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <KeyRound className="h-5 w-5" style={{ color: '#5D4AA8' }} />
+            <h3 className="text-sm font-semibold text-foreground">Passkeys</h3>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowNameInput((v) => !v)}
+            className="flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg border transition-colors"
+            style={{ borderColor: '#5D4AA8', color: '#5D4AA8' }}
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add passkey
+          </button>
+        </div>
+
+        <p className="text-xs text-muted-foreground">
+          Passkeys use your device&apos;s biometrics (Face ID, Touch ID, Windows Hello) or a hardware security key to sign in without a password.
+        </p>
+
+        {showNameInput && (
+          <div className="flex items-center gap-2">
+            <Input
+              value={newName}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewName(e.target.value)}
+              placeholder={`e.g. MacBook Touch ID, iPhone Face ID`}
+              className="flex-1"
+              onKeyDown={(e: React.KeyboardEvent) => e.key === 'Enter' && handleEnroll()}
+            />
+            <Button
+              type="button"
+              variant="primary"
+              onClick={handleEnroll}
+              disabled={enrolling}
+            >
+              {enrolling ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Register'}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => { setShowNameInput(false); setNewName(''); }}
+            >
+              Cancel
+            </Button>
+          </div>
+        )}
+
+        {loading ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+          </div>
+        ) : passkeys.length === 0 ? (
+          <div
+            className="rounded-lg p-4 text-sm text-center"
+            style={{ background: '#F9F8FF', border: '1px dashed rgba(93,74,168,0.3)', color: '#7A7090' }}
+          >
+            No passkeys registered yet. Add one to sign in without a password.
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {passkeys.map((pk) => (
+              <div
+                key={pk.id}
+                className="flex items-center justify-between p-3 rounded-lg border"
+                style={{ borderColor: '#E5DEEC', background: '#FDFCFF' }}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ background: '#EDE5F4' }}
+                  >
+                    <KeyRound className="h-4 w-4" style={{ color: '#5D4AA8' }} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{pk.friendlyName}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Added {new Date(pk.createdAt).toLocaleDateString()}
+                      {pk.status !== 'verified' && (
+                        <span className="ml-2 text-amber-600">· {pk.status}</span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleRevoke(pk.id)}
+                  disabled={revokingId === pk.id}
+                  className="p-2 rounded-lg text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
+                  title="Remove passkey"
+                >
+                  {revokingId === pk.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div
+        className="rounded-lg p-4 text-sm space-y-1"
+        style={{ background: '#F3EFFD', border: '1px solid rgba(93,74,168,0.15)' }}
+      >
+        <p className="font-medium" style={{ color: '#3D3450' }}>Enabling passkeys in Supabase</p>
+        <p style={{ color: '#7A7090' }}>
+          WebAuthn must be enabled in your Supabase project under <strong>Authentication → MFA → Add Factor → WebAuthn</strong> before passkeys can be registered.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ─── Clinical Notes Tab ───────────────────────────────────────────────────────
+
+type DraftNoteVisibility = 'ONLY_AUTHOR' | 'ALL_THERAPISTS' | 'BUSINESS_OWNER_ONLY';
+
+const DRAFT_VISIBILITY_OPTIONS: {
+  value: DraftNoteVisibility;
+  icon: React.ReactNode;
+  label: string;
+  description: string;
+}[] = [
+  {
+    value: 'ALL_THERAPISTS',
+    icon: <Users className="h-5 w-5" />,
+    label: 'All therapists',
+    description: 'Every therapist in the practice can read draft notes written by their colleagues.',
+  },
+  {
+    value: 'ONLY_AUTHOR',
+    icon: <Lock className="h-5 w-5" />,
+    label: 'Only the author',
+    description: 'Therapists can only see their own draft notes. Approved notes remain visible to all.',
+  },
+  {
+    value: 'BUSINESS_OWNER_ONLY',
+    icon: <ShieldCheck className="h-5 w-5" />,
+    label: 'Business owner only',
+    description: 'Draft notes are hidden from all therapists until approved. Only the business owner can view drafts.',
+  },
+];
+
+function ClinicalTab({ businessId }: { businessId: string }) {
+  const { data: business, isLoading } = useBusiness(businessId);
+  const updateBusiness = useUpdateBusiness(businessId);
+  const [saved, setSaved] = useState(false);
+  const [visibility, setVisibility] = useState<DraftNoteVisibility>('ALL_THERAPISTS');
+
+  useEffect(() => {
+    if (business) {
+      setVisibility(((business as any).draftNoteVisibility as DraftNoteVisibility) || 'ALL_THERAPISTS');
+    }
+  }, [business]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await updateBusiness.mutateAsync({ draftNoteVisibility: visibility } as any);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
+  if (isLoading) return <div className="text-sm text-muted-foreground">Loading…</div>;
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <SectionHeader
+        title="Draft Note Visibility"
+        description="Control which staff members can read treatment notes that are still in draft status. The business owner can always see all drafts regardless of this setting."
+      />
+
+      <div
+        className="rounded-xl p-4 space-y-1 text-sm"
+        style={{ background: '#F3EFFD', border: '1px solid rgba(93,74,168,0.15)' }}
+      >
+        <p className="font-medium" style={{ color: '#3D3450' }}>What counts as a draft?</p>
+        <p style={{ color: '#7A7090' }}>
+          A note stays in <strong>Draft</strong> status until it is submitted for review and approved. Notes in <strong>Approved</strong> status are always visible to all therapists, regardless of this setting.
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        {DRAFT_VISIBILITY_OPTIONS.map((opt) => {
+          const selected = visibility === opt.value;
+          return (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setVisibility(opt.value)}
+              className="w-full flex items-start gap-4 p-4 rounded-xl border text-left transition-all"
+              style={
+                selected
+                  ? { borderColor: '#5D4AA8', backgroundColor: '#F4F0FB' }
+                  : { borderColor: '#E5E7EB', backgroundColor: 'transparent' }
+              }
+            >
+              <div
+                className="mt-0.5 flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center"
+                style={{ background: selected ? '#EDE5F4' : '#F3F4F6', color: selected ? '#5D4AA8' : '#6B7280' }}
+              >
+                {opt.icon}
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium" style={{ color: selected ? '#5D4AA8' : '#111827' }}>
+                  {opt.label}
+                </p>
+                <p className="text-xs mt-0.5 text-gray-500">{opt.description}</p>
+              </div>
+              <div
+                className="mt-1 flex-shrink-0 w-4 h-4 rounded-full border-2 flex items-center justify-center"
+                style={{ borderColor: selected ? '#5D4AA8' : '#D1D5DB' }}
+              >
+                {selected && <div className="w-2 h-2 rounded-full" style={{ background: '#5D4AA8' }} />}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="flex justify-end pt-2">
+        <SaveButton isSaving={updateBusiness.isPending} saved={saved} />
+      </div>
+    </form>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function SettingsPage() {
@@ -692,6 +1096,9 @@ export default function SettingsPage() {
               {activeTab === 'team' && <TeamTab businessId={businessId} />}
               {activeTab === 'notifications' && <NotificationsTab businessId={businessId} />}
               {activeTab === 'branding' && <BrandingTab businessId={businessId} />}
+              {activeTab === 'booking' && <BookingTab businessId={businessId} />}
+              {activeTab === 'clinical' && <ClinicalTab businessId={businessId} />}
+              {activeTab === 'security' && <SecurityTab />}
             </>
           )}
         </CardContent>
@@ -705,8 +1112,34 @@ export default function SettingsPage() {
           <MapPin className="h-5 w-5 text-[#5D4AA8]" />
         </div>
         <div>
-          <p className="font-medium text-foreground">Manage Locations</p>
-          <p className="text-sm text-muted-foreground">Add and configure your business locations for multi-location support</p>
+          <p className="font-medium text-foreground">Locations & Rooms</p>
+          <p className="text-sm text-muted-foreground">Manage your business locations and treatment rooms</p>
+        </div>
+      </Link>
+
+      <Link
+        href="/settings/scheduling"
+        className="flex items-center gap-3 p-4 bg-card border border-border rounded-xl hover:bg-muted transition-colors"
+      >
+        <div className="h-10 w-10 bg-[#EDE5F4] rounded-lg flex items-center justify-center flex-shrink-0">
+          <Clock className="h-5 w-5 text-[#5D4AA8]" />
+        </div>
+        <div>
+          <p className="font-medium text-foreground">Availability Rules</p>
+          <p className="text-sm text-muted-foreground">Restrict booking windows for specific therapists, rooms, or service types</p>
+        </div>
+      </Link>
+
+      <Link
+        href="/settings/integrations"
+        className="flex items-center gap-3 p-4 bg-card border border-border rounded-xl hover:bg-muted transition-colors"
+      >
+        <div className="h-10 w-10 bg-[#EDE5F4] rounded-lg flex items-center justify-center flex-shrink-0">
+          <Link2 className="h-5 w-5 text-[#5D4AA8]" />
+        </div>
+        <div>
+          <p className="font-medium text-foreground">Integrations</p>
+          <p className="text-sm text-muted-foreground">Connect Xero or QuickBooks for two-way invoice and payment sync</p>
         </div>
       </Link>
     </div>

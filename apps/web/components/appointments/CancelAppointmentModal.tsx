@@ -5,11 +5,14 @@ import { Modal, Button, Textarea, Radio } from '@massage/ui';
 import { CancellationType } from '@massage/types';
 import { useCancelAppointment } from '@/lib/hooks/use-appointments';
 
+type RecurringScope = 'this_only' | 'this_and_following' | 'all';
+
 interface CancelAppointmentModalProps {
   isOpen: boolean;
   onClose: () => void;
   appointmentId: string;
   businessId: string | undefined;
+  recurringSeriesId?: string | null;
 }
 
 export function CancelAppointmentModal({
@@ -17,11 +20,13 @@ export function CancelAppointmentModal({
   onClose,
   appointmentId,
   businessId,
+  recurringSeriesId,
 }: CancelAppointmentModalProps) {
   const [cancellationType, setCancellationType] = useState<CancellationType>(
     CancellationType.CLIENT
   );
   const [reason, setReason] = useState('');
+  const [recurringScope, setRecurringScope] = useState<RecurringScope>('this_only');
 
   const cancelMutation = useCancelAppointment(businessId);
 
@@ -34,12 +39,14 @@ export function CancelAppointmentModal({
         cancellationData: {
           cancellationType,
           reason: reason || undefined,
-        },
+          ...(recurringSeriesId ? { recurringScope } : {}),
+        } as any,
       });
 
       onClose();
       setReason('');
       setCancellationType(CancellationType.CLIENT);
+      setRecurringScope('this_only');
     } catch (error: any) {
       alert(error.message || 'Failed to cancel appointment');
     }
@@ -49,6 +56,12 @@ export function CancelAppointmentModal({
     { value: CancellationType.CLIENT, label: 'Client cancelled' },
     { value: CancellationType.THERAPIST, label: 'Therapist cancelled' },
     { value: CancellationType.BUSINESS, label: 'Business/Admin cancelled' },
+  ];
+
+  const recurringOptions = [
+    { value: 'this_only', label: 'This appointment only' },
+    { value: 'this_and_following', label: 'This and all following appointments' },
+    { value: 'all', label: 'All appointments in this series' },
   ];
 
   return (
@@ -64,6 +77,21 @@ export function CancelAppointmentModal({
             Are you sure you want to cancel this appointment? This action cannot be undone.
           </p>
         </div>
+
+        {/* Recurring Scope (only shown for recurring appointments) */}
+        {recurringSeriesId && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Cancel scope <span className="text-red-500">*</span>
+            </label>
+            <Radio
+              name="recurringScope"
+              options={recurringOptions}
+              value={recurringScope}
+              onChange={(val) => setRecurringScope(val as RecurringScope)}
+            />
+          </div>
+        )}
 
         {/* Cancellation Type */}
         <div>

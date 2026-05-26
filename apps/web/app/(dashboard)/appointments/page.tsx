@@ -224,6 +224,7 @@ export default function AppointmentsPage() {
         }}
         appointmentId={selectedAppointment?.id || ''}
         businessId={businessId}
+        recurringSeriesId={selectedAppointment?.recurringSeriesId}
       />
 
       <TherapistAvailabilityModal

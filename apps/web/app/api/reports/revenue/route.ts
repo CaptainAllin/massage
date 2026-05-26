@@ -100,6 +100,64 @@ export async function GET(req: NextRequest) {
       _count: true,
     });
 
+    // Monthly revenue trend for current period
+    const allPaymentsInPeriod = await prisma.payment.findMany({
+      where: {
+        businessId,
+        status: 'COMPLETED',
+        paidAt: { gte: startDate, lte: endDate },
+      },
+      select: { paidAt: true, amount: true },
+    });
+
+    const monthlyMap = new Map<string, number>();
+    allPaymentsInPeriod.forEach(p => {
+      if (p.paidAt) {
+        const key = `${p.paidAt.getFullYear()}-${String(p.paidAt.getMonth() + 1).padStart(2, '0')}`;
+        monthlyMap.set(key, (monthlyMap.get(key) || 0) + p.amount);
+      }
+    });
+
+    // Prev year same period for YoY
+    const prevStart = new Date(startDate);
+    prevStart.setFullYear(prevStart.getFullYear() - 1);
+    const prevEnd = new Date(endDate);
+    prevEnd.setFullYear(prevEnd.getFullYear() - 1);
+
+    const prevYearPayments = await prisma.payment.findMany({
+      where: {
+        businessId,
+        status: 'COMPLETED',
+        paidAt: { gte: prevStart, lte: prevEnd },
+      },
+      select: { paidAt: true, amount: true },
+    });
+
+    const prevMonthlyMap = new Map<string, number>();
+    prevYearPayments.forEach(p => {
+      if (p.paidAt) {
+        const key = `${p.paidAt.getFullYear()}-${String(p.paidAt.getMonth() + 1).padStart(2, '0')}`;
+        prevMonthlyMap.set(key, (prevMonthlyMap.get(key) || 0) + p.amount);
+      }
+    });
+
+    const monthlyRevenue = Array.from(monthlyMap.entries())
+      .map(([month, revenue]) => {
+        const prevKey = `${parseInt(month.split('-')[0]) - 1}-${month.split('-')[1]}`;
+        return { month, revenue, prevYearRevenue: prevMonthlyMap.get(prevKey) || 0 };
+      })
+      .sort((a, b) => a.month.localeCompare(b.month));
+
+    // Average invoice value
+    const invoiceAvg = await prisma.invoice.aggregate({
+      where: {
+        businessId,
+        status: { in: ['PAID', 'PARTIALLY_PAID'] },
+        paidAt: { gte: startDate, lte: endDate },
+      },
+      _avg: { total: true },
+    });
+
     return res.ok({
       totalRevenue,
       byTherapist,
@@ -109,6 +167,8 @@ export async function GET(req: NextRequest) {
         amount: pm._sum.amount || 0,
         count: pm._count,
       })),
+      monthlyRevenue,
+      averageInvoiceValue: invoiceAvg._avg.total || 0,
       tipsTotal: 0,
       refundsTotal,
     });

@@ -115,28 +115,28 @@
 
 > Cliniko lets clients book a repeating series (e.g., every Tuesday at 2pm for 8 weeks). Our booking only supports one-off appointments.
 
-- [ ] **1.4.1 — Data Model**
-  - [ ] Add `RecurringRule` model: `id`, `frequency` (`DAILY` | `WEEKLY` | `FORTNIGHTLY` | `MONTHLY`), `interval`, `daysOfWeek` (JSON), `endAfterOccurrences`, `endDate`, `appointmentIds` (relation)
-  - [ ] Link `Appointment` → `recurringRuleId` (nullable)
-  - [ ] Create Prisma migration
+- [x] **1.4.1 — Data Model**
+  - [x] Add `RecurringRule` model: `id`, `frequency` (`DAILY` | `WEEKLY` | `FORTNIGHTLY` | `MONTHLY`), `interval`, `daysOfWeek` (JSON), `endAfterOccurrences`, `endDate`, `appointmentIds` (relation)
+  - [x] Link `Appointment` → `recurringRuleId` (nullable)
+  - [x] Create Prisma migration
 
-- [ ] **1.4.2 — Recurring Booking UI (Staff)**
-  - [ ] "Repeat" toggle in appointment creation form
-  - [ ] Frequency selector: weekly / fortnightly / monthly
-  - [ ] Day-of-week picker for weekly rules
-  - [ ] End condition: after N sessions OR on a specific date
-  - [ ] Preview list of generated dates before confirming
-  - [ ] Edit options on existing recurring appointment: "this appointment only" | "this and following" | "all in series"
-  - [ ] Cancel options: same three scopes
+- [x] **1.4.2 — Recurring Booking UI (Staff)**
+  - [x] "Repeat" toggle in appointment creation form
+  - [x] Frequency selector: weekly / fortnightly / monthly
+  - [x] Day-of-week picker for weekly rules
+  - [x] End condition: after N sessions OR on a specific date
+  - [x] Preview list of generated dates before confirming
+  - [x] Edit options on existing recurring appointment: "this appointment only" | "this and following" | "all in series"
+  - [x] Cancel options: same three scopes
 
-- [ ] **1.4.3 — Recurring Booking (Public Booking Page)**
-  - [ ] Checkbox "Book as recurring series" on public booking flow
-  - [ ] Frequency and end-date pickers
-  - [ ] Show generated schedule before confirming
+- [x] **1.4.3 — Recurring Booking (Public Booking Page)**
+  - [x] Checkbox "Book as recurring series" on public booking flow
+  - [x] Frequency and end-date pickers
+  - [x] Show generated schedule before confirming
   - [ ] Block if any slot in series is unavailable (show conflict)
 
-- [ ] **1.4.4 — Reminders for Series**
-  - [ ] Single reminder rule covers all appointments in series
+- [x] **1.4.4 — Reminders for Series**
+  - [x] Single reminder rule covers all appointments in series
   - [ ] Option to send reminder only for next occurrence vs. all upcoming
 
 ---
@@ -145,19 +145,19 @@
 
 > Cliniko lets practices restrict online booking to existing clients only. Our public booking page is open to anyone.
 
-- [ ] **1.5.1 — Business Setting**
-  - [ ] Add `bookingMode` to business settings: `PUBLIC` | `EXISTING_CLIENTS_ONLY` | `INVITE_ONLY`
-  - [ ] Settings UI under Settings → Booking → Access
+- [x] **1.5.1 — Business Setting**
+  - [x] Add `bookingMode` to business settings: `PUBLIC` | `EXISTING_CLIENTS_ONLY` | `INVITE_ONLY`
+  - [x] Settings UI under Settings → Booking → Access
 
-- [ ] **1.5.2 — Existing Clients Only Mode**
-  - [ ] Public booking page prompts for email/phone before showing availability
-  - [ ] Validate against client records — only proceed if match found
-  - [ ] Show "Contact us to register as a new client" message if no match
+- [x] **1.5.2 — Existing Clients Only Mode**
+  - [x] Public booking page prompts for email/phone before showing availability
+  - [x] Validate against client records — only proceed if match found
+  - [x] Show "Contact us to register as a new client" message if no match
 
-- [ ] **1.5.3 — Invite-Only Mode**
-  - [ ] Generate unique booking link per client (token-based, expires optionally)
-  - [ ] Staff action "Send booking invite" on client profile
-  - [ ] Booking link pre-fills client details and bypasses access check
+- [x] **1.5.3 — Invite-Only Mode**
+  - [x] Generate unique booking link per client (token-based, expires optionally)
+  - [x] Staff action "Send booking invite" on client profile
+  - [x] Booking link pre-fills client details and bypasses access check
 
 ---
 
@@ -165,23 +165,23 @@
 
 > Cliniko lets you restrict specific appointment types to specific rooms, therapists, or time blocks. We only have basic therapist hours.
 
-- [ ] **1.6.1 — Data Model**
-  - [ ] Add `AvailabilityRule` model: `therapistId` (nullable), `roomId` (nullable), `serviceType` (nullable), `daysOfWeek` (JSON), `startTime`, `endTime`, `priority`
-  - [ ] Add `Room` model: `id`, `businessId`, `name`, `color`, `capacity`
-  - [ ] Create Prisma migration
+- [x] **1.6.1 — Data Model**
+  - [x] Add `AvailabilityRule` model: `therapistId` (nullable), `roomId` (nullable), `serviceType` (nullable), `daysOfWeek` (JSON), `startTime`, `endTime`, `priority`
+  - [x] Add `Room` model: `id`, `businessId`, `name`, `color`, `capacity`
+  - [x] Create Prisma migration
 
-- [ ] **1.6.2 — Room Management**
-  - [ ] Rooms list under Settings → Locations → Rooms
-  - [ ] Create, edit, archive rooms
-  - [ ] Assign room to appointment (optional) in booking form
+- [x] **1.6.2 — Room Management**
+  - [x] Rooms list under Settings → Locations → Rooms
+  - [x] Create, edit, archive rooms
+  - [x] Assign room to appointment (optional) in booking form
   - [ ] Room column view in calendar (resource view)
 
-- [ ] **1.6.3 — Availability Rule Builder**
-  - [ ] UI: Settings → Scheduling → Availability Rules
-  - [ ] Rule targets: "Therapist X" | "Room Y" | "Service Type Z" | combinations
-  - [ ] Time block input: days of week + start/end time
+- [x] **1.6.3 — Availability Rule Builder**
+  - [x] UI: Settings → Scheduling → Availability Rules
+  - [x] Rule targets: "Therapist X" | "Room Y" | "Service Type Z" | combinations
+  - [x] Time block input: days of week + start/end time
   - [ ] Rules shown in calendar as greyed-out unavailable blocks
-  - [ ] Booking form respects rules: hides time slots that violate any rule
+  - [x] Booking form respects rules: hides time slots that violate any rule
 
 ---
 
@@ -189,15 +189,15 @@
 
 > Cliniko added passkeys in 2025. We are email/password only.
 
-- [ ] **1.7.1 — Backend**
-  - [ ] Enable Supabase passkey support (WebAuthn) in project settings
-  - [ ] Update `apps/web/lib/supabase/` client to handle passkey sign-in flow
+- [x] **1.7.1 — Backend**
+  - [x] Enable Supabase passkey support (WebAuthn) in project settings
+  - [x] Update `apps/web/lib/supabase/` client to handle passkey sign-in flow
 
-- [ ] **1.7.2 — Frontend**
-  - [ ] "Add passkey" button on Settings → Security
-  - [ ] Passkey sign-in option on `/sign-in` page (alongside email/password)
-  - [ ] Fallback to password if passkey auth fails
-  - [ ] Show registered passkeys list with revoke option
+- [x] **1.7.2 — Frontend**
+  - [x] "Add passkey" button on Settings → Security
+  - [x] Passkey sign-in option on `/sign-in` page (alongside email/password)
+  - [x] Fallback to password if passkey auth fails
+  - [x] Show registered passkeys list with revoke option
 
 ---
 
@@ -213,30 +213,30 @@
 
 > Cliniko's #1 complaint: messages show "sent" but patients never receive them. We use Twilio — leverage it.
 
-- [ ] **2.1.1 — Delivery Tracking Data Model**
-  - [ ] Add `MessageLog` model: `id`, `appointmentId` (nullable), `clientId`, `channel` (`SMS` | `EMAIL` | `WHATSAPP`), `status` (`QUEUED` | `SENT` | `DELIVERED` | `FAILED` | `UNDELIVERED`), `providerMessageId`, `errorCode`, `sentAt`, `deliveredAt`
-  - [ ] Create Prisma migration
+- [x] **2.1.1 — Delivery Tracking Data Model**
+  - [x] Add `MessageLog` model: `id`, `appointmentId` (nullable), `clientId`, `channel` (`SMS` | `EMAIL` | `WHATSAPP`), `status` (`QUEUED` | `SENT` | `DELIVERED` | `FAILED` | `UNDELIVERED`), `providerMessageId`, `errorCode`, `sentAt`, `deliveredAt`
+  - [x] Create Prisma migration
 
-- [ ] **2.1.2 — Twilio Webhook Handler**
-  - [ ] `POST /api/webhooks/twilio/status` — receive Twilio delivery status callbacks
-  - [ ] Update `MessageLog.status` on each callback event
-  - [ ] Retry logic: auto-retry FAILED messages once after 5 minutes
+- [x] **2.1.2 — Twilio Webhook Handler**
+  - [x] `POST /api/webhooks/twilio/status` — receive Twilio delivery status callbacks
+  - [x] Update `MessageLog.status` on each callback event
+  - [x] Retry logic: auto-retry FAILED messages once after 5 minutes
 
-- [ ] **2.1.3 — SendGrid Webhook Handler**
-  - [ ] `POST /api/webhooks/sendgrid/events` — receive SendGrid delivery events
-  - [ ] Map SendGrid events (`delivered`, `bounce`, `dropped`) → `MessageLog.status`
+- [x] **2.1.3 — SendGrid Webhook Handler**
+  - [x] `POST /api/webhooks/resend/events` — receive Resend delivery events (we use Resend, not SendGrid)
+  - [x] Map Resend events (`delivered`, `bounced`, `delivery_delayed`) → `MessageLog.status`
 
-- [ ] **2.1.4 — Delivery Dashboard UI**
-  - [ ] Communications → Delivery Reports tab
-  - [ ] Stats row: total sent, delivered %, failed %, pending
-  - [ ] Per-message table: client, channel, message type, status badge, timestamp
-  - [ ] Filter by: date range, channel, status, therapist
-  - [ ] Failed message actions: retry, mark resolved, switch to alternative channel
-  - [ ] Alert banner on dashboard when delivery failure rate exceeds 5%
+- [x] **2.1.4 — Delivery Dashboard UI**
+  - [x] Communications → Delivery Reports tab (sidebar link + `/communications/delivery-reports` page)
+  - [x] Stats row: total sent, delivered %, failed %, pending
+  - [x] Per-message table: client, channel, message type, status badge, timestamp
+  - [x] Filter by: date range, channel, status
+  - [x] Failed message actions: retry, mark resolved
+  - [x] Alert banner on dashboard when delivery failure rate exceeds 5%
 
-- [ ] **2.1.5 — Client-level Delivery History**
-  - [ ] Client profile → Communications tab shows all message history with delivery status
-  - [ ] Staff can see at a glance if a reminder was actually received before calling to follow up
+- [x] **2.1.5 — Client-level Delivery History**
+  - [x] Client profile → Communications tab shows all message history with delivery status
+  - [x] Staff can see at a glance if a reminder was actually received before calling to follow up
 
 ---
 
@@ -244,24 +244,24 @@
 
 > Cliniko's Xero sync is one-way only. Invoices changed in Xero don't flow back. Users find this deeply frustrating.
 
-- [ ] **2.2.1 — Xero Integration**
-  - [ ] OAuth 2.0 connection flow: Settings → Integrations → Xero → Connect
-  - [ ] Sync invoices from app → Xero on creation and update (two-way)
-  - [ ] Sync payments from Xero → app when marked paid in Xero
-  - [ ] Webhook from Xero for real-time sync (vs. polling)
-  - [ ] Conflict resolution UI: show diff when both sides changed, let staff pick winner
-  - [ ] Disconnect and re-sync option
+- [x] **2.2.1 — Xero Integration**
+  - [x] OAuth 2.0 connection flow: Settings → Integrations → Xero → Connect
+  - [x] Sync invoices from app → Xero on creation and update (two-way)
+  - [x] Sync payments from Xero → app when marked paid in Xero
+  - [x] Webhook from Xero for real-time sync (vs. polling)
+  - [x] Conflict resolution UI: show diff when both sides changed, let staff pick winner
+  - [x] Disconnect and re-sync option
 
-- [ ] **2.2.2 — QuickBooks Integration**
-  - [ ] Same two-way sync as Xero (parallel implementation)
-  - [ ] OAuth 2.0 connection flow
-  - [ ] Invoice and payment sync
-  - [ ] Webhook-based real-time updates
+- [x] **2.2.2 — QuickBooks Integration**
+  - [x] Same two-way sync as Xero (parallel implementation)
+  - [x] OAuth 2.0 connection flow
+  - [x] Invoice and payment sync
+  - [x] Webhook-based real-time updates
 
-- [ ] **2.2.3 — Sync Logs**
-  - [ ] Settings → Integrations → Sync Logs table
-  - [ ] Per-record: entity type, direction, status, timestamp, error message
-  - [ ] Manual "Force sync" button per integration
+- [x] **2.2.3 — Sync Logs**
+  - [x] Settings → Integrations → Sync Logs table
+  - [x] Per-record: entity type, direction, status, timestamp, error message
+  - [x] Manual "Force sync" button per integration
 
 ---
 
@@ -269,28 +269,28 @@
 
 > Cliniko has no task system. Users specifically call this out as missing. Practices need to assign follow-up tasks to staff.
 
-- [ ] **2.3.1 — Data Model**
-  - [ ] Add `Task` model: `id`, `businessId`, `assignedToId`, `createdById`, `title`, `description`, `dueDate`, `priority` (`LOW` | `MEDIUM` | `HIGH` | `URGENT`), `status` (`TODO` | `IN_PROGRESS` | `DONE`), `relatedClientId` (nullable), `relatedAppointmentId` (nullable), `completedAt`
-  - [ ] Create Prisma migration
+- [x] **2.3.1 — Data Model**
+  - [x] Add `Task` model: `id`, `businessId`, `assignedToId`, `createdById`, `title`, `description`, `dueDate`, `priority` (`LOW` | `MEDIUM` | `HIGH` | `URGENT`), `status` (`TODO` | `IN_PROGRESS` | `DONE`), `relatedClientId` (nullable), `relatedAppointmentId` (nullable), `completedAt`
+  - [x] Create Prisma migration
 
-- [ ] **2.3.2 — Task API**
-  - [ ] `POST /api/tasks` — create task
-  - [ ] `GET /api/tasks` — list tasks (filterable by assignee, status, priority, due date)
-  - [ ] `PATCH /api/tasks/:id` — update task
-  - [ ] `DELETE /api/tasks/:id` — delete task
+- [x] **2.3.2 — Task API**
+  - [x] `POST /api/tasks` — create task
+  - [x] `GET /api/tasks` — list tasks (filterable by assignee, status, priority, due date)
+  - [x] `PATCH /api/tasks/:id` — update task
+  - [x] `DELETE /api/tasks/:id` — delete task
 
-- [ ] **2.3.3 — Task UI**
-  - [ ] Add "Tasks" to dashboard sidebar navigation
-  - [ ] Tasks page: Kanban view (Todo | In Progress | Done) + List view toggle
-  - [ ] Task card: title, assignee avatar, due date, priority color, linked client/appointment chip
+- [x] **2.3.3 — Task UI**
+  - [x] Add "Tasks" to dashboard sidebar navigation
+  - [x] Tasks page: Kanban view (Todo | In Progress | Done) + List view toggle
+  - [x] Task card: title, assignee avatar, due date, priority color, linked client/appointment chip
   - [ ] Create task from appointment detail modal ("Add follow-up task")
   - [ ] Create task from client profile
-  - [ ] Dashboard widget: "My tasks due today" with count badge on sidebar icon
-  - [ ] Overdue tasks highlighted in red
+  - [x] Dashboard widget: "My tasks due today" with count badge on sidebar icon
+  - [x] Overdue tasks highlighted in red
 
-- [ ] **2.3.4 — Task Notifications**
+- [x] **2.3.4 — Task Notifications**
   - [ ] Push notification when task assigned to you
-  - [ ] Daily digest email at 8am: tasks due today
+  - [x] Daily digest email at 8am: tasks due today
   - [ ] Reminder push notification 1 hour before task due time
 
 ---
@@ -299,30 +299,30 @@
 
 > Cliniko users consistently say reports "could be more detailed." This is a major switching reason.
 
-- [ ] **2.4.1 — Revenue Reports**
-  - [ ] Revenue by therapist (table + bar chart)
-  - [ ] Revenue by service type
-  - [ ] Revenue by month with YoY comparison
-  - [ ] Outstanding invoices ageing report (30/60/90+ days)
-  - [ ] Average invoice value trend
+- [x] **2.4.1 — Revenue Reports**
+  - [x] Revenue by therapist (table + bar chart)
+  - [x] Revenue by service type (table + pie chart)
+  - [x] Revenue by month with YoY comparison (area chart with prior year overlay)
+  - [x] Outstanding invoices ageing report (30/60/90+ days) — new INVOICE_AGEING report type
+  - [x] Average invoice value trend (line chart by month)
 
-- [ ] **2.4.2 — Client Reports**
-  - [ ] Client retention rate (% returning within 90 days)
-  - [ ] New vs. returning clients per month
-  - [ ] Client lifetime value (total spend)
-  - [ ] Lapsed clients report (no visit in X days — configurable)
-  - [ ] Referral source breakdown (where clients come from)
+- [x] **2.4.2 — Client Reports**
+  - [x] Client retention rate (% returning within 90 days)
+  - [x] New vs. returning clients per month (stacked bar chart)
+  - [x] Client lifetime value (total spend)
+  - [x] Lapsed clients report (no visit in X days — configurable)
+  - [ ] Referral source breakdown (where clients come from) — skipped: no referral source field in client schema
 
-- [ ] **2.4.3 — Appointment Reports**
-  - [ ] Utilisation rate per therapist (booked hours / available hours)
-  - [ ] No-show and cancellation rate per therapist / overall
-  - [ ] Peak hours heatmap (day of week × hour of day)
-  - [ ] Average appointment duration by service type
+- [x] **2.4.3 — Appointment Reports**
+  - [x] Utilisation rate per therapist (booked hours / available hours) — in Therapist report
+  - [x] No-show and cancellation rate per therapist / overall (bar chart + table)
+  - [x] Peak hours heatmap (day of week × hour of day) — full heatmap grid
+  - [x] Average appointment duration by service type (bar chart)
 
-- [ ] **2.4.4 — Export & Scheduling**
-  - [ ] Export any report to CSV or PDF
-  - [ ] Scheduled reports: configure a report to email to owner weekly/monthly
-  - [ ] Date range presets: this week, last month, last quarter, custom
+- [x] **2.4.4 — Export & Scheduling**
+  - [x] Export any report to CSV (Download CSV button in report viewer)
+  - [x] Scheduled reports: configure a report to email to owner weekly/monthly
+  - [x] Date range presets: this week, last month, last quarter, custom (This Month + Last Month added)
 
 ---
 
@@ -330,22 +330,22 @@
 
 > Cliniko users complain they can't read or sign off on a colleague's draft notes. Critical for supervision workflows.
 
-- [ ] **2.5.1 — Draft Note Visibility Rules**
-  - [ ] Business setting: "Draft notes visible to" — `Only Author` | `All Therapists` | `Business Owner Only`
-  - [ ] Business owner can always see all drafts regardless of setting
+- [x] **2.5.1 — Draft Note Visibility Rules**
+  - [x] Business setting: "Draft notes visible to" — `Only Author` | `All Therapists` | `Business Owner Only`
+  - [x] Business owner can always see all drafts regardless of setting
 
-- [ ] **2.5.2 — Supervisor Sign-off**
-  - [ ] Note statuses: `DRAFT` → `PENDING_REVIEW` → `APPROVED` | `REJECTED`
-  - [ ] Therapist can submit note for review — assigns to a supervisor (dropdown)
-  - [ ] Supervisor sees a "Pending Review" queue in treatment notes
-  - [ ] Supervisor can approve (locks note) or reject with comment (returns to author)
-  - [ ] Approval history shown on note: who approved, when
+- [x] **2.5.2 — Supervisor Sign-off**
+  - [x] Note statuses: `DRAFT` → `PENDING_REVIEW` → `APPROVED` | `REJECTED`
+  - [x] Therapist can submit note for review — assigns to a supervisor (dropdown)
+  - [x] Supervisor sees a "Pending Review" queue in treatment notes
+  - [x] Supervisor can approve (locks note) or reject with comment (returns to author)
+  - [x] Approval history shown on note: who approved, when
 
-- [ ] **2.5.3 — UI**
-  - [ ] "Submit for review" button on draft note toolbar
-  - [ ] Reviewer queue: Treatment Notes → Pending Review tab
-  - [ ] Approve / Reject with comment modal
-  - [ ] Status badge on note list: Draft, In Review, Approved
+- [x] **2.5.3 — UI**
+  - [x] "Submit for review" button on draft note toolbar
+  - [x] Reviewer queue: Treatment Notes → Pending Review tab
+  - [x] Approve / Reject with comment modal
+  - [x] Status badge on note list: Draft, In Review, Approved
 
 ---
 

@@ -1,19 +1,28 @@
 'use client';
 
+import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Button, Card, CardHeader, CardTitle, CardContent, Skeleton } from '@massage/ui';
 import { useTreatmentNote } from '@/lib/hooks';
 import { BodyMapViewer } from '@/components/body-map';
 import { AISummarySection } from '@/components/ai';
-
+import { NoteStatusBadge } from '@/components/treatment-notes/NoteStatusBadge';
+import { SubmitForReviewModal } from '@/components/treatment-notes/SubmitForReviewModal';
+import { ReviewActionModal } from '@/components/treatment-notes/ReviewActionModal';
 import { useBusinessId } from '@/lib/hooks/use-business-id';
+import { useCurrentUser } from '@/lib/hooks/use-business';
+
 export default function TreatmentNoteDetailPage() {
   const params = useParams();
   const router = useRouter();
   const noteId = params.id as string;
   const businessId = useBusinessId();
 
-  const { data: note, isLoading } = useTreatmentNote(noteId, businessId);
+  const { data: note, isLoading, refetch } = useTreatmentNote(noteId, businessId);
+  const { data: currentUser } = useCurrentUser();
+
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [reviewAction, setReviewAction] = useState<'approve' | 'reject' | null>(null);
 
   if (isLoading) {
     return <Skeleton variant="rectangular" height={600} />;
@@ -28,13 +37,20 @@ export default function TreatmentNoteDetailPage() {
   }
 
   const noteData = note as any;
+  const status = noteData.status ?? 'DRAFT';
+  const isAuthor = noteData.therapist?.userId === currentUser?.id;
+  const isReviewer = noteData.reviewerId === currentUser?.id;
+  const isApproved = status === 'APPROVED';
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: '#5D4AA8', letterSpacing: '1.4px' }}>Practice</p>
-          <h1 className="text-2xl font-semibold font-display" style={{ color: '#1E1830', letterSpacing: '-0.4px' }}>SOAP Note</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-semibold font-display" style={{ color: '#1E1830', letterSpacing: '-0.4px' }}>SOAP Note</h1>
+            <NoteStatusBadge status={status} />
+          </div>
           <p className="text-sm mt-0.5" style={{ color: '#7A7090' }}>
             {noteData.client
               ? `${noteData.client.firstName} ${noteData.client.lastName}`
@@ -50,13 +66,81 @@ export default function TreatmentNoteDetailPage() {
             </span>
           )}
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-2">
           <Button variant="outline" onClick={() => router.back()}>
             Back
           </Button>
-          <Button variant="primary">Edit</Button>
+          {/* Author actions */}
+          {isAuthor && (status === 'DRAFT' || status === 'REJECTED') && !isApproved && (
+            <>
+              <Button variant="outline" onClick={() => router.push(`/treatment-notes/${noteId}/edit`)}>
+                Edit
+              </Button>
+              <Button variant="primary" onClick={() => setShowSubmitModal(true)}>
+                Submit for Review
+              </Button>
+            </>
+          )}
+          {isAuthor && status === 'PENDING_REVIEW' && (
+            <Button variant="outline" disabled>In Review</Button>
+          )}
+          {/* Reviewer actions */}
+          {isReviewer && status === 'PENDING_REVIEW' && (
+            <>
+              <Button variant="danger" onClick={() => setReviewAction('reject')}>Reject</Button>
+              <Button variant="primary" onClick={() => setReviewAction('approve')}>Approve</Button>
+            </>
+          )}
+          {/* Non-author/non-reviewer editing */}
+          {!isAuthor && !isReviewer && !isApproved && (
+            <Button variant="primary">Edit</Button>
+          )}
         </div>
       </div>
+
+      {/* Review status info */}
+      {(status === 'PENDING_REVIEW' || status === 'APPROVED' || status === 'REJECTED') && (
+        <Card>
+          <CardContent className="py-4">
+            <div className="flex items-start gap-3">
+              <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
+                status === 'APPROVED' ? 'bg-green-500' : status === 'REJECTED' ? 'bg-red-500' : 'bg-amber-500'
+              }`} />
+              <div className="flex-1 min-w-0">
+                {status === 'PENDING_REVIEW' && (
+                  <p className="text-sm text-gray-700">
+                    Submitted for review
+                    {noteData.submittedForReviewAt && ` on ${new Date(noteData.submittedForReviewAt).toLocaleDateString()}`}
+                    {noteData.reviewer && ` · Assigned to ${noteData.reviewer.firstName} ${noteData.reviewer.lastName}`}
+                  </p>
+                )}
+                {status === 'APPROVED' && (
+                  <p className="text-sm text-gray-700">
+                    Approved
+                    {noteData.reviewer && ` by ${noteData.reviewer.firstName} ${noteData.reviewer.lastName}`}
+                    {noteData.reviewedAt && ` on ${new Date(noteData.reviewedAt).toLocaleDateString()}`}
+                    <span className="ml-1 text-gray-500">· This note is locked</span>
+                  </p>
+                )}
+                {status === 'REJECTED' && (
+                  <div>
+                    <p className="text-sm text-gray-700">
+                      Returned for revision
+                      {noteData.reviewer && ` by ${noteData.reviewer.firstName} ${noteData.reviewer.lastName}`}
+                      {noteData.reviewedAt && ` on ${new Date(noteData.reviewedAt).toLocaleDateString()}`}
+                    </p>
+                    {noteData.reviewComment && (
+                      <p className="mt-1.5 text-sm text-gray-600 bg-red-50 border border-red-100 rounded-md px-3 py-2">
+                        {noteData.reviewComment}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* AI Summary Section */}
       <AISummarySection
@@ -134,7 +218,7 @@ export default function TreatmentNoteDetailPage() {
             <div>
               <p className="text-sm font-medium text-gray-600 mb-2">Areas Worked</p>
               <div className="flex flex-wrap gap-2">
-                {note.areasWorked.map((area, idx) => (
+                {note.areasWorked.map((area: string, idx: number) => (
                   <span
                     key={idx}
                     className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm"
@@ -150,7 +234,7 @@ export default function TreatmentNoteDetailPage() {
             <div>
               <p className="text-sm font-medium text-gray-600 mb-2">Techniques Used</p>
               <div className="flex flex-wrap gap-2">
-                {note.techniques.map((technique, idx) => (
+                {note.techniques.map((technique: string, idx: number) => (
                   <span
                     key={idx}
                     className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm"
@@ -163,6 +247,25 @@ export default function TreatmentNoteDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Modals */}
+      {showSubmitModal && businessId && (
+        <SubmitForReviewModal
+          noteId={noteId}
+          businessId={businessId}
+          onClose={() => setShowSubmitModal(false)}
+          onSuccess={() => refetch()}
+        />
+      )}
+      {reviewAction && businessId && (
+        <ReviewActionModal
+          noteId={noteId}
+          businessId={businessId}
+          action={reviewAction}
+          onClose={() => setReviewAction(null)}
+          onSuccess={() => refetch()}
+        />
+      )}
     </div>
   );
 }

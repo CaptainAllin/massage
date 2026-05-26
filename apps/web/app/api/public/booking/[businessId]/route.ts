@@ -16,7 +16,7 @@ export async function GET(
 
     const business = await prisma.business.findUnique({
       where: { id: businessId },
-      select: { id: true, name: true, logo: true, primaryColor: true, secondaryColor: true },
+      select: { id: true, name: true, logo: true, primaryColor: true, secondaryColor: true, bookingMode: true },
     });
 
     if (!business) return res.notFound('Business not found');
@@ -56,6 +56,7 @@ export async function POST(
       clientEmail,
       clientPhone,
       notes,
+      inviteToken,
     } = body;
 
     if (!therapistId || !startTime || !duration || !clientFirstName || !clientLastName) {
@@ -64,9 +65,30 @@ export async function POST(
 
     const business = await prisma.business.findUnique({
       where: { id: businessId },
-      select: { id: true, name: true, email: true },
+      select: { id: true, name: true, email: true, bookingMode: true },
     });
     if (!business) return res.notFound('Business not found');
+
+    // Access control enforcement
+    if (business.bookingMode === 'INVITE_ONLY') {
+      if (!inviteToken) return res.forbidden('An invitation is required to book with this business.');
+      const invite = await prisma.bookingInvite.findUnique({ where: { token: inviteToken } });
+      if (!invite || invite.businessId !== businessId) return res.forbidden('Invalid or expired invitation.');
+      if (invite.usedAt) return res.forbidden('This invitation has already been used.');
+      if (invite.expiresAt && invite.expiresAt < new Date()) return res.forbidden('This invitation has expired.');
+    } else if (business.bookingMode === 'EXISTING_CLIENTS_ONLY') {
+      const exists = await prisma.client.findFirst({
+        where: {
+          businessId,
+          OR: [
+            ...(clientEmail ? [{ email: clientEmail }] : []),
+            ...(clientPhone ? [{ phoneNumber: clientPhone }] : []),
+          ],
+        },
+        select: { id: true },
+      });
+      if (!exists) return res.forbidden('Online booking is restricted to existing clients. Please contact us to register.');
+    }
 
     const therapist = await prisma.therapist.findFirst({
       where: { id: therapistId, businessId, isActive: true },
@@ -122,6 +144,14 @@ export async function POST(
         therapist: { include: { user: true } },
       },
     });
+
+    // Mark invite as used if invite-only booking
+    if (business.bookingMode === 'INVITE_ONLY' && inviteToken) {
+      await prisma.bookingInvite.update({
+        where: { token: inviteToken },
+        data: { usedAt: new Date() },
+      });
+    }
 
     // Send confirmation email (non-blocking)
     const clientEmail2 = client.email;

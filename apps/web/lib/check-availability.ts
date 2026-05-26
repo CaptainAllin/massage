@@ -5,7 +5,8 @@ export async function checkAvailability(
   therapistId: string,
   startTime: Date,
   endTime: Date,
-  excludeAppointmentId?: string
+  excludeAppointmentId?: string,
+  serviceType?: string
 ) {
   const dayOfWeek = startTime.getDay();
   const timeString = startTime.toTimeString().substring(0, 5);
@@ -40,6 +41,34 @@ export async function checkAvailability(
 
   if (timeOff) {
     return { available: false, reason: 'TIME_OFF', message: 'Therapist is on time off during this period' };
+  }
+
+  // Check availability rules — if any rules exist for this therapist/service, slot must be within a rule window
+  const ruleFilter: any[] = [{ therapistId }];
+  if (serviceType) ruleFilter.push({ serviceType });
+
+  const rules = await prisma.availabilityRule.findMany({
+    where: { OR: ruleFilter },
+  });
+
+  if (rules.length > 0) {
+    const slotStartStr = timeString;
+    const slotEndStr = endTimeString;
+    const matchesRule = rules.some((r) => {
+      const days = r.daysOfWeek as number[];
+      return (
+        days.includes(dayOfWeek) &&
+        slotStartStr >= r.startTime &&
+        slotEndStr <= r.endTime
+      );
+    });
+    if (!matchesRule) {
+      return {
+        available: false,
+        reason: 'RULE_VIOLATION',
+        message: 'This time slot is outside the configured availability rules',
+      };
+    }
   }
 
   const conflictWhere: any = {

@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, Phone, Mail, MessageSquare, CalendarPlus } from 'lucide-react';
+import { ChevronLeft, Phone, Mail, MessageSquare, CalendarPlus, Link2, Check, Loader2 } from 'lucide-react';
 import { Client } from '@massage/types';
 import { APT_COLORS, APT_SOFT } from '@/lib/appointment-colors';
 
@@ -25,6 +25,7 @@ function calcAge(dob: Date | null): number | null {
 export interface ClientHeaderProps {
   client: Client;
   lifetimeSpent?: number;
+  businessId?: string;
   onMessage?: () => void;
   onBook?: () => void;
 }
@@ -32,9 +33,34 @@ export interface ClientHeaderProps {
 export const ClientHeader: React.FC<ClientHeaderProps> = ({
   client,
   lifetimeSpent = 0,
+  businessId,
   onMessage,
   onBook,
 }) => {
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteCopied, setInviteCopied] = useState(false);
+
+  const handleSendInvite = async () => {
+    if (!businessId) return;
+    setInviteLoading(true);
+    try {
+      const r = await fetch(`/api/clients/${client.id}/booking-invite`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ businessId, expiresInHours: 72 }),
+      });
+      const d = await r.json();
+      if (d.success && d.data.bookingUrl) {
+        await navigator.clipboard.writeText(d.data.bookingUrl);
+        setInviteCopied(true);
+        setTimeout(() => setInviteCopied(false), 3000);
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setInviteLoading(false);
+    }
+  };
   const fullName = `${client.firstName} ${client.lastName}`;
   const initials = `${client.firstName[0] || ''}${client.lastName[0] || ''}`.toUpperCase();
   const ci = colorIdx(client.id);
@@ -164,6 +190,23 @@ export const ClientHeader: React.FC<ClientHeaderProps> = ({
               <MessageSquare className="w-4 h-4" />
               Message
             </button>
+            {businessId && (
+              <button
+                onClick={handleSendInvite}
+                disabled={inviteLoading}
+                title="Copy invite link (expires in 72 hours)"
+                className="flex items-center gap-2 px-4 py-[7px] rounded-full text-[13px] font-medium text-iris-ink border border-iris-line bg-white hover:bg-iris-soft1 transition-colors disabled:opacity-60"
+              >
+                {inviteLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : inviteCopied ? (
+                  <Check className="w-4 h-4 text-green-600" />
+                ) : (
+                  <Link2 className="w-4 h-4" />
+                )}
+                {inviteCopied ? 'Link copied!' : 'Send invite'}
+              </button>
+            )}
             <button
               onClick={onBook}
               className="flex items-center gap-2 px-4 py-[7px] rounded-full text-[13px] font-medium text-white iris-gradient-primary iris-shadow-primary"
