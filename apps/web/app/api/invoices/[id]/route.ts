@@ -2,6 +2,7 @@ import { requireAuth, res, AuthError } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
 import { NextRequest } from 'next/server';
 import { emitWebhookEvent } from '@/lib/webhooks';
+import { emitAutomation } from '@/lib/automation';
 
 function calculateTotals(lineItems: any[], taxAmount = 0, discountAmount = 0) {
   const subtotal = lineItems.reduce((sum: number, item: any) => sum + item.total, 0);
@@ -87,6 +88,13 @@ export async function PATCH(
 
     if (updatedInvoice.status === 'PAID' && invoice.status !== 'PAID') {
       emitWebhookEvent(businessId, 'invoice.paid', { id, invoiceNumber: updatedInvoice.invoiceNumber, total: updatedInvoice.total, clientId: updatedInvoice.clientId }).catch(() => {});
+      emitAutomation('PAYMENT_RECEIVED', businessId, {
+        invoiceId: id,
+        clientId: updatedInvoice.clientId,
+        amount: updatedInvoice.total,
+        invoiceNumber: updatedInvoice.invoiceNumber,
+        businessId,
+      });
     }
 
     return res.ok(updatedInvoice);

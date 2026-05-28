@@ -62,6 +62,8 @@ model Business {
   stripeAccountId            String?
   clientPortalEnabled        Boolean                      @default(false)
   clientPortalSettings       Json?
+  slackAccessToken           String?
+  slackDefaultChannel        String?
   aiPromptTemplates          AIPromptTemplate[]
   aiUsage                    AIUsage[]
   analyticsSnapshots         AnalyticsSnapshot[]
@@ -201,6 +203,7 @@ model Client {
   medicalHistory             Json?
   allergies                  String[]                     @default([])
   medications                String[]                     @default([])
+  tags                       String[]                     @default([])
   primaryPhysician           String?
   insuranceProvider          String?
   insurancePolicyNumber      String?

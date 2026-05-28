@@ -2,6 +2,7 @@ import { requireAuth, requireBusinessAccess, res, AuthError } from '@/lib/api-au
 import { prisma } from '@/lib/prisma';
 import { NextRequest } from 'next/server';
 import { emitWebhookEvent } from '@/lib/webhooks';
+import { emitAutomation } from '@/lib/automation';
 
 export async function GET(req: NextRequest) {
   try {
@@ -129,6 +130,7 @@ export async function POST(req: NextRequest) {
     });
 
     emitWebhookEvent(businessId, 'client.created', { id: client.id, firstName: client.firstName, lastName: client.lastName, email: client.email }).catch(() => {});
+    emitAutomation('CLIENT_CREATED', businessId, { clientId: client.id, businessId });
     return res.created(client);
   } catch (err) {
     if (err instanceof AuthError) return res.unauthorized(err.message);

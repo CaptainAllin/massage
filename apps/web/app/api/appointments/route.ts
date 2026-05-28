@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { AppointmentStatus, GroupBookingStatus } from '@prisma/client';
 import { checkAvailability } from '@/lib/check-availability';
 import { emitWebhookEvent } from '@/lib/webhooks';
+import { emitAutomation } from '@/lib/automation';
 
 export const GET = withAuth(async (req, _user) => {
   const { searchParams } = new URL(req.url);
@@ -125,6 +126,14 @@ export const POST = withAuth(async (req, user) => {
   });
 
   emitWebhookEvent(businessId, 'appointment.created', { id: appointment.id, clientId: primaryClientId, therapistId, startTime: start, status: 'SCHEDULED' }).catch(() => {});
+  emitAutomation('APPOINTMENT_BOOKED', businessId, {
+    appointmentId: appointment.id,
+    clientId: primaryClientId,
+    therapistId,
+    serviceType: (rest as any).serviceType ?? null,
+    startTime: start.toISOString(),
+    businessId,
+  });
 
   return res.created(appointment, 'Appointment created successfully');
 });

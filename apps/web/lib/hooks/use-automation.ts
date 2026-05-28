@@ -55,3 +55,25 @@ export function useDeleteAutomationRule(businessId: string | undefined) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['automation', businessId] }),
   });
 }
+
+export function useAutomationLogs(businessId: string | undefined, page = 1) {
+  return useQuery({
+    queryKey: ['automation-logs', businessId, page],
+    queryFn: async () => {
+      const { data } = await apiClient.get(`/automation/logs?businessId=${businessId}&page=${page}&limit=50`);
+      return data as { logs: any[]; meta: { page: number; limit: number; total: number; totalPages: number } };
+    },
+    enabled: !!businessId,
+  });
+}
+
+export function useRerunAutomation(businessId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (logId: string) => {
+      const res = await apiClient.post('/automation/logs/rerun', { logId });
+      return res.data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['automation-logs', businessId] }),
+  });
+}

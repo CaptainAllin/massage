@@ -22,7 +22,7 @@
 
 > The AutomationRule model and basic API exist. Stubs are not functional. Triggers are not called from real events. This phase makes the engine actually work.
 
-- [ ] **Phase 1 complete**
+- [x] **Phase 1 complete**
 
 ---
 
@@ -30,29 +30,29 @@
 
 > Right now `POST /api/automation/trigger` must be called manually. No real event fires it.
 
-- [ ] **1.1.1 — Appointment Triggers**
-  - [ ] Call `emitAutomation('APPOINTMENT_BOOKED', data)` inside `POST /api/appointments` after record created
-  - [ ] Call `emitAutomation('APPOINTMENT_COMPLETED', data)` when appointment status set to `COMPLETED`
-  - [ ] Call `emitAutomation('APPOINTMENT_CANCELLED', data)` when appointment status set to `CANCELLED`
-  - [ ] Include full payload: `appointmentId`, `clientId`, `therapistId`, `serviceType`, `startTime`, `businessId`
+- [x] **1.1.1 — Appointment Triggers**
+  - [x] Call `emitAutomation('APPOINTMENT_BOOKED', data)` inside `POST /api/appointments` after record created
+  - [x] Call `emitAutomation('APPOINTMENT_COMPLETED', data)` when appointment status set to `COMPLETED`
+  - [x] Call `emitAutomation('APPOINTMENT_CANCELLED', data)` when appointment status set to `CANCELLED`
+  - [x] Include full payload: `appointmentId`, `clientId`, `therapistId`, `serviceType`, `startTime`, `businessId`
 
-- [ ] **1.1.2 — Client Triggers**
-  - [ ] Call `emitAutomation('CLIENT_CREATED', data)` inside `POST /api/clients` after record created
-  - [ ] Schedule `CLIENT_INACTIVE` check via cron (daily at 9am): find clients with no appointment in 30+ days
+- [x] **1.1.2 — Client Triggers**
+  - [x] Call `emitAutomation('CLIENT_CREATED', data)` inside `POST /api/clients` after record created
+  - [x] Schedule `CLIENT_INACTIVE` check via cron (daily at 9am): find clients with no appointment in 30+ days
 
-- [ ] **1.1.3 — Payment Triggers**
-  - [ ] Call `emitAutomation('PAYMENT_RECEIVED', data)` inside invoice payment handler
-  - [ ] Call `emitAutomation('PAYMENT_FAILED', data)` on Stripe payment failure webhook
+- [x] **1.1.3 — Payment Triggers**
+  - [x] Call `emitAutomation('PAYMENT_RECEIVED', data)` inside invoice payment handler
+  - [x] Call `emitAutomation('PAYMENT_FAILED', data)` on Stripe payment failure webhook
 
-- [ ] **1.1.4 — Intake Form Trigger**
-  - [ ] Call `emitAutomation('INTAKE_FORM_SUBMITTED', data)` inside `POST /api/intake-forms` after submission
+- [x] **1.1.4 — Intake Form Trigger**
+  - [x] Call `emitAutomation('INTAKE_FORM_SUBMITTED', data)` inside `POST /api/intake-forms` after submission
 
-- [ ] **1.1.5 — Membership Trigger**
-  - [ ] Call `emitAutomation('MEMBERSHIP_RENEWED', data)` on Stripe subscription renewal webhook
+- [x] **1.1.5 — Membership Trigger**
+  - [x] Call `emitAutomation('MEMBERSHIP_RENEWED', data)` on Stripe subscription renewal webhook
 
-- [ ] **1.1.6 — `emitAutomation` Helper**
-  - [ ] Create `apps/web/lib/automation.ts` with `emitAutomation(trigger, businessId, data)` helper
-  - [ ] Helper queries active rules by trigger, evaluates conditions, executes actions in background (non-blocking)
+- [x] **1.1.6 — `emitAutomation` Helper**
+  - [x] Create `apps/web/lib/automation.ts` with `emitAutomation(trigger, businessId, data)` helper
+  - [x] Helper queries active rules by trigger, evaluates conditions, executes actions in background (non-blocking)
 
 ---
 
@@ -60,47 +60,47 @@
 
 > Action params contain `{{client.email}}` etc. but nothing resolves them. Every `SEND_EMAIL` fires with raw `{{placeholders}}`.
 
-- [ ] **1.2.1 — Variable Resolver**
-  - [ ] Create `resolveTemplate(template: string, context: object): string` in `lib/automation.ts`
-  - [ ] Support context keys: `client.*`, `appointment.*`, `invoice.*`, `business.*`, `therapist.*`
-  - [ ] Resolve at execution time by fetching related records from DB using IDs in `triggerData`
+- [x] **1.2.1 — Variable Resolver**
+  - [x] Create `resolveTemplate(template: string, context: object): string` in `lib/automation.ts`
+  - [x] Support context keys: `client.*`, `appointment.*`, `invoice.*`, `business.*`, `therapist.*`
+  - [x] Resolve at execution time by fetching related records from DB using IDs in `triggerData`
 
-- [ ] **1.2.2 — Available Variables Reference**
-  - [ ] `{{client.firstName}}`, `{{client.lastName}}`, `{{client.email}}`, `{{client.phone}}`
-  - [ ] `{{appointment.date}}`, `{{appointment.time}}`, `{{appointment.service}}`, `{{appointment.therapistName}}`
-  - [ ] `{{invoice.amount}}`, `{{invoice.dueDate}}`, `{{invoice.number}}`
-  - [ ] `{{business.name}}`, `{{business.phone}}`, `{{business.address}}`
+- [x] **1.2.2 — Available Variables Reference**
+  - [x] `{{client.firstName}}`, `{{client.lastName}}`, `{{client.email}}`, `{{client.phone}}`
+  - [x] `{{appointment.date}}`, `{{appointment.time}}`, `{{appointment.service}}`, `{{appointment.therapistName}}`
+  - [x] `{{invoice.amount}}`, `{{invoice.dueDate}}`, `{{invoice.number}}`
+  - [x] `{{business.name}}`, `{{business.phone}}`, `{{business.address}}`
   - [ ] Show variable picker in the UI rule builder with autocomplete
 
 ---
 
 ### 1.3 Action Stubs → Real Implementations
 
-- [ ] **1.3.1 — SEND_SMS (fix stub)**
-  - [ ] Wire `SEND_SMS` action to real Twilio send via existing `lib/sms.ts`
-  - [ ] Resolve `{{client.phone}}` if `to` is a template variable
+- [x] **1.3.1 — SEND_SMS (fix stub)**
+  - [x] Wire `SEND_SMS` action to real Twilio send via existing `lib/sms.ts`
+  - [x] Resolve `{{client.phone}}` if `to` is a template variable
 
-- [ ] **1.3.2 — ADD_TAG (fix stub)**
-  - [ ] Add `tags` JSON field to `Client` model in schema (migration)
-  - [ ] `ADD_TAG` action appends tag string to `client.tags` array
+- [x] **1.3.2 — ADD_TAG (fix stub)**
+  - [x] Add `tags` JSON field to `Client` model in schema (migration)
+  - [x] `ADD_TAG` action appends tag string to `client.tags` array
 
-- [ ] **1.3.3 — CREATE_TASK (fix stub)**
-  - [ ] `CREATE_TASK` action calls `prisma.task.create(...)` using existing `Task` model
-  - [ ] Support template variables in task title and description
-  - [ ] Assign to `{{therapist.id}}` or a fixed staff member (configurable in action params)
+- [x] **1.3.3 — CREATE_TASK (fix stub)**
+  - [x] `CREATE_TASK` action calls `prisma.task.create(...)` using existing `Task` model
+  - [x] Support template variables in task title and description
+  - [x] Assign to `{{therapist.id}}` or a fixed staff member (configurable in action params)
 
 ---
 
 ### 1.4 Automation Run History UI
 
-- [ ] **1.4.1 — Log List in Automation Page**
-  - [ ] Add "Run History" tab to `/automation` page
-  - [ ] Table: rule name, trigger, status (SUCCESS/FAILED/SKIPPED), executed at, # actions run
-  - [ ] Expandable row: show `triggerData` JSON and per-action results
+- [x] **1.4.1 — Log List in Automation Page**
+  - [x] Add "Run History" tab to `/automation` page
+  - [x] Table: rule name, trigger, status (SUCCESS/FAILED/SKIPPED), executed at, # actions run
+  - [x] Expandable row: show `triggerData` JSON and per-action results
 
-- [ ] **1.4.2 — Per-rule Log**
-  - [ ] In rule detail modal, show last 10 executions
-  - [ ] "Re-run" button on failed executions (replays with same triggerData)
+- [x] **1.4.2 — Per-rule Log**
+  - [x] In rule detail modal, show last 10 executions
+  - [x] "Re-run" button on failed executions (replays with same triggerData)
 
 ---
 
@@ -108,7 +108,7 @@
 
 > Expand the action library beyond email/SMS/tag/task.
 
-- [ ] **Phase 2 complete**
+- [x] **Phase 2 complete**
 
 ---
 
@@ -116,60 +116,60 @@
 
 > Generic webhook action — calls any external URL. Enables headless integration with any third-party without native support.
 
-- [ ] **2.1.1 — Action Schema**
-  - [ ] New action type: `HTTP_REQUEST`
-  - [ ] Params: `url`, `method` (GET/POST/PUT), `headers` (JSON key/value pairs), `body` (template string)
-  - [ ] Resolve template variables in `url`, `headers`, and `body` before sending
+- [x] **2.1.1 — Action Schema**
+  - [x] New action type: `HTTP_REQUEST`
+  - [x] Params: `url`, `method` (GET/POST/PUT), `headers` (JSON key/value pairs), `body` (template string)
+  - [x] Resolve template variables in `url`, `headers`, and `body` before sending
 
-- [ ] **2.1.2 — Execution**
-  - [ ] POST/GET/PUT to the configured URL with resolved payload
-  - [ ] Log response status and body in `AutomationLog.result`
-  - [ ] Treat 2xx as success, anything else as failure
+- [x] **2.1.2 — Execution**
+  - [x] POST/GET/PUT to the configured URL with resolved payload
+  - [x] Log response status and body in `AutomationLog.result`
+  - [x] Treat 2xx as success, anything else as failure
 
-- [ ] **2.1.3 — UI**
-  - [ ] HTTP Request action card in rule builder
-  - [ ] Header key/value editor (add/remove rows)
-  - [ ] Body textarea with variable picker
+- [x] **2.1.3 — UI**
+  - [x] HTTP Request action card in rule builder
+  - [x] Header key/value editor (add/remove rows)
+  - [x] Body textarea with variable picker
 
 ---
 
 ### 2.2 Slack Notification Action
 
-- [ ] **2.2.1 — Slack App**
-  - [ ] Create Slack app in Slack API dashboard, get Bot Token scope: `chat:write`, `incoming-webhook`
-  - [ ] Settings → Integrations → Slack: OAuth connect flow, store `slackAccessToken` and default channel in business settings
-  - [ ] Disconnect Slack action
+- [x] **2.2.1 — Slack App**
+  - [x] Create Slack app in Slack API dashboard, get Bot Token scope: `chat:write`, `incoming-webhook`
+  - [x] Settings → Integrations → Slack: OAuth connect flow, store `slackAccessToken` and default channel in business settings
+  - [x] Disconnect Slack action
 
-- [ ] **2.2.2 — Action Schema**
-  - [ ] New action type: `SEND_SLACK`
-  - [ ] Params: `channel` (defaults to connected channel, overridable), `message` (template string)
-  - [ ] POST to Slack `chat.postMessage` API with resolved message
+- [x] **2.2.2 — Action Schema**
+  - [x] New action type: `SEND_SLACK`
+  - [x] Params: `channel` (defaults to connected channel, overridable), `message` (template string)
+  - [x] POST to Slack `chat.postMessage` API with resolved message
 
-- [ ] **2.2.3 — Preset Examples**
-  - [ ] "New booking → Slack" preset template in UI
-  - [ ] "Payment received → Slack" preset template
+- [x] **2.2.3 — Preset Examples**
+  - [x] "New booking → Slack" preset template in UI
+  - [x] "Payment received → Slack" preset template
 
 ---
 
 ### 2.3 Internal Notification Action
 
-- [ ] **2.3.1 — Action Schema**
-  - [ ] New action type: `SEND_PUSH`
-  - [ ] Params: `recipientUserId` (or `ALL_STAFF`), `title`, `body` (template strings)
-  - [ ] Calls existing push notification infrastructure (`/api/push`)
+- [x] **2.3.1 — Action Schema**
+  - [x] New action type: `SEND_PUSH`
+  - [x] Params: `recipientUserId` (or `ALL_STAFF`), `title`, `body` (template strings)
+  - [x] Calls existing push notification infrastructure (`/api/push`)
 
-- [ ] **2.3.2 — Trigger Examples**
-  - [ ] Appointment booked → push to assigned therapist
-  - [ ] Payment failed → push to business owner
+- [x] **2.3.2 — Trigger Examples**
+  - [x] Appointment booked → push to assigned therapist
+  - [x] Payment failed → push to business owner
 
 ---
 
 ### 2.4 Update Client Field Action
 
-- [ ] **2.4.1 — Action Schema**
-  - [ ] New action type: `UPDATE_CLIENT`
-  - [ ] Params: `field` (e.g. `notes`, `referralSource`, any custom field), `value` (template string)
-  - [ ] Calls `prisma.client.update` with the specified field
+- [x] **2.4.1 — Action Schema**
+  - [x] New action type: `UPDATE_CLIENT`
+  - [x] Params: `field` (e.g. `goals`, `occupation`, `primaryPhysician`), `value` (template string)
+  - [x] Calls `prisma.client.update` with the specified field (allowlisted: goals, occupation, primaryPhysician, insuranceProvider, insurancePolicyNumber)
 
 ---
 

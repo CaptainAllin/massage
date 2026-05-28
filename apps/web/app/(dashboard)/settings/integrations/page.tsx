@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Button, Card, CardContent } from '@massage/ui';
 import {
   ArrowLeft, X, RefreshCw, Link2, Link2Off, AlertTriangle,
-  ChevronDown, ChevronUp, Loader2, GitMerge, ArrowUpDown, Webhook, Key
+  ChevronDown, ChevronUp, Loader2, GitMerge, ArrowUpDown, Webhook, Key, Hash
 } from 'lucide-react';
 import Link from 'next/link';
 import { useBusinessId } from '@/lib/hooks/use-business-id';
@@ -294,6 +294,118 @@ function ProviderCard({
   );
 }
 
+// ─── Slack Card ───────────────────────────────────────────────────────────────
+
+function SlackCard({ businessId }: { businessId: string }) {
+  const [connected, setConnected] = useState(false);
+  const [channel, setChannel] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [disconnecting, setDisconnecting] = useState(false);
+  const [connecting, setConnecting] = useState(false);
+
+  const fetchStatus = useCallback(async () => {
+    try {
+      const res = await apiClient.get(`/api/integrations/slack/status?businessId=${businessId}`);
+      setConnected(res.data?.data?.connected ?? false);
+      setChannel(res.data?.data?.channel ?? null);
+    } finally {
+      setLoading(false);
+    }
+  }, [businessId]);
+
+  useEffect(() => { fetchStatus(); }, [fetchStatus]);
+
+  // Handle OAuth callback result
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const slackResult = params.get('slack');
+    if (slackResult) {
+      fetchStatus();
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [fetchStatus]);
+
+  const handleConnect = async () => {
+    setConnecting(true);
+    try {
+      const res = await apiClient.get(`/api/integrations/slack/connect?businessId=${businessId}`);
+      if (res.data?.data?.authUrl) window.location.href = res.data.data.authUrl;
+    } catch {
+      setConnecting(false);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    if (!confirm('Disconnect Slack? Automation Slack actions will stop working.')) return;
+    setDisconnecting(true);
+    try {
+      await apiClient.post('/api/integrations/slack/disconnect', { businessId });
+      setConnected(false);
+      setChannel(null);
+    } finally {
+      setDisconnecting(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardContent className="p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 flex items-center justify-center rounded-xl bg-muted">
+              <Hash className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-foreground">Slack</h3>
+                {!loading && (
+                  <span
+                    className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium"
+                    style={{
+                      background: connected ? '#dcfce7' : '#f3f4f6',
+                      color: connected ? '#16a34a' : '#6b7280',
+                    }}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: connected ? '#16a34a' : '#6b7280' }} />
+                    {connected ? 'Connected' : 'Not connected'}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Send Slack messages from automation rules. Used by the SEND_SLACK action.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            ) : connected ? (
+              <Button variant="outline" size="sm" onClick={handleDisconnect} disabled={disconnecting}>
+                {disconnecting ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Link2Off className="h-3.5 w-3.5 mr-1.5" />}
+                Disconnect
+              </Button>
+            ) : (
+              <Button variant="primary" size="sm" onClick={handleConnect} disabled={connecting}>
+                {connecting ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Link2 className="h-3.5 w-3.5 mr-1.5" />}
+                Connect
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {connected && channel && (
+          <div className="mt-4 pt-4 border-t border-border text-sm">
+            <span className="text-muted-foreground text-xs">Default channel</span>
+            <p className="font-medium mt-0.5 font-mono">{channel}</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function IntegrationsPage() {
@@ -427,6 +539,7 @@ export default function IntegrationsPage() {
 
       {/* Provider cards */}
       <div className="space-y-4">
+        <h2 className="text-sm font-semibold text-foreground">Accounting</h2>
         <ProviderCard
           provider="XERO"
           logo="X"
@@ -449,6 +562,14 @@ export default function IntegrationsPage() {
           loading={connectingProvider === 'QUICKBOOKS'}
         />
       </div>
+
+      {/* Messaging integrations */}
+      {businessId && (
+        <div className="space-y-4">
+          <h2 className="text-sm font-semibold text-foreground">Messaging</h2>
+          <SlackCard businessId={businessId} />
+        </div>
+      )}
 
       {/* Developer tools */}
       <div className="space-y-3">

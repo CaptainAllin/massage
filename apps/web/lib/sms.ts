@@ -204,6 +204,20 @@ export async function sendBookingConfirmationSms(params: {
   }
 }
 
+export async function sendAutomationSms(params: {
+  to: string;
+  message: string;
+  businessId: string;
+  clientId?: string | null;
+}): Promise<void> {
+  const { to, message, businessId, clientId } = params;
+  await sendAndLog(to, message, 'SMS', {
+    businessId,
+    clientId,
+    messageType: 'AUTOMATION',
+  });
+}
+
 export async function sendAppointmentReminderSms(params: {
   to: string;
   channel?: SmsChannel;

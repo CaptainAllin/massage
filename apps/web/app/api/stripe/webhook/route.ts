@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sendPaymentConfirmationSms } from '@/lib/sms';
+import { emitAutomation } from '@/lib/automation';
 
 // Public route — Stripe verifies via signature, no user auth needed
 export async function POST(req: NextRequest) {
@@ -123,6 +124,12 @@ async function handlePaymentIntentFailed(paymentIntent: any) {
   });
   if (!payment) return;
   await prisma.payment.update({ where: { id: payment.id }, data: { status: 'FAILED' } });
+  emitAutomation('PAYMENT_FAILED', payment.businessId, {
+    clientId: payment.clientId ?? undefined,
+    invoiceId: payment.invoiceId ?? undefined,
+    amount: payment.amount,
+    businessId: payment.businessId,
+  });
 }
 
 async function handleInvoicePaymentSucceeded(stripeInvoice: any) {
@@ -137,6 +144,11 @@ async function handleInvoicePaymentSucceeded(stripeInvoice: any) {
       status: 'ACTIVE',
       nextBillingDate: stripeInvoice.period_end ? new Date(stripeInvoice.period_end * 1000) : undefined,
     } as any,
+  });
+  emitAutomation('MEMBERSHIP_RENEWED', membership.businessId, {
+    membershipId: membership.id,
+    clientId: membership.clientId,
+    businessId: membership.businessId,
   });
 }
 

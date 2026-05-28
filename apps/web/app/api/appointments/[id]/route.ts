@@ -3,6 +3,7 @@ import { requireAuth, res, AuthError } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
 import { checkAvailability } from '@/lib/check-availability';
 import { emitWebhookEvent } from '@/lib/webhooks';
+import { emitAutomation } from '@/lib/automation';
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -90,8 +91,20 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     });
 
     const isCancelled = updated.status === 'CANCELLED' && existing.status !== 'CANCELLED';
+    const isCompleted = updated.status === 'COMPLETED' && existing.status !== 'COMPLETED';
     const event = isCancelled ? 'appointment.cancelled' : 'appointment.updated';
     emitWebhookEvent(businessId, event, { id, status: updated.status, clientId: updated.clientId, therapistId: updated.therapistId }).catch(() => {});
+
+    const automationPayload = {
+      appointmentId: id,
+      clientId: updated.clientId,
+      therapistId: updated.therapistId,
+      serviceType: (updated as any).serviceType ?? null,
+      startTime: updated.startTime.toISOString(),
+      businessId,
+    };
+    if (isCancelled) emitAutomation('APPOINTMENT_CANCELLED', businessId, automationPayload);
+    if (isCompleted) emitAutomation('APPOINTMENT_COMPLETED', businessId, automationPayload);
 
     return res.ok(updated, 'Appointment updated successfully');
   } catch (err) {

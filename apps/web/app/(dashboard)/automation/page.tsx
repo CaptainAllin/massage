@@ -18,6 +18,12 @@ import {
   MessageSquare,
   Tag,
   ClipboardList,
+  RefreshCw,
+  History,
+  Globe,
+  Bell,
+  UserCog,
+  Hash,
 } from 'lucide-react';
 import { useBusinessId } from '@/lib/hooks/use-business-id';
 import {
@@ -26,6 +32,8 @@ import {
   useUpdateAutomationRule,
   useToggleAutomationRule,
   useDeleteAutomationRule,
+  useAutomationLogs,
+  useRerunAutomation,
 } from '@/lib/hooks/use-automation';
 
 const TRIGGERS = [
@@ -44,7 +52,11 @@ const ACTION_TYPES = [
   { value: 'SEND_EMAIL', label: 'Send Email', icon: Mail },
   { value: 'SEND_SMS', label: 'Send SMS', icon: MessageSquare },
   { value: 'ADD_TAG', label: 'Add Tag to Client', icon: Tag },
-  { value: 'CREATE_TASK', label: 'Create Task Note', icon: ClipboardList },
+  { value: 'CREATE_TASK', label: 'Create Task', icon: ClipboardList },
+  { value: 'HTTP_REQUEST', label: 'HTTP Request', icon: Globe },
+  { value: 'SEND_SLACK', label: 'Send Slack Message', icon: Hash },
+  { value: 'SEND_PUSH', label: 'Push Notification', icon: Bell },
+  { value: 'UPDATE_CLIENT', label: 'Update Client Field', icon: UserCog },
 ];
 
 const PRESET_TEMPLATES = [
@@ -111,9 +123,110 @@ const PRESET_TEMPLATES = [
       },
     ],
   },
+  {
+    name: 'New Booking → Slack',
+    description: 'Post a Slack message when a new appointment is booked',
+    trigger: 'APPOINTMENT_BOOKED',
+    conditions: {},
+    actions: [
+      {
+        type: 'SEND_SLACK',
+        params: {
+          channel: '',
+          message: 'New booking: {{client.firstName}} {{client.lastName}} — {{appointment.service}} on {{appointment.date}} at {{appointment.time}}',
+        },
+      },
+    ],
+  },
+  {
+    name: 'Payment Received → Slack',
+    description: 'Notify your team on Slack when a payment is received',
+    trigger: 'PAYMENT_RECEIVED',
+    conditions: {},
+    actions: [
+      {
+        type: 'SEND_SLACK',
+        params: {
+          channel: '',
+          message: 'Payment received from {{client.firstName}} {{client.lastName}}: {{invoice.amount}}',
+        },
+      },
+    ],
+  },
 ];
 
 type ActionForm = { type: string; params: Record<string, string> };
+
+type HeaderPair = { key: string; value: string };
+
+function HeaderEditor({ value, onChange }: { value: string; onChange: (json: string) => void }) {
+  const parsePairs = (v: string): HeaderPair[] => {
+    try {
+      const obj = JSON.parse(v || '{}');
+      return Object.entries(obj).map(([key, val]) => ({ key, value: String(val) }));
+    } catch {
+      return [];
+    }
+  };
+
+  const [pairs, setPairs] = React.useState<HeaderPair[]>(() => parsePairs(value));
+
+  const commit = (newPairs: HeaderPair[]) => {
+    setPairs(newPairs);
+    const obj: Record<string, string> = {};
+    newPairs.filter((p) => p.key.trim()).forEach((p) => { obj[p.key] = p.value; });
+    onChange(JSON.stringify(obj));
+  };
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-muted-foreground">Request Headers</span>
+        <button
+          type="button"
+          onClick={() => commit([...pairs, { key: '', value: '' }])}
+          className="text-xs text-primary hover:underline flex items-center gap-0.5"
+        >
+          <Plus className="w-3 h-3" /> Add header
+        </button>
+      </div>
+      {pairs.length === 0 && (
+        <p className="text-xs text-muted-foreground italic px-1">No custom headers</p>
+      )}
+      {pairs.map((pair, i) => (
+        <div key={i} className="flex gap-1">
+          <input
+            placeholder="Header name"
+            value={pair.key}
+            onChange={(e) => {
+              const p = [...pairs];
+              p[i] = { ...pair, key: e.target.value };
+              commit(p);
+            }}
+            className="flex-1 text-xs px-2 py-1.5 rounded border border-border focus:outline-none"
+          />
+          <input
+            placeholder="Value (supports {{variables}})"
+            value={pair.value}
+            onChange={(e) => {
+              const p = [...pairs];
+              p[i] = { ...pair, value: e.target.value };
+              commit(p);
+            }}
+            className="flex-1 text-xs px-2 py-1.5 rounded border border-border focus:outline-none"
+          />
+          <button
+            type="button"
+            onClick={() => commit(pairs.filter((_, j) => j !== i))}
+            className="text-red-400 hover:text-red-600 px-1"
+          >
+            <Trash2 className="w-3 h-3" />
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function AutomationRuleModal({
   businessId,
@@ -154,6 +267,10 @@ function AutomationRuleModal({
           SEND_SMS: { to: '', message: '' },
           ADD_TAG: { tag: '' },
           CREATE_TASK: { title: '', description: '' },
+          HTTP_REQUEST: { url: '', method: 'POST', headers: '{}', body: '' },
+          SEND_SLACK: { channel: '', message: '' },
+          SEND_PUSH: { recipientUserId: 'ALL_STAFF', title: '', body: '' },
+          UPDATE_CLIENT: { field: 'goals', value: '' },
         };
         actions[idx] = { type: value, params: defaults[value] ?? {} };
       } else {
@@ -315,6 +432,100 @@ function AutomationRuleModal({
                         />
                       </>
                     )}
+                    {action.type === 'HTTP_REQUEST' && (
+                      <>
+                        <div className="flex gap-2">
+                          <select
+                            value={action.params.method ?? 'POST'}
+                            onChange={(e) => updateAction(idx, 'method', e.target.value)}
+                            className="text-xs px-2 py-1.5 rounded border border-border bg-background focus:outline-none w-20"
+                          >
+                            <option value="POST">POST</option>
+                            <option value="GET">GET</option>
+                            <option value="PUT">PUT</option>
+                          </select>
+                          <input
+                            placeholder="https://api.example.com/webhook"
+                            value={action.params.url ?? ''}
+                            onChange={(e) => updateAction(idx, 'url', e.target.value)}
+                            className="flex-1 text-xs px-2 py-1.5 rounded border border-border focus:outline-none"
+                          />
+                        </div>
+                        <HeaderEditor
+                          key={`headers-${idx}`}
+                          value={action.params.headers ?? '{}'}
+                          onChange={(v) => updateAction(idx, 'headers', v)}
+                        />
+                        <textarea
+                          placeholder='Body — JSON template, e.g. {"client": "{{client.firstName}}"}'
+                          value={action.params.body ?? ''}
+                          onChange={(e) => updateAction(idx, 'body', e.target.value)}
+                          rows={3}
+                          className="w-full text-xs px-2 py-1.5 rounded border border-border focus:outline-none resize-none"
+                        />
+                      </>
+                    )}
+                    {action.type === 'SEND_SLACK' && (
+                      <>
+                        <input
+                          placeholder="Channel (leave blank to use default from settings)"
+                          value={action.params.channel ?? ''}
+                          onChange={(e) => updateAction(idx, 'channel', e.target.value)}
+                          className="w-full text-xs px-2 py-1.5 rounded border border-border focus:outline-none"
+                        />
+                        <textarea
+                          placeholder="Message body (supports {{template.variables}})"
+                          value={action.params.message ?? ''}
+                          onChange={(e) => updateAction(idx, 'message', e.target.value)}
+                          rows={3}
+                          className="w-full text-xs px-2 py-1.5 rounded border border-border focus:outline-none resize-none"
+                        />
+                        <p className="text-xs text-muted-foreground">Connect Slack in Settings → Integrations first.</p>
+                      </>
+                    )}
+                    {action.type === 'SEND_PUSH' && (
+                      <>
+                        <input
+                          placeholder="Recipient user ID or ALL_STAFF"
+                          value={action.params.recipientUserId ?? 'ALL_STAFF'}
+                          onChange={(e) => updateAction(idx, 'recipientUserId', e.target.value)}
+                          className="w-full text-xs px-2 py-1.5 rounded border border-border focus:outline-none"
+                        />
+                        <input
+                          placeholder="Notification title"
+                          value={action.params.title ?? ''}
+                          onChange={(e) => updateAction(idx, 'title', e.target.value)}
+                          className="w-full text-xs px-2 py-1.5 rounded border border-border focus:outline-none"
+                        />
+                        <input
+                          placeholder="Notification body (supports {{template.variables}})"
+                          value={action.params.body ?? ''}
+                          onChange={(e) => updateAction(idx, 'body', e.target.value)}
+                          className="w-full text-xs px-2 py-1.5 rounded border border-border focus:outline-none"
+                        />
+                      </>
+                    )}
+                    {action.type === 'UPDATE_CLIENT' && (
+                      <>
+                        <select
+                          value={action.params.field ?? 'goals'}
+                          onChange={(e) => updateAction(idx, 'field', e.target.value)}
+                          className="w-full text-xs px-2 py-1.5 rounded border border-border bg-background focus:outline-none"
+                        >
+                          <option value="goals">Goals</option>
+                          <option value="occupation">Occupation</option>
+                          <option value="primaryPhysician">Primary Physician</option>
+                          <option value="insuranceProvider">Insurance Provider</option>
+                          <option value="insurancePolicyNumber">Insurance Policy #</option>
+                        </select>
+                        <input
+                          placeholder="New value (supports {{template.variables}})"
+                          value={action.params.value ?? ''}
+                          onChange={(e) => updateAction(idx, 'value', e.target.value)}
+                          className="w-full text-xs px-2 py-1.5 rounded border border-border focus:outline-none"
+                        />
+                      </>
+                    )}
                   </div>
                 ))}
               </div>
@@ -451,10 +662,120 @@ function RuleCard({ rule, businessId }: { rule: any; businessId: string }) {
   );
 }
 
+function RunHistoryTab({ businessId }: { businessId: string }) {
+  const [page, setPage] = useState(1);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const { data, isLoading } = useAutomationLogs(businessId, page);
+  const rerun = useRerunAutomation(businessId);
+
+  const logs = data?.logs ?? [];
+  const meta = data?.meta;
+
+  const statusIcon = (status: string) => {
+    if (status === 'SUCCESS') return <CheckCircle className="w-3.5 h-3.5 text-[#5D4AA8] flex-shrink-0" />;
+    if (status === 'FAILED') return <XCircle className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />;
+    return <AlertCircle className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />;
+  };
+
+  return (
+    <div className="space-y-3">
+      {isLoading && <p className="text-sm text-muted-foreground">Loading run history...</p>}
+      {!isLoading && logs.length === 0 && (
+        <div className="text-center py-16 text-muted-foreground">
+          <History className="w-12 h-12 mx-auto mb-3 opacity-30" />
+          <p className="font-medium">No runs yet</p>
+          <p className="text-sm mt-1">Logs will appear here once your automation rules fire</p>
+        </div>
+      )}
+      {logs.map((log: any) => (
+        <Card key={log.id}>
+          <CardContent className="p-4">
+            <div className="flex items-start justify-between gap-3">
+              <button
+                onClick={() => setExpandedId(expandedId === log.id ? null : log.id)}
+                className="flex items-start gap-3 flex-1 min-w-0 text-left"
+              >
+                {statusIcon(log.status)}
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">{log.rule?.name ?? 'Unknown Rule'}</p>
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5 flex-wrap">
+                    <span className="font-mono bg-muted px-1 rounded">{log.rule?.trigger}</span>
+                    <span>{new Date(log.executedAt).toLocaleString()}</span>
+                    <span className={log.status === 'SUCCESS' ? 'text-[#5D4AA8]' : log.status === 'FAILED' ? 'text-red-600' : 'text-[#7A7090]'}>
+                      {log.status}
+                    </span>
+                  </div>
+                  {log.errorMessage && (
+                    <p className="text-xs text-red-500 mt-0.5 truncate">{log.errorMessage}</p>
+                  )}
+                </div>
+              </button>
+              {log.status === 'FAILED' && (
+                <button
+                  onClick={() => rerun.mutate(log.id)}
+                  disabled={rerun.isPending}
+                  title="Re-run with same data"
+                  className="text-muted-foreground hover:text-primary flex-shrink-0"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+            {expandedId === log.id && (
+              <div className="mt-3 border-t border-border pt-3 space-y-2">
+                {log.result && (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground mb-1">ACTION RESULTS</p>
+                    <div className="space-y-1">
+                      {(log.result as any[]).map((r: any, i: number) => (
+                        <div key={i} className="flex items-center gap-2 text-xs bg-muted/50 rounded px-2 py-1">
+                          <span className="font-mono text-muted-foreground">{r.type}</span>
+                          <span className={r.status === 'sent' || r.status === 'created' || r.status === 'tagged' ? 'text-[#5D4AA8]' : r.status === 'failed' ? 'text-red-500' : 'text-[#7A7090]'}>
+                            {r.status}
+                          </span>
+                          {r.error && <span className="text-red-400 truncate">{r.error}</span>}
+                          {r.reason && <span className="text-[#7A7090] truncate">{r.reason}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {log.triggerData && (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground mb-1">TRIGGER DATA</p>
+                    <pre className="text-xs bg-muted rounded p-2 overflow-auto max-h-32">
+                      {JSON.stringify(log.triggerData, null, 2)}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ))}
+      {meta && meta.totalPages > 1 && (
+        <div className="flex items-center justify-between text-sm text-muted-foreground pt-2">
+          <span>{meta.total} total runs</span>
+          <div className="flex gap-2">
+            <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="px-2 py-1 rounded border border-border disabled:opacity-40 hover:bg-muted">
+              Prev
+            </button>
+            <span className="px-2 py-1">{page} / {meta.totalPages}</span>
+            <button onClick={() => setPage((p) => Math.min(meta.totalPages, p + 1))} disabled={page === meta.totalPages} className="px-2 py-1 rounded border border-border disabled:opacity-40 hover:bg-muted">
+              Next
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AutomationPage() {
   const businessId = useBusinessId();
   const { data, isLoading } = useAutomationRules(businessId);
   const [showModal, setShowModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<'rules' | 'history'>('rules');
 
   const rules = data?.rules ?? [];
   const activeCount = rules.filter((r: any) => r.isActive).length;
@@ -499,37 +820,50 @@ export default function AutomationPage() {
         ))}
       </div>
 
-      {/* Rules List */}
-      <div className="space-y-3">
-        {isLoading && <p className="text-sm text-muted-foreground">Loading automation rules...</p>}
-        {!isLoading && rules.length === 0 && (
-          <div className="text-center py-16 text-muted-foreground">
-            <Zap className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <p className="font-medium">No automation rules yet</p>
-            <p className="text-sm mt-1">Create your first rule or start from a template</p>
-            <Button onClick={() => setShowModal(true)} className="mt-4 [background:linear-gradient(135deg,#5D4AA8,#3F2F87)] hover:opacity-90 text-white">
-              <Plus className="w-4 h-4 mr-2" />
-              Create First Rule
-            </Button>
-          </div>
-        )}
-        {rules.map((rule: any) => (
-          <RuleCard key={rule.id} rule={rule} businessId={businessId!} />
+      {/* Tabs */}
+      <div className="flex gap-1 border-b border-border">
+        {[
+          { key: 'rules', label: 'Rules' },
+          { key: 'history', label: 'Run History' },
+        ].map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key as 'rules' | 'history')}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === tab.key
+                ? 'border-[#5D4AA8] text-[#5D4AA8]'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            {tab.label}
+          </button>
         ))}
       </div>
 
-      {/* How it works */}
-      {rules.length > 0 && (
-        <Card>
-          <CardContent className="p-4">
-            <h2 className="font-semibold mb-2 text-sm">How Automations Work</h2>
-            <p className="text-xs text-muted-foreground">
-              Rules are evaluated when their trigger event fires (e.g., an appointment is completed). You can also manually fire triggers via{' '}
-              <code className="font-mono bg-muted px-1 rounded">POST /api/automation/trigger</code> from a webhook or external system like Zapier.
-              Template variables (<code className="font-mono bg-muted px-1 rounded">{'{{client.email}}'}</code>) are resolved at send time.
-            </p>
-          </CardContent>
-        </Card>
+      {/* Rules Tab */}
+      {activeTab === 'rules' && (
+        <div className="space-y-3">
+          {isLoading && <p className="text-sm text-muted-foreground">Loading automation rules...</p>}
+          {!isLoading && rules.length === 0 && (
+            <div className="text-center py-16 text-muted-foreground">
+              <Zap className="w-12 h-12 mx-auto mb-3 opacity-30" />
+              <p className="font-medium">No automation rules yet</p>
+              <p className="text-sm mt-1">Create your first rule or start from a template</p>
+              <Button onClick={() => setShowModal(true)} className="mt-4 [background:linear-gradient(135deg,#5D4AA8,#3F2F87)] hover:opacity-90 text-white">
+                <Plus className="w-4 h-4 mr-2" />
+                Create First Rule
+              </Button>
+            </div>
+          )}
+          {rules.map((rule: any) => (
+            <RuleCard key={rule.id} rule={rule} businessId={businessId!} />
+          ))}
+        </div>
+      )}
+
+      {/* Run History Tab */}
+      {activeTab === 'history' && businessId && (
+        <RunHistoryTab businessId={businessId} />
       )}
     </div>
   );

@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { NextRequest } from 'next/server';
 import { res } from '@/lib/api-auth';
+import { emitAutomation } from '@/lib/automation';
 
 export async function POST(
   req: NextRequest,
@@ -27,6 +28,12 @@ export async function POST(
         formData: { ...formData, _completed: true },
         submittedAt: new Date(),
       },
+    });
+
+    emitAutomation('INTAKE_FORM_SUBMITTED', existing.businessId, {
+      intakeFormId: id,
+      clientId: existing.clientId ?? undefined,
+      businessId: existing.businessId,
     });
 
     return res.ok(updated);
