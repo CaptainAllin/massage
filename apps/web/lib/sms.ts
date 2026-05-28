@@ -1,4 +1,5 @@
 import { createMessageLog, markMessageLogSent, markMessageLogFailed, MessageChannel } from './message-log';
+import { canSendSms, consumeSmsCredit, maybeSendOverageWarning, SMS_COST_PER_MESSAGE } from './sms-credits';
 
 export type SmsChannel = 'SMS' | 'WHATSAPP';
 
@@ -56,6 +57,15 @@ async function sendAndLog(
   channel: SmsChannel,
   logParams: LoggedSmsParams,
 ): Promise<void> {
+  // Check SMS credits before sending (only for SMS, not WhatsApp)
+  if (channel === 'SMS') {
+    const creditCheck = await canSendSms(logParams.businessId);
+    if (!creditCheck.allowed) {
+      console.warn(`SMS blocked for business ${logParams.businessId}: ${creditCheck.reason}`);
+      return;
+    }
+  }
+
   const msgChannel = channel === 'WHATSAPP' ? MessageChannel.WHATSAPP : MessageChannel.SMS;
   const log = await createMessageLog({
     businessId: logParams.businessId,
@@ -70,6 +80,12 @@ async function sendAndLog(
     const result = await sendTwilioMessage(to, body, channel);
     if (result?.sid) {
       await markMessageLogSent(log.id, result.sid);
+      // Track credit consumption and cost for SMS messages
+      if (channel === 'SMS') {
+        await consumeSmsCredit(logParams.businessId, SMS_COST_PER_MESSAGE);
+        // Fire-and-forget overage warning check
+        maybeSendOverageWarning(logParams.businessId).catch(() => {});
+      }
     }
   } catch (err: any) {
     await markMessageLogFailed(log.id, err?.message ?? 'UNKNOWN');

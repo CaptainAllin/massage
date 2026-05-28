@@ -8,10 +8,12 @@ import { DayView } from './DayView';
 import { MonthView } from './MonthView';
 import { StaffView } from './StaffView';
 import { useAppointments } from '@/lib/hooks/use-appointments';
+import { useLocations } from '@/lib/hooks/use-locations';
 import { startOfWeek, endOfWeek, startOfDay, endOfDay, startOfMonth, endOfMonth, getWeek, format } from 'date-fns';
 import { EmptyState } from '@massage/ui';
 import { useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
+import { MapPin } from 'lucide-react';
 
 interface AppointmentCalendarProps {
   businessId: string | undefined;
@@ -38,11 +40,13 @@ export function AppointmentCalendar({
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<'week' | 'day' | 'month' | 'staff'>('week');
   const [selectedTherapist, setSelectedTherapist] = useState<string | null>(null);
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
   const [selectedStatuses, setSelectedStatuses] = useState<AppointmentStatus[]>([
     AppointmentStatus.SCHEDULED,
     AppointmentStatus.CONFIRMED,
     AppointmentStatus.IN_PROGRESS,
   ]);
+  const { data: locations = [] } = useLocations(businessId);
 
   const dateRange = useMemo(() => {
     if (viewMode === 'day' || viewMode === 'staff') {
@@ -62,7 +66,8 @@ export function AppointmentCalendar({
     status: selectedStatuses,
     startDate: dateRange.startDate,
     endDate: dateRange.endDate,
-  });
+    ...(selectedLocationId ? { locationId: selectedLocationId } : {}),
+  } as any);
 
   const appointments = appointmentsResponse?.data || [];
 
@@ -202,6 +207,23 @@ export function AppointmentCalendar({
           </p>
         )}
       </div>
+
+      {(locations as any[]).length > 1 && (
+        <div className="flex items-center gap-2">
+          <MapPin className="h-4 w-4 flex-shrink-0" style={{ color: '#9E96B0' }} />
+          <select
+            value={selectedLocationId ?? ''}
+            onChange={(e) => setSelectedLocationId(e.target.value || null)}
+            className="text-sm rounded-lg px-2.5 py-1.5 focus:outline-none"
+            style={{ border: '1px solid #D9D3E8', color: '#3D3450', background: '#fff' }}
+          >
+            <option value="">All locations</option>
+            {(locations as any[]).map((loc: any) => (
+              <option key={loc.id} value={loc.id}>{loc.name}</option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <CalendarFilters
         currentDate={currentDate}

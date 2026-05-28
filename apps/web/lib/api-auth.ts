@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { createHash } from 'crypto';
 import { createServiceClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 
@@ -34,11 +35,32 @@ export type AuthUser = {
   authUserId: string;
   email: string;
   role: string;
+  apiKeyId?: string;
+  apiKeyPermissions?: string[];
 };
 
 export async function requireAuth(req: NextRequest): Promise<AuthUser> {
   const authHeader = req.headers.get('authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
+  if (!authHeader) throw new AuthError('No token provided');
+
+  // Support ApiKey authentication: Authorization: ApiKey <key>
+  if (authHeader.startsWith('ApiKey ')) {
+    const rawKey = authHeader.substring(7);
+    const keyHash = createHash('sha256').update(rawKey).digest('hex');
+    const apiKey = await prisma.apiKey.findUnique({
+      where: { keyHash },
+      include: { business: { select: { ownerId: true } } },
+    });
+    if (!apiKey || !apiKey.isActive) throw new AuthError('Invalid or revoked API key');
+    if (apiKey.expiresAt && apiKey.expiresAt < new Date()) throw new AuthError('API key has expired');
+    // Update lastUsedAt without blocking
+    prisma.apiKey.update({ where: { id: apiKey.id }, data: { lastUsedAt: new Date() } }).catch(() => {});
+    const owner = await prisma.user.findUnique({ where: { id: apiKey.business.ownerId } });
+    if (!owner) throw new AuthError('API key owner not found');
+    return { id: owner.id, authUserId: owner.authUserId, email: owner.email, role: owner.role, apiKeyId: apiKey.id, apiKeyPermissions: apiKey.permissions as string[] };
+  }
+
+  if (!authHeader.startsWith('Bearer ')) {
     throw new AuthError('No token provided');
   }
 
@@ -85,11 +107,44 @@ export async function requireAuth(req: NextRequest): Promise<AuthUser> {
 
 /** Verify the authenticated user belongs to the given business (owner or therapist). */
 export async function requireBusinessAccess(user: AuthUser, businessId: string): Promise<void> {
+  if (user.role === 'SUPER_ADMIN') return;
+
   const isOwner = await prisma.business.findFirst({
     where: { id: businessId, ownerId: user.id },
     select: { id: true },
   });
   if (isOwner) return;
+
+  const isTherapist = await prisma.therapist.findFirst({
+    where: { businessId, userId: user.id },
+    select: { id: true },
+  });
+  if (isTherapist) return;
+
+  throw new AuthError('You do not have access to this business');
+}
+
+export async function requireLocationAccess(
+  user: AuthUser,
+  businessId: string,
+  locationId?: string | null
+): Promise<void> {
+  if (user.role === 'SUPER_ADMIN') return;
+
+  const isOwner = await prisma.business.findFirst({
+    where: { id: businessId, ownerId: user.id },
+    select: { id: true },
+  });
+  if (isOwner) return;
+
+  if (user.role === 'LOCATION_MANAGER' && locationId) {
+    const therapist = await prisma.therapist.findFirst({
+      where: { businessId, userId: user.id },
+      select: { locationId: true },
+    });
+    if (therapist?.locationId === locationId) return;
+    throw new AuthError('You do not have access to this location');
+  }
 
   const isTherapist = await prisma.therapist.findFirst({
     where: { businessId, userId: user.id },

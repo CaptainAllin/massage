@@ -1,6 +1,6 @@
 import { requireAuth, res, AuthError } from '@/lib/api-auth';
 import { NextRequest } from 'next/server';
-import { generateOccurrenceDates } from '../route';
+import { generateOccurrenceDates } from '@/lib/recurring-appointments';
 
 export async function POST(req: NextRequest) {
   try {

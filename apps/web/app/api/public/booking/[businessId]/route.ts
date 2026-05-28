@@ -21,16 +21,24 @@ export async function GET(
 
     if (!business) return res.notFound('Business not found');
 
-    const therapists = await prisma.therapist.findMany({
-      where: { businessId, isActive: true },
-      include: {
-        user: { select: { id: true, firstName: true, lastName: true, profileImageUrl: true } },
-        availability: { where: { isActive: true }, select: { dayOfWeek: true, startTime: true, endTime: true } },
-      },
-      orderBy: { createdAt: 'asc' },
-    });
+    const [therapists, locations] = await Promise.all([
+      prisma.therapist.findMany({
+        where: { businessId, isActive: true },
+        include: {
+          user: { select: { id: true, firstName: true, lastName: true, profileImageUrl: true } },
+          availability: { where: { isActive: true }, select: { dayOfWeek: true, startTime: true, endTime: true } },
+          location: { select: { id: true, name: true } },
+        },
+        orderBy: { createdAt: 'asc' },
+      }),
+      prisma.location.findMany({
+        where: { businessId, isActive: true },
+        select: { id: true, name: true, address: true, city: true },
+        orderBy: [{ isPrimary: 'desc' }, { name: 'asc' }],
+      }),
+    ]);
 
-    return res.ok({ business, therapists });
+    return res.ok({ business, therapists, locations });
   } catch (err) {
     console.error('[PUBLIC BOOKING GET]', err);
     return res.error();

@@ -31,6 +31,7 @@ import {
   Sparkles,
   MailCheck,
   CheckSquare,
+  Code2,
 } from 'lucide-react';
 
 export interface MenuItem {
@@ -205,6 +206,12 @@ const defaultMenuGroups: MenuGroup[] = [
         href: '/settings',
         icon: Settings,
         allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER', 'RECEPTIONIST', 'THERAPIST'],
+      },
+      {
+        label: 'Developer',
+        href: '/settings/api',
+        icon: Code2,
+        allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER'],
       },
     ],
   },

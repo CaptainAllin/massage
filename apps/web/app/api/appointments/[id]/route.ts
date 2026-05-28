@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { requireAuth, res, AuthError } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
 import { checkAvailability } from '@/lib/check-availability';
+import { emitWebhookEvent } from '@/lib/webhooks';
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -87,6 +88,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         metadata: { updatedFields: Object.keys(body), recurringScope },
       },
     });
+
+    const isCancelled = updated.status === 'CANCELLED' && existing.status !== 'CANCELLED';
+    const event = isCancelled ? 'appointment.cancelled' : 'appointment.updated';
+    emitWebhookEvent(businessId, event, { id, status: updated.status, clientId: updated.clientId, therapistId: updated.therapistId }).catch(() => {});
 
     return res.ok(updated, 'Appointment updated successfully');
   } catch (err) {

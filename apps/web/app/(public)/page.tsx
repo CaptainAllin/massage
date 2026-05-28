@@ -25,9 +25,9 @@ export default function HomePage() {
                   Get Started Free
                 </Button>
               </Link>
-              <Link href="/sign-in">
+              <Link href="/pricing">
                 <Button size="lg" variant="outline">
-                  Sign In
+                  See Pricing
                 </Button>
               </Link>
             </div>

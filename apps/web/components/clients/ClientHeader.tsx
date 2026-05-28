@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, Phone, Mail, MessageSquare, CalendarPlus, Link2, Check, Loader2 } from 'lucide-react';
+import { ChevronLeft, Phone, Mail, MessageSquare, CalendarPlus, Link2, Check, Loader2, LayoutDashboard } from 'lucide-react';
 import { Client } from '@massage/types';
 import { APT_COLORS, APT_SOFT } from '@/lib/appointment-colors';
 
@@ -39,6 +39,26 @@ export const ClientHeader: React.FC<ClientHeaderProps> = ({
 }) => {
   const [inviteLoading, setInviteLoading] = useState(false);
   const [inviteCopied, setInviteCopied] = useState(false);
+  const [portalLoading, setPortalLoading] = useState(false);
+  const [portalSent, setPortalSent] = useState(false);
+
+  const handleSendPortalInvite = async () => {
+    if (!businessId || !client.email) return;
+    setPortalLoading(true);
+    try {
+      await fetch(`/api/clients/${client.id}/portal-invite`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ businessId }),
+      });
+      setPortalSent(true);
+      setTimeout(() => setPortalSent(false), 3000);
+    } catch {
+      // silently fail
+    } finally {
+      setPortalLoading(false);
+    }
+  };
 
   const handleSendInvite = async () => {
     if (!businessId) return;
@@ -205,6 +225,23 @@ export const ClientHeader: React.FC<ClientHeaderProps> = ({
                   <Link2 className="w-4 h-4" />
                 )}
                 {inviteCopied ? 'Link copied!' : 'Send invite'}
+              </button>
+            )}
+            {businessId && client.email && (
+              <button
+                onClick={handleSendPortalInvite}
+                disabled={portalLoading}
+                title="Send client portal invite email"
+                className="flex items-center gap-2 px-4 py-[7px] rounded-full text-[13px] font-medium text-iris-ink border border-iris-line bg-white hover:bg-iris-soft1 transition-colors disabled:opacity-60"
+              >
+                {portalLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : portalSent ? (
+                  <Check className="w-4 h-4 text-green-600" />
+                ) : (
+                  <LayoutDashboard className="w-4 h-4" />
+                )}
+                {portalSent ? 'Invite sent!' : 'Portal invite'}
               </button>
             )}
             <button

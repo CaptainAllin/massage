@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Button, Card, CardContent } from '@massage/ui';
 import {
   ArrowLeft, X, RefreshCw, Link2, Link2Off, AlertTriangle,
-  ChevronDown, ChevronUp, Loader2, GitMerge, ArrowUpDown
+  ChevronDown, ChevronUp, Loader2, GitMerge, ArrowUpDown, Webhook, Key
 } from 'lucide-react';
 import Link from 'next/link';
 import { useBusinessId } from '@/lib/hooks/use-business-id';
@@ -448,6 +448,39 @@ export default function IntegrationsPage() {
           onSync={() => handleSync('QUICKBOOKS')}
           loading={connectingProvider === 'QUICKBOOKS'}
         />
+      </div>
+
+      {/* Developer tools */}
+      <div className="space-y-3">
+        <h2 className="text-sm font-semibold text-foreground">Developer Tools</h2>
+        <div className="grid grid-cols-2 gap-4">
+          <Link href="/settings/integrations/webhooks">
+            <Card className="cursor-pointer hover:bg-muted/40 transition-colors">
+              <CardContent className="p-5 flex items-center gap-3">
+                <div className="w-10 h-10 flex items-center justify-center rounded-xl bg-muted">
+                  <Webhook className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="font-medium text-sm">Webhooks</p>
+                  <p className="text-xs text-muted-foreground">Receive real-time events</p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+          <Link href="/settings/api">
+            <Card className="cursor-pointer hover:bg-muted/40 transition-colors">
+              <CardContent className="p-5 flex items-center gap-3">
+                <div className="w-10 h-10 flex items-center justify-center rounded-xl bg-muted">
+                  <Key className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="font-medium text-sm">API Keys</p>
+                  <p className="text-xs text-muted-foreground">Manage developer access</p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        </div>
       </div>
 
       {/* Conflicts list */}

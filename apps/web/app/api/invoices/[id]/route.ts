@@ -1,6 +1,7 @@
 import { requireAuth, res, AuthError } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
 import { NextRequest } from 'next/server';
+import { emitWebhookEvent } from '@/lib/webhooks';
 
 function calculateTotals(lineItems: any[], taxAmount = 0, discountAmount = 0) {
   const subtotal = lineItems.reduce((sum: number, item: any) => sum + item.total, 0);
@@ -83,6 +84,10 @@ export async function PATCH(
         metadata: { updatedFields: Object.keys(data) },
       },
     });
+
+    if (updatedInvoice.status === 'PAID' && invoice.status !== 'PAID') {
+      emitWebhookEvent(businessId, 'invoice.paid', { id, invoiceNumber: updatedInvoice.invoiceNumber, total: updatedInvoice.total, clientId: updatedInvoice.clientId }).catch(() => {});
+    }
 
     return res.ok(updatedInvoice);
   } catch (err) {

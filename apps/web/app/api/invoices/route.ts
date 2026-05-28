@@ -1,6 +1,7 @@
 import { requireAuth, res, AuthError } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
 import { NextRequest } from 'next/server';
+import { emitWebhookEvent } from '@/lib/webhooks';
 
 async function generateInvoiceNumber(businessId: string): Promise<string> {
   const year = new Date().getFullYear();
@@ -113,6 +114,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    emitWebhookEvent(businessId, 'invoice.created', { id: invoice.id, invoiceNumber, total, status: 'DRAFT', clientId }).catch(() => {});
     return res.created(invoice);
   } catch (err) {
     if (err instanceof AuthError) return res.unauthorized(err.message);

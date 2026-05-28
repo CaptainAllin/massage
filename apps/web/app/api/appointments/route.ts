@@ -2,6 +2,7 @@ import { withAuth, res } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
 import { AppointmentStatus, GroupBookingStatus } from '@prisma/client';
 import { checkAvailability } from '@/lib/check-availability';
+import { emitWebhookEvent } from '@/lib/webhooks';
 
 export const GET = withAuth(async (req, _user) => {
   const { searchParams } = new URL(req.url);
@@ -11,6 +12,7 @@ export const GET = withAuth(async (req, _user) => {
   const status = searchParams.get('status');
   const therapistId = searchParams.get('therapistId');
   const clientId = searchParams.get('clientId');
+  const locationId = searchParams.get('locationId');
   const startDate = searchParams.get('startDate');
   const endDate = searchParams.get('endDate');
   const page = parseInt(searchParams.get('page') || '1', 10);
@@ -26,6 +28,7 @@ export const GET = withAuth(async (req, _user) => {
   }
   if (therapistId) where.therapistId = therapistId;
   if (clientId) where.clientId = clientId;
+  if (locationId) where.locationId = locationId;
   if (startDate || endDate) {
     where.startTime = {};
     if (startDate) where.startTime.gte = new Date(startDate);
@@ -120,6 +123,8 @@ export const POST = withAuth(async (req, user) => {
       metadata: { clientId: primaryClientId, therapistId, startTime: start, duration, isGroup: isGroup ?? false },
     },
   });
+
+  emitWebhookEvent(businessId, 'appointment.created', { id: appointment.id, clientId: primaryClientId, therapistId, startTime: start, status: 'SCHEDULED' }).catch(() => {});
 
   return res.created(appointment, 'Appointment created successfully');
 });

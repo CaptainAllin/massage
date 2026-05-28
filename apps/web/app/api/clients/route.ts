@@ -1,6 +1,7 @@
 import { requireAuth, requireBusinessAccess, res, AuthError } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
 import { NextRequest } from 'next/server';
+import { emitWebhookEvent } from '@/lib/webhooks';
 
 export async function GET(req: NextRequest) {
   try {
@@ -127,6 +128,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    emitWebhookEvent(businessId, 'client.created', { id: client.id, firstName: client.firstName, lastName: client.lastName, email: client.email }).catch(() => {});
     return res.created(client);
   } catch (err) {
     if (err instanceof AuthError) return res.unauthorized(err.message);

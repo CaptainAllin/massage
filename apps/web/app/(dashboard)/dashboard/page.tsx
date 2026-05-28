@@ -362,6 +362,75 @@ function ServiceMix({ businessId }: { businessId: string }) {
   );
 }
 
+// ── SMS Credits Widget ─────────────────────────────────────────────────────────
+
+function SmsCreditWidget({ businessId }: { businessId: string }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['sms-credits', businessId],
+    queryFn: async () => {
+      const r = await apiClient.get('/sms-credits', { params: { businessId } });
+      return r.data.data as {
+        creditsIncluded: number;
+        creditsUsed: number;
+        creditsRemaining: number;
+        percentUsed: number;
+        isUnlimited: boolean;
+        isExhausted: boolean;
+        isNearLimit: boolean;
+      };
+    },
+    enabled: !!businessId,
+  });
+
+  if (isLoading || !data || data.isUnlimited) return null;
+
+  const barColor = data.isExhausted ? '#C94040' : data.isNearLimit ? '#C97E68' : '#5D4AA8';
+  const pct = Math.min(100, Math.round(data.percentUsed));
+
+  return (
+    <div
+      className="rounded-2xl px-5 py-4 flex items-center gap-5"
+      style={{ background: '#fff', border: `1px solid ${data.isExhausted ? '#F5D5D5' : data.isNearLimit ? '#F7E5DD' : '#EFE9F2'}`, boxShadow: '0 2px 12px rgba(93,74,168,0.06)' }}
+    >
+      <div
+        className="w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center"
+        style={{ background: data.isExhausted ? '#FEE9E9' : data.isNearLimit ? '#F7E5DD' : '#EDE5F4' }}
+      >
+        <svg width="16" height="16" fill="none" stroke={barColor} strokeWidth="2" viewBox="0 0 24 24">
+          <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+        </svg>
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between mb-1.5">
+          <p className="text-xs font-semibold uppercase" style={{ letterSpacing: '1.2px', color: barColor }}>
+            SMS Credits · This Period
+          </p>
+          <p className="text-xs font-semibold tabular-nums" style={{ color: '#3D3450' }}>
+            {data.creditsUsed} / {data.creditsIncluded}
+          </p>
+        </div>
+        <div className="w-full overflow-hidden" style={{ height: '5px', background: '#EDE5F4', borderRadius: '3px' }}>
+          <div style={{ width: `${pct}%`, height: '5px', background: barColor, borderRadius: '3px', transition: 'width 0.4s ease' }} />
+        </div>
+        {(data.isNearLimit || data.isExhausted) && (
+          <p className="mt-1.5 text-xs" style={{ color: barColor }}>
+            {data.isExhausted ? 'Credits exhausted — SMS paused until next billing cycle.' : `${data.creditsRemaining} credits remaining — approaching your plan limit.`}
+          </p>
+        )}
+      </div>
+      {data.isNearLimit && (
+        <a
+          href="/settings"
+          className="flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap"
+          style={{ background: 'linear-gradient(135deg, #5D4AA8, #3F2F87)', color: '#fff' }}
+        >
+          Upgrade
+        </a>
+      )}
+    </div>
+  );
+}
+
 // ── Page ───────────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
@@ -529,6 +598,9 @@ export default function DashboardPage() {
           }
         />
       </div>
+
+      {/* ── SMS Credits widget ── */}
+      {businessId && <SmsCreditWidget businessId={businessId} />}
 
       {/* ── Lower two-column grid: Sessions (1.55fr) | Charts (1fr) ── */}
       <div className="grid gap-4" style={{ gridTemplateColumns: 'minmax(0, 1.55fr) minmax(0, 1fr)' }}>

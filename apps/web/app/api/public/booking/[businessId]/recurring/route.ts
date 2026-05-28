@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { res } from '@/lib/api-auth';
 import { AppointmentStatus } from '@prisma/client';
-import { generateOccurrenceDates } from '@/app/api/recurring-appointments/route';
+import { generateOccurrenceDates } from '@/lib/recurring-appointments';
 import { sendBookingConfirmation } from '@/lib/email';
 
 // POST — create a recurring series booking from the public booking page

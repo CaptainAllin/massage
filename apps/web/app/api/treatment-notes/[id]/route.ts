@@ -1,6 +1,7 @@
 import { requireAuth, res, AuthError } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
 import { NextRequest } from 'next/server';
+import { emitWebhookEvent } from '@/lib/webhooks';
 
 export async function GET(
   req: NextRequest,
@@ -111,6 +112,10 @@ export async function PATCH(
         metadata: { updatedFields: Object.keys(data) },
       },
     });
+
+    if (note.status === 'APPROVED' && existing.status !== 'APPROVED') {
+      emitWebhookEvent(businessId, 'treatment_note.completed', { id, clientId: note.clientId, therapistId: note.therapistId, appointmentId: note.appointmentId }).catch(() => {});
+    }
 
     return res.ok(note);
   } catch (err) {

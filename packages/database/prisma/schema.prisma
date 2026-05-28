@@ -51,12 +51,17 @@ model Business {
   secondaryColor             String?                      @default("#E7D8C9")
   subscriptionTier           String?                      @default("FREE")
   subscriptionStatus         String?                      @default("ACTIVE")
+  smsCreditsIncluded         Int                          @default(50)
+  smsCreditsUsed             Int                          @default(0)
+  smsBillingCycleStart       DateTime?
   bookingMode                BookingMode                  @default(PUBLIC)
   draftNoteVisibility        DraftNoteVisibility          @default(ALL_THERAPISTS)
   ownerId                    String                       @unique
   createdAt                  DateTime                     @default(now())
   updatedAt                  DateTime                     @updatedAt
   stripeAccountId            String?
+  clientPortalEnabled        Boolean                      @default(false)
+  clientPortalSettings       Json?
   aiPromptTemplates          AIPromptTemplate[]
   aiUsage                    AIUsage[]
   analyticsSnapshots         AnalyticsSnapshot[]
@@ -118,6 +123,9 @@ model Business {
   accountingIntegrations     AccountingIntegration[]
   accountingSyncLogs         AccountingSyncLog[]
   tasks                      Task[]
+  scheduledExports           ScheduledExport[]
+  apiKeys                    ApiKey[]
+  webhooks                   Webhook[]
 
   @@index([ownerId])
   @@map("businesses")
@@ -151,12 +159,27 @@ model Therapist {
   payrollRecords             PayrollRecord[]
   waitlist                   Waitlist[]
   availabilityRules          AvailabilityRule[]
+  therapistLocations         TherapistLocation[]
 
   @@index([userId])
   @@index([businessId])
   @@index([locationId])
   @@index([isActive])
   @@map("therapists")
+}
+
+model TherapistLocation {
+  id          String    @id @default(cuid())
+  therapistId String
+  locationId  String
+  createdAt   DateTime  @default(now())
+  therapist   Therapist @relation(fields: [therapistId], references: [id], onDelete: Cascade)
+  location    Location  @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@unique([therapistId, locationId])
+  @@index([therapistId])
+  @@index([locationId])
+  @@map("therapist_locations")
 }
 
 model Client {
@@ -724,6 +747,8 @@ model CommunicationSettings {
   defaultReminderHours  Int      @default(24)
   autoSendReminders     Boolean  @default(false)
   emailSignature        String?
+  smsOverageEnabled     Boolean  @default(false)
+  smsHardStop           Boolean  @default(false)
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
   business              Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
@@ -1013,6 +1038,7 @@ model ExportHistory {
   downloadCount  Int          @default(0)
   lastDownloadAt DateTime?
   errorMessage   String?
+  triggeredBy    String?      @default("MANUAL")
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   business       Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
@@ -1023,6 +1049,28 @@ model ExportHistory {
   @@index([requestedAt])
   @@index([expiresAt])
   @@map("export_history")
+}
+
+model ScheduledExport {
+  id          String            @id @default(cuid())
+  businessId  String
+  userId      String
+  name        String
+  exportType  String
+  format      ExportFormat
+  frequency   ScheduleFrequency
+  filters     Json?
+  emailTo     String
+  isActive    Boolean           @default(true)
+  lastRunAt   DateTime?
+  nextRunAt   DateTime
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  business    Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+  @@index([isActive, nextRunAt])
+  @@map("scheduled_exports")
 }
 
 model AIUsage {
@@ -1196,24 +1244,27 @@ model PromotionRecipient {
 }
 
 model Location {
-  id           String        @id @default(cuid())
-  businessId   String
-  name         String
-  address      String?
-  city         String?
-  state        String?
-  postalCode   String?
-  phoneNumber  String?
-  email        String?
-  isActive     Boolean       @default(true)
-  isPrimary    Boolean       @default(false)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  business     Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  appointments Appointment[]
-  clients      Client[]
-  payments     Payment[]
-  therapists   Therapist[]
+  id                 String              @id @default(cuid())
+  businessId         String
+  name               String
+  address            String?
+  city               String?
+  state              String?
+  postalCode         String?
+  phoneNumber        String?
+  email              String?
+  timezone           String?
+  isActive           Boolean             @default(true)
+  isPrimary          Boolean             @default(false)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  business           Business            @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  appointments       Appointment[]
+  clients            Client[]
+  payments           Payment[]
+  therapists         Therapist[]
+  rooms              Room[]
+  therapistLocations TherapistLocation[]
 
   @@index([businessId])
   @@index([isActive])
@@ -1382,6 +1433,7 @@ enum PromotionStatus {
 enum UserRole {
   SUPER_ADMIN
   BUSINESS_OWNER
+  LOCATION_MANAGER
   RECEPTIONIST
   THERAPIST
   CLIENT
@@ -1462,6 +1514,7 @@ enum ExportFormat {
   CSV
   PDF
   EXCEL
+  JSON
 }
 
 enum ExportStatus {
@@ -1469,6 +1522,12 @@ enum ExportStatus {
   PROCESSING
   COMPLETED
   FAILED
+}
+
+enum ScheduleFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
 }
 
 enum AIProvider {
@@ -1790,19 +1849,22 @@ model BookingInvite {
 }
 
 model Room {
-  id           String            @id @default(cuid())
-  businessId   String
-  name         String
-  color        String?           @default("#8B5CF6")
-  capacity     Int?              @default(1)
-  isActive     Boolean           @default(true)
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
-  business     Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  appointments Appointment[]
+  id                String            @id @default(cuid())
+  businessId        String
+  locationId        String?
+  name              String
+  color             String?           @default("#8B5CF6")
+  capacity          Int?              @default(1)
+  isActive          Boolean           @default(true)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  business          Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  location          Location?         @relation(fields: [locationId], references: [id])
+  appointments      Appointment[]
   availabilityRules AvailabilityRule[]
 
   @@index([businessId])
+  @@index([locationId])
   @@index([isActive])
   @@map("rooms")
 }
@@ -1919,6 +1981,7 @@ model MessageLog {
   deliveredAt       DateTime?
   retryCount        Int              @default(0)
   lastRetriedAt     DateTime?
+  smsCost           Float?
   metadata          Json?
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
@@ -2007,4 +2070,58 @@ enum TreatmentNoteStatus {
   PENDING_REVIEW
   APPROVED
   REJECTED
+}
+
+model ApiKey {
+  id          String    @id @default(cuid())
+  businessId  String
+  name        String
+  keyHash     String    @unique
+  permissions Json      @default("[]")
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  business    Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+  @@index([keyHash])
+  @@map("api_keys")
+}
+
+model Webhook {
+  id              String            @id @default(cuid())
+  businessId      String
+  url             String
+  events          Json              @default("[]")
+  secret          String
+  isActive        Boolean           @default(true)
+  lastTriggeredAt DateTime?
+  failureCount    Int               @default(0)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  business        Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  deliveries      WebhookDelivery[]
+
+  @@index([businessId])
+  @@map("webhooks")
+}
+
+model WebhookDelivery {
+  id           String   @id @default(cuid())
+  webhookId    String
+  event        String
+  payload      Json
+  statusCode   Int?
+  responseBody String?
+  attemptedAt  DateTime @default(now())
+  succeeded    Boolean  @default(false)
+  webhook      Webhook  @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@index([webhookId])
+  @@index([event])
+  @@index([succeeded])
+  @@index([attemptedAt])
+  @@map("webhook_deliveries")
 }

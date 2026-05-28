@@ -169,6 +169,7 @@ function LocationFormModal({
     postalCode: location?.postalCode ?? '',
     phoneNumber: location?.phoneNumber ?? '',
     email: location?.email ?? '',
+    timezone: location?.timezone ?? '',
     isPrimary: location?.isPrimary ?? false,
     isActive: location?.isActive ?? true,
   });
@@ -265,6 +266,32 @@ function LocationFormModal({
               onChange={(e) => setForm({ ...form, email: e.target.value })}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#5D4AA8]"
             />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Timezone</label>
+            <select
+              value={form.timezone}
+              onChange={(e) => setForm({ ...form, timezone: e.target.value })}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#5D4AA8]"
+            >
+              <option value="">— Use business default —</option>
+              <option value="Australia/Sydney">Australia/Sydney (AEDT)</option>
+              <option value="Australia/Melbourne">Australia/Melbourne (AEDT)</option>
+              <option value="Australia/Brisbane">Australia/Brisbane (AEST)</option>
+              <option value="Australia/Perth">Australia/Perth (AWST)</option>
+              <option value="Australia/Adelaide">Australia/Adelaide (ACDT)</option>
+              <option value="Pacific/Auckland">Pacific/Auckland (NZDT)</option>
+              <option value="America/New_York">America/New_York (ET)</option>
+              <option value="America/Chicago">America/Chicago (CT)</option>
+              <option value="America/Denver">America/Denver (MT)</option>
+              <option value="America/Los_Angeles">America/Los_Angeles (PT)</option>
+              <option value="America/Vancouver">America/Vancouver (PT)</option>
+              <option value="America/Toronto">America/Toronto (ET)</option>
+              <option value="Europe/London">Europe/London (GMT)</option>
+              <option value="Europe/Paris">Europe/Paris (CET)</option>
+              <option value="Asia/Singapore">Asia/Singapore (SGT)</option>
+              <option value="Asia/Tokyo">Asia/Tokyo (JST)</option>
+            </select>
           </div>
           <div className="flex gap-6">
             <label className="flex items-center gap-2 cursor-pointer">

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, Button, Input, Badge } from '@massage/ui';
-import { Building2, Users, Bell, Palette, Save, Upload, Loader2, Check, BellRing, MapPin, CalendarCheck, Globe, Lock, UserCheck, Clock, ShieldCheck, KeyRound, Trash2, Plus, Link2, FileText } from 'lucide-react';
+import { Building2, Users, Bell, Palette, Save, Upload, Loader2, Check, BellRing, MapPin, CalendarCheck, Globe, Lock, UserCheck, Clock, ShieldCheck, KeyRound, Trash2, Plus, Link2, FileText, LayoutDashboard, ExternalLink, Copy, CheckCheck } from 'lucide-react';
 import Link from 'next/link';
 import { useBusinessId } from '@/lib/hooks/use-business-id';
 import { useBusiness, useUpdateBusiness } from '@/lib/hooks/use-business';
@@ -13,7 +13,7 @@ import { apiClient } from '@/lib/api-client';
 import { usePushNotifications } from '@/lib/hooks/use-push-notifications';
 import { listPasskeys, enrollPasskey, revokePasskey, type PasskeyFactor } from '@/lib/supabase/passkeys';
 
-type Tab = 'business' | 'team' | 'notifications' | 'branding' | 'booking' | 'clinical' | 'security';
+type Tab = 'business' | 'team' | 'notifications' | 'branding' | 'booking' | 'clinical' | 'security' | 'portal';
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: 'business', label: 'Business', icon: <Building2 className="h-4 w-4" /> },
@@ -23,6 +23,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: 'booking', label: 'Booking', icon: <CalendarCheck className="h-4 w-4" /> },
   { id: 'clinical', label: 'Clinical Notes', icon: <FileText className="h-4 w-4" /> },
   { id: 'security', label: 'Security', icon: <ShieldCheck className="h-4 w-4" /> },
+  { id: 'portal', label: 'Client Portal', icon: <LayoutDashboard className="h-4 w-4" /> },
 ];
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
@@ -297,6 +298,8 @@ function NotificationsTab({ businessId }: { businessId: string }) {
     whatsappEnabled: false,
     defaultReminderHours: 24,
     autoSendReminders: false,
+    smsOverageEnabled: false,
+    smsHardStop: false,
   });
 
   useEffect(() => {
@@ -307,6 +310,8 @@ function NotificationsTab({ businessId }: { businessId: string }) {
         whatsappEnabled: settings.whatsappEnabled,
         defaultReminderHours: settings.defaultReminderHours,
         autoSendReminders: settings.autoSendReminders,
+        smsOverageEnabled: (settings as any).smsOverageEnabled ?? false,
+        smsHardStop: (settings as any).smsHardStop ?? false,
       });
     }
   }, [settings]);
@@ -385,6 +390,29 @@ function NotificationsTab({ businessId }: { businessId: string }) {
           checked={form.autoSendReminders}
           onChange={(v) => setForm((f) => ({ ...f, autoSendReminders: v }))}
         />
+      </div>
+
+      <div className="rounded-lg border border-violet-100 dark:border-violet-900/40 bg-violet-50 dark:bg-violet-900/20 p-4 space-y-3">
+        <p className="text-sm font-semibold text-violet-800 dark:text-violet-300">SMS Credits — Overage Handling</p>
+        <p className="text-xs text-violet-700 dark:text-violet-400">
+          SMS is included in your plan. Configure what happens when your monthly credit allowance is exhausted.
+        </p>
+        <div className="space-y-2 pt-1">
+          <Toggle
+            id="smsOverageEnabled"
+            label="Auto-purchase overage credits"
+            description="Automatically buy extra SMS credits via Stripe when your allowance runs out (opt-in)."
+            checked={form.smsOverageEnabled}
+            onChange={(v) => setForm((f) => ({ ...f, smsOverageEnabled: v }))}
+          />
+          <Toggle
+            id="smsHardStop"
+            label="Hard stop when credits exhausted"
+            description="Disable SMS sending entirely once your credits run out instead of continuing to send."
+            checked={form.smsHardStop}
+            onChange={(v) => setForm((f) => ({ ...f, smsHardStop: v }))}
+          />
+        </div>
       </div>
 
       <FieldRow label="Reminder Lead Time (hours)">
@@ -1048,6 +1076,143 @@ function ClinicalTab({ businessId }: { businessId: string }) {
   );
 }
 
+// ─── Client Portal Tab ───────────────────────────────────────────────────────
+
+function ClientPortalTab({ businessId }: { businessId: string }) {
+  const { data: business, isLoading } = useBusiness(businessId);
+  const updateBusiness = useUpdateBusiness(businessId);
+  const [saved, setSaved] = useState(false);
+  const [enabled, setEnabled] = useState(false);
+  const [settings, setSettings] = useState({ showNotes: false, showInvoices: true, showIntakeForms: true });
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (business) {
+      setEnabled((business as any).clientPortalEnabled ?? false);
+      const s = (business as any).clientPortalSettings;
+      if (s) setSettings({ showNotes: s.showNotes ?? false, showInvoices: s.showInvoices ?? true, showIntakeForms: s.showIntakeForms ?? true });
+    }
+  }, [business]);
+
+  const portalUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/client-portal/sign-in`
+    : '/client-portal/sign-in';
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await updateBusiness.mutateAsync({ clientPortalEnabled: enabled, clientPortalSettings: settings } as any);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+  };
+
+  const copyUrl = () => {
+    navigator.clipboard.writeText(portalUrl).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  if (isLoading) return <p className="text-sm text-muted-foreground">Loading…</p>;
+
+  return (
+    <form onSubmit={handleSave} className="space-y-6">
+      <SectionHeader title="Client Portal" description="Give clients a self-service portal to view their appointments, invoices, and forms." />
+
+      {/* Enable toggle */}
+      <div className="flex items-start justify-between gap-4 p-4 rounded-xl" style={{ background: '#FAFAFA', border: '1px solid #EFE9F2' }}>
+        <div>
+          <p className="text-sm font-semibold" style={{ color: '#1E1830' }}>Enable Client Portal</p>
+          <p className="text-xs mt-0.5" style={{ color: '#7A7090' }}>
+            When enabled, clients can sign in at your portal URL to access their records.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setEnabled((v) => !v)}
+          className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0"
+          style={{ background: enabled ? '#5D4AA8' : '#D1D5DB' }}
+        >
+          <span
+            className="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
+            style={{ transform: enabled ? 'translateX(22px)' : 'translateX(2px)' }}
+          />
+        </button>
+      </div>
+
+      {/* Portal URL */}
+      {enabled && (
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1.5" style={{ color: '#3D3450' }}>Portal URL</label>
+            <div className="flex gap-2">
+              <div
+                className="flex-1 px-3 py-2 rounded-xl text-sm truncate"
+                style={{ background: '#F8F7FF', border: '1px solid #D9D3E8', color: '#5D4AA8' }}
+              >
+                {portalUrl}
+              </div>
+              <button
+                type="button"
+                onClick={copyUrl}
+                className="px-3 py-2 rounded-xl text-sm flex items-center gap-1.5"
+                style={{ background: '#EDE5F4', color: '#5D4AA8' }}
+              >
+                {copied ? <CheckCheck className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                {copied ? 'Copied' : 'Copy'}
+              </button>
+              <a
+                href="/client-portal/sign-in"
+                target="_blank"
+                className="px-3 py-2 rounded-xl text-sm flex items-center gap-1.5"
+                style={{ background: '#EDE5F4', color: '#5D4AA8' }}
+              >
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            </div>
+          </div>
+
+          {/* Visibility settings */}
+          <div>
+            <p className="text-sm font-semibold mb-3" style={{ color: '#1E1830' }}>Visible to Clients</p>
+            <div className="space-y-2">
+              {[
+                { key: 'showInvoices', label: 'Invoices & payment history' },
+                { key: 'showIntakeForms', label: 'Intake forms' },
+                { key: 'showNotes', label: 'Approved treatment summaries (documents)' },
+              ].map(({ key, label }) => (
+                <label key={key} className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={settings[key as keyof typeof settings]}
+                    onChange={(e) => setSettings((s) => ({ ...s, [key]: e.target.checked }))}
+                    className="w-4 h-4 rounded accent-[#5D4AA8]"
+                  />
+                  <span className="text-sm" style={{ color: '#3D3450' }}>{label}</span>
+                </label>
+              ))}
+            </div>
+            <p className="text-xs mt-2" style={{ color: '#9E96B0' }}>Appointments are always visible to clients.</p>
+          </div>
+
+          <div
+            className="flex items-start gap-2.5 rounded-xl p-3.5"
+            style={{ background: '#F3EFFD', border: '1px solid rgba(93,74,168,0.15)' }}
+          >
+            <LayoutDashboard className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color: '#5D4AA8' }} />
+            <p className="text-xs" style={{ color: '#5D4AA8' }}>
+              To invite a client, go to their profile and click <strong>Send Portal Invite</strong>. They will receive an email with the portal link.
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div className="flex justify-end pt-2">
+        <SaveButton isSaving={updateBusiness.isPending} saved={saved} />
+      </div>
+    </form>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function SettingsPage() {
@@ -1099,6 +1264,7 @@ export default function SettingsPage() {
               {activeTab === 'booking' && <BookingTab businessId={businessId} />}
               {activeTab === 'clinical' && <ClinicalTab businessId={businessId} />}
               {activeTab === 'security' && <SecurityTab />}
+              {activeTab === 'portal' && <ClientPortalTab businessId={businessId} />}
             </>
           )}
         </CardContent>

@@ -102,6 +102,8 @@ export default function PublicBookingPage() {
   const [step, setStep] = useState(1); // 1=therapist, 2=service, 3=datetime, 4=contact, 5=confirm
   const [business, setBusiness] = useState<Business | null>(null);
   const [therapists, setTherapists] = useState<Therapist[]>([]);
+  const [locations, setLocations] = useState<{ id: string; name: string; address?: string; city?: string }[]>([]);
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [booked, setBooked] = useState(false);
@@ -164,6 +166,7 @@ export default function PublicBookingPage() {
         const biz: Business = d.data.business;
         setBusiness(biz);
         setTherapists(d.data.therapists);
+        if (d.data.locations?.length > 1) setLocations(d.data.locations);
 
         if (biz.bookingMode === 'PUBLIC') {
           setAccessGranted(true);
@@ -798,11 +801,50 @@ export default function PublicBookingPage() {
             <h2 className="text-xl font-bold text-gray-900 mb-1">Choose a Therapist</h2>
             <p className="text-sm text-gray-500 mb-5">Select who you'd like to see.</p>
 
-            {therapists.length === 0 ? (
-              <p className="text-gray-400 text-sm text-center py-10">No therapists available at this time.</p>
-            ) : (
+            {/* Location filter (only shown when business has multiple locations) */}
+            {locations.length > 1 && (
+              <div className="mb-4">
+                <label className="block text-xs font-medium text-gray-500 mb-1.5">Filter by location</label>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setSelectedLocationId(null)}
+                    className="px-3 py-1.5 rounded-full text-xs font-medium border transition-colors"
+                    style={{
+                      background: !selectedLocationId ? accent : '#fff',
+                      color: !selectedLocationId ? '#fff' : '#6B7280',
+                      borderColor: !selectedLocationId ? accent : '#e5e7eb',
+                    }}
+                  >
+                    All locations
+                  </button>
+                  {locations.map((loc) => (
+                    <button
+                      key={loc.id}
+                      onClick={() => setSelectedLocationId(loc.id)}
+                      className="px-3 py-1.5 rounded-full text-xs font-medium border transition-colors"
+                      style={{
+                        background: selectedLocationId === loc.id ? accent : '#fff',
+                        color: selectedLocationId === loc.id ? '#fff' : '#6B7280',
+                        borderColor: selectedLocationId === loc.id ? accent : '#e5e7eb',
+                      }}
+                    >
+                      {loc.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {(() => {
+              const visible = selectedLocationId
+                ? therapists.filter((t: any) => t.location?.id === selectedLocationId)
+                : therapists;
+              if (visible.length === 0) {
+                return <p className="text-gray-400 text-sm text-center py-10">No therapists available{selectedLocationId ? ' at this location' : ''}.</p>;
+              }
+              return (
               <div className="space-y-3">
-                {therapists.map((t) => {
+                {visible.map((t) => {
                   const name = `${t.user.firstName} ${t.user.lastName}`;
                   const selected = selectedTherapist?.id === t.id;
                   return (
@@ -854,7 +896,8 @@ export default function PublicBookingPage() {
                   );
                 })}
               </div>
-            )}
+              );
+            })()}
 
             <button
               disabled={!selectedTherapist}

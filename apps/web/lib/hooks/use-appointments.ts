@@ -33,6 +33,7 @@ export function useAppointments(businessId: string | undefined, filters?: Appoin
         ...(filters?.limit && { limit: String(filters.limit) }),
         ...(filters?.sortBy && { sortBy: filters.sortBy }),
         ...(filters?.sortOrder && { sortOrder: filters.sortOrder }),
+        ...((filters as any)?.locationId && { locationId: (filters as any).locationId }),
       });
 
       const response = await apiClient.get<PaginatedResponse<Appointment>>(
