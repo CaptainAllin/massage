@@ -109,18 +109,18 @@ export async function requireAuth(req: NextRequest): Promise<AuthUser> {
 export async function requireBusinessAccess(user: AuthUser, businessId: string): Promise<void> {
   if (user.role === 'SUPER_ADMIN') return;
 
-  const isOwner = await prisma.business.findFirst({
-    where: { id: businessId, ownerId: user.id },
-    select: { id: true },
-  });
-  if (isOwner) return;
+  const [isOwner, isTherapist] = await Promise.all([
+    prisma.business.findFirst({
+      where: { id: businessId, ownerId: user.id },
+      select: { id: true },
+    }),
+    prisma.therapist.findFirst({
+      where: { businessId, userId: user.id },
+      select: { id: true },
+    }),
+  ]);
 
-  const isTherapist = await prisma.therapist.findFirst({
-    where: { businessId, userId: user.id },
-    select: { id: true },
-  });
-  if (isTherapist) return;
-
+  if (isOwner || isTherapist) return;
   throw new AuthError('You do not have access to this business');
 }
 

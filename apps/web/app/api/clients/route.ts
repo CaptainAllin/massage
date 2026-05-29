@@ -13,35 +13,6 @@ export async function GET(req: NextRequest) {
     if (!businessId) return res.badRequest('businessId is required');
     await requireBusinessAccess(user, businessId);
 
-    // Return filter counts for the filter chips
-    if (searchParams.get('counts') === 'true') {
-      const now = new Date();
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
-
-      const [all, vip, newThisMonth, dueForVisit, inactive60d] = await Promise.all([
-        prisma.client.count({ where: { businessId } }),
-        prisma.client.count({ where: { businessId, totalVisits: { gte: 10 } } }),
-        prisma.client.count({ where: { businessId, createdAt: { gte: startOfMonth } } }),
-        prisma.client.count({
-          where: {
-            businessId,
-            isActive: true,
-            OR: [{ lastVisitDate: { lt: thirtyDaysAgo } }, { lastVisitDate: null }],
-          },
-        }),
-        prisma.client.count({
-          where: {
-            businessId,
-            OR: [{ isActive: false }, { lastVisitDate: { lt: sixtyDaysAgo } }],
-          },
-        }),
-      ]);
-
-      return Response.json({ success: true, data: { all, vip, newThisMonth, dueForVisit, inactive60d } });
-    }
-
     const isActiveParam = searchParams.get('isActive');
     const search = searchParams.get('search');
     const filter = searchParams.get('filter');
@@ -74,12 +45,13 @@ export async function GET(req: NextRequest) {
         { lastName: { contains: search, mode: 'insensitive' } },
         { email: { contains: search, mode: 'insensitive' } },
       ];
-      where.AND = [{ OR: searchCondition }];
+      // Preserve any existing filter-level AND, merge search into it
+      where.AND = [...(where.AND ?? []), { OR: searchCondition }];
       delete where.OR;
     }
 
     const skip = (page - 1) * limit;
-    const [clients, total] = await Promise.all([
+    const [clients, total, allCount, vipCount, newThisMonth, dueForVisit, inactive60d] = await Promise.all([
       prisma.client.findMany({
         where,
         orderBy: { createdAt: 'desc' },
@@ -92,12 +64,29 @@ export async function GET(req: NextRequest) {
         },
       }),
       prisma.client.count({ where }),
+      prisma.client.count({ where: { businessId } }),
+      prisma.client.count({ where: { businessId, totalVisits: { gte: 10 } } }),
+      prisma.client.count({ where: { businessId, createdAt: { gte: startOfMonth } } }),
+      prisma.client.count({
+        where: {
+          businessId,
+          isActive: true,
+          OR: [{ lastVisitDate: { lt: thirtyDaysAgo } }, { lastVisitDate: null }],
+        },
+      }),
+      prisma.client.count({
+        where: {
+          businessId,
+          OR: [{ isActive: false }, { lastVisitDate: { lt: sixtyDaysAgo } }],
+        },
+      }),
     ]);
 
     return Response.json({
       success: true,
       data: clients,
       meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      counts: { all: allCount, vip: vipCount, newThisMonth, dueForVisit, inactive60d },
     });
   } catch (err) {
     if (err instanceof AuthError) return res.unauthorized(err.message);

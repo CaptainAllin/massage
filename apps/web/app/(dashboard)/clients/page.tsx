@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useClientsWithMeta, useClientCounts, ClientFilterType } from '@/lib/hooks/use-clients';
+import { useClientsWithMeta, ClientFilterType } from '@/lib/hooks/use-clients';
 import { ClientsTable } from '@/components/clients/ClientsTable';
 import { AddClientModal } from '@/components/clients/AddClientModal';
 import { ImportClientsModal } from '@/components/clients/ImportClientsModal';
@@ -47,8 +47,7 @@ export default function ClientsPage() {
     filter: activeFilter,
   });
 
-  const { data: countsRaw } = useClientCounts(businessId);
-  const counts = buildCounts(countsRaw);
+  const counts = buildCounts(result?.counts);
 
   const clients = result?.data ?? [];
   const meta = result?.meta;

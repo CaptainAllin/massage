@@ -28,10 +28,11 @@ import {
   ShieldCheck,
   LogOut,
   HelpCircle,
-  Sparkles,
   MailCheck,
   CheckSquare,
   Code2,
+  ChevronRight,
+  Search,
 } from 'lucide-react';
 
 export interface MenuItem {
@@ -54,35 +55,55 @@ export interface SidebarProps {
   userEmail?: string;
   userInitials?: string;
   onSignOut?: () => void;
+  /** @deprecated moved to header — no longer rendered in sidebar */
   onGetStarted?: () => void;
+  /** @deprecated moved to header — no longer rendered in sidebar */
   onboardingProgress?: number;
+  /** @deprecated moved to header — no longer rendered in sidebar */
   whatsNewCount?: number;
+  /** @deprecated moved to header — no longer rendered in sidebar */
   onWhatsNew?: () => void;
 }
 
-const defaultMenuGroups: MenuGroup[] = [
+const PINNED_ITEMS: MenuItem[] = [
   {
-    label: 'Practice',
+    label: 'Dashboard',
+    href: '/dashboard',
+    icon: LayoutDashboard,
+    allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER', 'RECEPTIONIST', 'THERAPIST'],
+  },
+  {
+    label: 'Appointments',
+    href: '/appointments',
+    icon: Calendar,
+    badge: 6,
+    allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER', 'RECEPTIONIST', 'THERAPIST'],
+  },
+  {
+    label: 'Clients',
+    href: '/clients',
+    icon: Users,
+    allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER', 'RECEPTIONIST', 'THERAPIST'],
+  },
+  {
+    label: 'Messages',
+    href: '/messages',
+    icon: MessageSquare,
+    badge: 3,
+    allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER', 'RECEPTIONIST'],
+  },
+  {
+    label: 'Payments',
+    href: '/payments',
+    icon: CreditCard,
+    allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER', 'RECEPTIONIST'],
+  },
+];
+
+const COLLAPSIBLE_GROUPS: MenuGroup[] = [
+  {
+    label: 'Operations',
     items: [
-      {
-        label: 'Dashboard',
-        href: '/dashboard',
-        icon: LayoutDashboard,
-        allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER', 'RECEPTIONIST', 'THERAPIST'],
-      },
-      {
-        label: 'Appointments',
-        href: '/appointments',
-        icon: Calendar,
-        badge: 6,
-        allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER', 'RECEPTIONIST', 'THERAPIST'],
-      },
-      {
-        label: 'Clients',
-        href: '/clients',
-        icon: Users,
-        allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER', 'RECEPTIONIST', 'THERAPIST'],
-      },
       {
         label: 'Intake Forms',
         href: '/intake-forms',
@@ -90,33 +111,15 @@ const defaultMenuGroups: MenuGroup[] = [
         allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER', 'RECEPTIONIST', 'THERAPIST'],
       },
       {
-        label: 'Messages',
-        href: '/messages',
-        icon: MessageSquare,
-        badge: 3,
-        allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER', 'RECEPTIONIST'],
-      },
-      {
-        label: 'Delivery Reports',
-        href: '/communications/delivery-reports',
-        icon: MailCheck,
-        allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER', 'RECEPTIONIST'],
-      },
-      {
         label: 'Tasks',
         href: '/tasks',
         icon: CheckSquare,
         allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER', 'RECEPTIONIST', 'THERAPIST'],
       },
-    ],
-  },
-  {
-    label: 'Operations',
-    items: [
       {
-        label: 'Payments',
-        href: '/payments',
-        icon: CreditCard,
+        label: 'Delivery Reports',
+        href: '/communications/delivery-reports',
+        icon: MailCheck,
         allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER', 'RECEPTIONIST'],
       },
       {
@@ -272,9 +275,7 @@ function NavItem({ item, active, onClick }: { item: MenuItem; active: boolean; o
             }
       }
     >
-      <span
-        className={cn('transition-opacity', active ? 'opacity-100' : 'opacity-60 group-hover:opacity-90')}
-      >
+      <span className={cn('transition-opacity', active ? 'opacity-100' : 'opacity-60 group-hover:opacity-90')}>
         <Icon size={16} />
       </span>
       <span className="flex-1 truncate" style={{ fontSize: '13.5px' }}>{item.label}</span>
@@ -294,6 +295,15 @@ function NavItem({ item, active, onClick }: { item: MenuItem; active: boolean; o
   );
 }
 
+const GROUP_LABEL_STYLE: React.CSSProperties = {
+  fontSize: '10px',
+  fontWeight: 600,
+  letterSpacing: '1.3px',
+  textTransform: 'uppercase',
+  color: '#7A7090',
+  fontFamily: 'Sora, system-ui, sans-serif',
+};
+
 function MenuContent({
   userRole,
   userName,
@@ -301,10 +311,6 @@ function MenuContent({
   userInitials,
   onSignOut,
   onClose,
-  onGetStarted,
-  onboardingProgress,
-  whatsNewCount,
-  onWhatsNew,
 }: {
   userRole?: string | null;
   userName?: string;
@@ -312,62 +318,124 @@ function MenuContent({
   userInitials?: string;
   onSignOut?: () => void;
   onClose?: () => void;
-  onGetStarted?: () => void;
-  onboardingProgress?: number;
-  whatsNewCount?: number;
-  onWhatsNew?: () => void;
 }) {
   const pathname = usePathname();
+  const [openGroups, setOpenGroups] = React.useState<Set<string>>(new Set());
+
+  // Auto-expand any group that contains the current path
+  React.useEffect(() => {
+    const autoOpen = new Set<string>();
+    for (const group of COLLAPSIBLE_GROUPS) {
+      if (
+        group.items.some(
+          (item) => pathname === item.href || pathname.startsWith(item.href + '/')
+        )
+      ) {
+        autoOpen.add(group.label);
+      }
+    }
+    if (autoOpen.size > 0) {
+      setOpenGroups((prev) => new Set([...prev, ...autoOpen]));
+    }
+  }, [pathname]);
+
+  const toggleGroup = (label: string) => {
+    setOpenGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(label)) next.delete(label);
+      else next.add(label);
+      return next;
+    });
+  };
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
 
-  const filteredGroups = defaultMenuGroups
-    .map((group) => ({
-      ...group,
-      items: group.items.filter((item) => {
-        if (!item.allowedRoles) return true;
-        if (!userRole) return false;
-        return item.allowedRoles.includes(userRole);
-      }),
-    }))
-    .filter((group) => group.items.length > 0);
+  const filteredPinned = PINNED_ITEMS.filter((item) => {
+    if (!item.allowedRoles) return true;
+    if (!userRole) return false;
+    return item.allowedRoles.includes(userRole);
+  });
+
+  const filteredGroups = COLLAPSIBLE_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => {
+      if (!item.allowedRoles) return true;
+      if (!userRole) return false;
+      return item.allowedRoles.includes(userRole);
+    }),
+  })).filter((group) => group.items.length > 0);
 
   return (
     <div className="flex h-full flex-col" style={{ background: '#FBF8FD' }}>
       <IrisLogo />
 
-      <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-5" style={{ scrollbarWidth: 'none' }}>
-        {filteredGroups.map((group) => (
-          <div key={group.label}>
-            <p
-              className="mb-1.5 px-3"
-              style={{
-                fontSize: '10px',
-                fontWeight: 600,
-                letterSpacing: '1.4px',
-                textTransform: 'uppercase',
-                color: '#7A7090',
-                fontFamily: 'Sora, system-ui, sans-serif',
-              }}
-            >
-              {group.label}
-            </p>
-            <div className="space-y-0.5">
-              {group.items.map((item) => (
-                <NavItem
-                  key={item.href}
-                  item={item}
-                  active={isActive(item.href)}
-                  onClick={onClose}
-                />
-              ))}
-            </div>
+      <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-4" style={{ scrollbarWidth: 'none' }}>
+        {/* Pinned section */}
+        <div>
+          <p className="mb-1.5 px-3" style={GROUP_LABEL_STYLE}>Pinned</p>
+          <div className="space-y-0.5">
+            {filteredPinned.map((item) => (
+              <NavItem key={item.href} item={item} active={isActive(item.href)} onClick={onClose} />
+            ))}
           </div>
-        ))}
+        </div>
+
+        {/* Collapsible groups */}
+        <div className="space-y-1.5">
+          {filteredGroups.map((group) => {
+            const isOpen = openGroups.has(group.label);
+            const hasActiveItem = group.items.some((item) => isActive(item.href));
+            return (
+              <div key={group.label}>
+                <button
+                  onClick={() => toggleGroup(group.label)}
+                  className="w-full flex items-center justify-between rounded-xl px-3 py-2 transition-colors"
+                  style={{
+                    background: hasActiveItem ? 'rgba(93,74,168,0.06)' : '#FFFFFF',
+                    border: `1px solid ${hasActiveItem ? 'rgba(93,74,168,0.18)' : '#F1EEF6'}`,
+                  }}
+                  onMouseEnter={(e) => { if (!hasActiveItem) (e.currentTarget as HTMLElement).style.background = '#F8F5FC'; }}
+                  onMouseLeave={(e) => { if (!hasActiveItem) (e.currentTarget as HTMLElement).style.background = '#FFFFFF'; }}
+                >
+                  <span style={{ ...GROUP_LABEL_STYLE, color: hasActiveItem ? '#5D4AA8' : '#7A7090' }}>
+                    {group.label}
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span style={{ fontSize: '11px', color: '#B0A8C0' }}>{group.items.length}</span>
+                    <ChevronRight
+                      size={12}
+                      style={{
+                        color: '#B0A8C0',
+                        transform: isOpen ? 'rotate(90deg)' : 'none',
+                        transition: 'transform 0.15s ease',
+                      }}
+                    />
+                  </div>
+                </button>
+                {isOpen && (
+                  <div className="mt-1 space-y-0.5">
+                    {group.items.map((item) => (
+                      <NavItem key={item.href} item={item} active={isActive(item.href)} onClick={onClose} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Jump to anything hint */}
+        <div
+          className="flex items-center gap-2 px-3 py-1"
+          style={{ color: '#B0A8C0' }}
+        >
+          <Search size={12} />
+          <span style={{ fontSize: '11.5px' }}>Jump to anything · ⌘K</span>
+        </div>
       </nav>
 
-      {/* Help & What's New */}
-      <div className="mx-3 mb-1 space-y-0.5">
+      {/* Help & Docs */}
+      <div className="mx-3 mb-1">
         <a
           href="https://docs.iris.care"
           target="_blank"
@@ -375,93 +443,15 @@ function MenuContent({
           onClick={onClose}
           className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition-colors group"
           style={{ color: '#3D3450' }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = '#EDE5F4')}
-          onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+          onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = '#EDE5F4')}
+          onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = 'transparent')}
         >
           <span className="opacity-60 group-hover:opacity-90">
             <HelpCircle size={16} />
           </span>
           <span style={{ fontSize: '13.5px' }}>Help &amp; Docs</span>
         </a>
-        {onWhatsNew && (
-          <button
-            onClick={() => { onWhatsNew(); onClose?.(); }}
-            className="w-full flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition-colors group text-left"
-            style={{ color: '#3D3450' }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = '#EDE5F4')}
-            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-          >
-            <span className="opacity-60 group-hover:opacity-90 relative">
-              <Sparkles size={16} />
-              {whatsNewCount != null && whatsNewCount > 0 && (
-                <span
-                  className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full flex items-center justify-center text-white"
-                  style={{ background: '#C97E68', fontSize: '8px', fontWeight: 700 }}
-                >
-                  {whatsNewCount > 9 ? '9+' : whatsNewCount}
-                </span>
-              )}
-            </span>
-            <span style={{ fontSize: '13.5px' }}>What&apos;s New</span>
-            {whatsNewCount != null && whatsNewCount > 0 && (
-              <span
-                className="ml-auto text-xs font-semibold rounded-full px-1.5 py-0.5 leading-none"
-                style={{ background: '#F7E5DD', color: '#C97E68', fontSize: '11px' }}
-              >
-                {whatsNewCount}
-              </span>
-            )}
-          </button>
-        )}
       </div>
-
-      {/* Getting Started button */}
-      {onGetStarted && (
-        <div className="mx-3 mb-2">
-          <button
-            onClick={() => { onGetStarted(); onClose?.(); }}
-            className="w-full flex items-center gap-2.5 rounded-xl px-3 py-2.5 transition-all"
-            style={{ background: 'rgba(93,74,168,0.08)', border: '1px solid rgba(93,74,168,0.14)' }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(93,74,168,0.14)')}
-            onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(93,74,168,0.08)')}
-          >
-            <div
-              className="w-6 h-6 rounded-lg flex-shrink-0 flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg, #5D4AA8, #7665C2)' }}
-            >
-              <svg width="12" height="12" fill="none" viewBox="0 0 24 24">
-                <path d="M12 2L14.09 8.26L21 9.27L16 14.14L17.18 21.02L12 17.77L6.82 21.02L8 14.14L3 9.27L9.91 8.26L12 2Z" fill="white" />
-              </svg>
-            </div>
-            <div className="flex-1 min-w-0 text-left">
-              <p className="text-xs font-semibold" style={{ color: '#3D3450' }}>Getting Started</p>
-              {onboardingProgress != null && onboardingProgress < 100 && (
-                <div className="mt-1 w-full overflow-hidden rounded-full" style={{ height: '3px', background: 'rgba(93,74,168,0.15)' }}>
-                  <div
-                    style={{
-                      width: `${onboardingProgress}%`,
-                      height: '3px',
-                      background: 'linear-gradient(90deg, #7665C2, #5D4AA8)',
-                      borderRadius: '9999px',
-                      transition: 'width 0.5s ease',
-                    }}
-                  />
-                </div>
-              )}
-            </div>
-            {onboardingProgress != null && onboardingProgress < 100 && (
-              <span className="text-xs font-bold tabular-nums flex-shrink-0" style={{ color: '#5D4AA8' }}>
-                {onboardingProgress}%
-              </span>
-            )}
-            {onboardingProgress === 100 && (
-              <svg width="14" height="14" fill="#2D8A67" viewBox="0 0 24 24">
-                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
-              </svg>
-            )}
-          </button>
-        </div>
-      )}
 
       {/* User profile card */}
       <div
@@ -488,8 +478,8 @@ function MenuContent({
             title="Sign out"
             className="flex-shrink-0 rounded-lg p-1 transition-colors"
             style={{ color: '#7A7090' }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = '#5D4AA8')}
-            onMouseLeave={(e) => (e.currentTarget.style.color = '#7A7090')}
+            onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = '#5D4AA8')}
+            onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = '#7A7090')}
           >
             <LogOut size={14} />
           </button>
@@ -506,10 +496,6 @@ export function Sidebar({
   userEmail,
   userInitials,
   onSignOut,
-  onGetStarted,
-  onboardingProgress,
-  whatsNewCount,
-  onWhatsNew,
 }: SidebarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
@@ -519,10 +505,6 @@ export function Sidebar({
     userEmail,
     userInitials,
     onSignOut,
-    onGetStarted,
-    onboardingProgress,
-    whatsNewCount,
-    onWhatsNew,
   };
 
   return (

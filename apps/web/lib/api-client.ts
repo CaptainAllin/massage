@@ -35,6 +35,7 @@ export function clearAuthTokenCache() {
 export const apiClient = axios.create({
   baseURL: API_URL,
   headers: { 'Content-Type': 'application/json' },
+  timeout: 30_000,
 });
 
 apiClient.interceptors.request.use(

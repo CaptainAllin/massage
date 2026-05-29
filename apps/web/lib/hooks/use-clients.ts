@@ -32,6 +32,7 @@ export function useClients(businessId: string | undefined, filters?: ClientFilte
 }
 
 // Fetch clients with meta + filter support (used by clients page)
+// Also returns counts so a second API call is not needed.
 export function useClientsWithMeta(
   businessId: string | undefined,
   filters?: { search?: string; page?: number; limit?: number; filter?: ClientFilterType }
@@ -49,22 +50,25 @@ export function useClientsWithMeta(
       return {
         data: response.data.data as Client[],
         meta: response.data.meta as { page: number; limit: number; total: number; totalPages: number },
+        counts: response.data.counts as ClientCounts | undefined,
       };
     },
     enabled: !!businessId,
+    staleTime: 30_000,
   });
 }
 
-// Fetch filter counts for the filter chips
+// Fetch filter counts for the filter chips (kept for backwards compat; prefer useClientsWithMeta.counts)
 export function useClientCounts(businessId: string | undefined) {
   return useQuery({
     queryKey: ['clients-counts', businessId],
     queryFn: async () => {
-      const params = new URLSearchParams({ businessId: businessId!, counts: 'true' });
-      const response = await apiClient.get<ApiResponse<ClientCounts>>(`/clients?${params}`);
-      return response.data.data;
+      const params = new URLSearchParams({ businessId: businessId! });
+      const response = await apiClient.get<any>(`/clients?${params}&limit=1&page=1`);
+      return response.data.counts as ClientCounts;
     },
     enabled: !!businessId,
+    staleTime: 60_000,
   });
 }
 

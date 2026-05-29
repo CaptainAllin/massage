@@ -34,12 +34,18 @@ export function useBusinessId(): string | undefined {
 
   const [businessId, setBusinessId] = useState<string | undefined>(undefined);
 
-  // Hydrate from user metadata or localStorage after mount (avoids SSR mismatch)
+  // Seed from localStorage on mount only (deferred to avoid SSR/client mismatch)
   useEffect(() => {
-    const id = user?.user_metadata?.businessId ?? readLocalBusinessId();
+    const cached = readLocalBusinessId();
+    if (cached) setBusinessId(cached);
+  }, []);
+
+  // Update from user metadata when it resolves
+  useEffect(() => {
+    const id = user?.user_metadata?.businessId;
     if (id) {
       setBusinessId(id);
-      if (user?.user_metadata?.businessId) writeLocalBusinessId(user.user_metadata.businessId);
+      writeLocalBusinessId(id);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.user_metadata?.businessId]);
