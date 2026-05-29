@@ -1271,6 +1271,19 @@ export default function SettingsPage() {
       </Card>
 
       <Link
+        href="/settings/reminders"
+        className="flex items-center gap-3 p-4 bg-card border border-border rounded-xl hover:bg-muted transition-colors"
+      >
+        <div className="h-10 w-10 bg-[#EDE5F4] rounded-lg flex items-center justify-center flex-shrink-0">
+          <BellRing className="h-5 w-5 text-[#5D4AA8]" />
+        </div>
+        <div>
+          <p className="font-medium text-foreground">Reminders &amp; Notifications</p>
+          <p className="text-sm text-muted-foreground">Toggle and customise automated messages sent to clients and staff</p>
+        </div>
+      </Link>
+
+      <Link
         href="/settings/locations"
         className="flex items-center gap-3 p-4 bg-card border border-border rounded-xl hover:bg-muted transition-colors"
       >

@@ -77,3 +77,20 @@ export function useRerunAutomation(businessId: string | undefined) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['automation-logs', businessId] }),
   });
 }
+
+export function useAutomationAnalytics(businessId: string | undefined) {
+  return useQuery({
+    queryKey: ['automation-analytics', businessId],
+    queryFn: async () => {
+      const { data } = await apiClient.get(`/automation/analytics?businessId=${businessId}`);
+      return data as {
+        rulesActive: number;
+        runsThisMonth: number;
+        successRate: number;
+        failedThisMonth: number;
+        revenueAttributed: number;
+      };
+    },
+    enabled: !!businessId,
+  });
+}

@@ -116,6 +116,13 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
       console.error('[PaymentConfirmationSms]', err.message);
     }
   }
+
+  emitAutomation('PAYMENT_RECEIVED', payment.businessId, {
+    clientId: payment.clientId ?? undefined,
+    invoiceId: payment.invoiceId ?? undefined,
+    amount: payment.amount,
+    businessId: payment.businessId,
+  });
 }
 
 async function handlePaymentIntentFailed(paymentIntent: any) {
@@ -182,6 +189,11 @@ async function handleSubscriptionDeleted(subscription: any) {
   await prisma.membership.update({
     where: { id: membership.id },
     data: { status: 'CANCELLED', cancelledAt: new Date() } as any,
+  });
+  emitAutomation('MEMBERSHIP_CANCELLED', membership.businessId, {
+    membershipId: membership.id,
+    clientId: membership.clientId,
+    businessId: membership.businessId,
   });
 }
 

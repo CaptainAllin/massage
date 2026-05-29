@@ -3,6 +3,7 @@ import { requireAuth, res, AuthError } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
 import { WaitlistStatus } from '@prisma/client';
 import crypto from 'crypto';
+import { emitAutomation } from '@/lib/automation';
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -75,6 +76,11 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         entityId: params.id,
         metadata: { clientId: entry.clientId, offerExpiryHours, offerToken },
       },
+    });
+
+    emitAutomation('WAITLIST_SPOT_AVAILABLE', businessId, {
+      waitlistId: params.id, clientId: entry.clientId, businessId,
+      serviceType: entry.serviceType ?? null, bookingLink,
     });
 
     return res.ok({ ...updated, bookingLink }, 'Slot offer sent to client');

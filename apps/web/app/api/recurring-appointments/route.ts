@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { AppointmentStatus } from '@prisma/client';
 import { NextRequest } from 'next/server';
 import { generateOccurrenceDates } from '@/lib/recurring-appointments';
+import { emitAutomation } from '@/lib/automation';
 
 const seriesInclude = {
   client: true,
@@ -163,6 +164,11 @@ export async function POST(req: NextRequest) {
         entityId: series.id,
         metadata: { frequency, startDate, endDate, occurrences, appointmentsGenerated: occurrenceDates.length },
       },
+    });
+
+    emitAutomation('RECURRING_SERIES_CREATED', businessId, {
+      seriesId: series.id, clientId, therapistId, businessId, frequency,
+      appointmentsGenerated: occurrenceDates.length, startDate,
     });
 
     return res.created(series);

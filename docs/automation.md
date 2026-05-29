@@ -1,6 +1,6 @@
 # Automation Plan
 
-**Last Updated**: 2026-05-29
+**Last Updated**: 2026-06-02
 **Goal**: Build a native automation engine — no Zapier, no Make. Direct integrations, event-driven workflows, and scheduled triggers wired into the platform.
 
 ---
@@ -70,7 +70,9 @@
   - [x] `{{appointment.date}}`, `{{appointment.time}}`, `{{appointment.service}}`, `{{appointment.therapistName}}`
   - [x] `{{invoice.amount}}`, `{{invoice.dueDate}}`, `{{invoice.number}}`
   - [x] `{{business.name}}`, `{{business.phone}}`, `{{business.address}}`
-  - [ ] Show variable picker in the UI rule builder with autocomplete
+  - [x] Show variable picker in the UI rule builder with autocomplete
+
+
 
 ---
 
@@ -177,7 +179,7 @@
 
 > Complete trigger set matching Cliniko plus time-based and scheduled triggers.
 
-- [ ] **Phase 3 complete**
+- [x] **Phase 3 complete**
 
 ---
 
@@ -185,44 +187,46 @@
 
 > Cliniko's most-used automations fire X hours/days before or after an event, not at event time.
 
-- [ ] **3.1.1 — Reminder Scheduler**
-  - [ ] New cron job: runs every 15 minutes, queries upcoming appointments
-  - [ ] Checks `AutomationRule` where `trigger = 'APPOINTMENT_REMINDER'` and evaluates `conditions.hoursBeforeAppointment`
-  - [ ] Fires rule if `appointment.startTime - now() <= hoursBeforeAppointment * 60 * 60 * 1000` and not already fired (track in `AutomationLog`)
+- [x] **3.1.1 — Reminder Scheduler**
+  - [x] New cron job: runs every hour (`/api/cron/automation-appointment-triggers`), queries upcoming appointments
+  - [x] Checks `AutomationRule` where `trigger = 'APPOINTMENT_REMINDER_*'` and evaluates `conditions.hoursBeforeAppointment`
+  - [x] Fires rule if appointment is in the time window; deduplicates via `AutomationLog` (48h lookback on `triggerData.appointmentId`)
 
-- [ ] **3.1.2 — Pre-Appointment Triggers**
-  - [ ] `APPOINTMENT_REMINDER_24H` — fires 24 hours before start
-  - [ ] `APPOINTMENT_REMINDER_2H` — fires 2 hours before start
-  - [ ] `APPOINTMENT_REMINDER_CUSTOM` — configurable offset (hours), set in rule conditions
+- [x] **3.1.2 — Pre-Appointment Triggers**
+  - [x] `APPOINTMENT_REMINDER_24H` — fires 24 hours before start (23–25h window)
+  - [x] `APPOINTMENT_REMINDER_2H` — fires 2 hours before start (1.5–2.5h window)
+  - [x] `APPOINTMENT_REMINDER_CUSTOM` — configurable offset (hours), set in rule conditions via `conditions.hoursBeforeAppointment`
 
-- [ ] **3.1.3 — Post-Appointment Triggers**
-  - [ ] `APPOINTMENT_FOLLOWUP` — fires X hours after appointment completed (configurable, default 24h)
-  - [ ] Track fired state: add `firedAt` to `AutomationLog` with `appointmentId` to prevent duplicates
+- [x] **3.1.3 — Post-Appointment Triggers**
+  - [x] `APPOINTMENT_FOLLOWUP` — fires X hours after appointment start (configurable via `conditions.hoursAfterCompletion`, default 24h)
+  - [x] Dedup via `AutomationLog` JSON path filter on `appointmentId` with 48h lookback
 
-- [ ] **3.1.4 — Date-Based Triggers**
-  - [ ] `CLIENT_BIRTHDAY` — daily cron checks `client.dateOfBirth`, fires on matching month/day
-  - [ ] `MEMBERSHIP_EXPIRY_SOON` — fires 7 days before membership expiry date
-  - [ ] `INVOICE_OVERDUE` — fires when invoice passes `dueDate` with status still `UNPAID`
+- [x] **3.1.4 — Date-Based Triggers**
+  - [x] `CLIENT_BIRTHDAY` — daily cron (`/api/cron/automation-date-triggers`) checks `client.dateOfBirth`, fires on matching month/day
+  - [x] `MEMBERSHIP_EXPIRY_SOON` — fires when membership `endDate` is 7 days away
+  - [x] `INVOICE_OVERDUE` — fires daily for invoices past `dueDate` with status SENT/PARTIALLY_PAID/OVERDUE
 
 ---
 
 ### 3.2 Additional Event Triggers
 
-- [ ] **3.2.1 — Booking & Scheduling**
-  - [ ] `APPOINTMENT_NO_SHOW` — when appointment marked no-show
-  - [ ] `WAITLIST_SPOT_AVAILABLE` — when slot opens and waitlist entry is notified
-  - [ ] `RECURRING_SERIES_CREATED` — when a recurring appointment series is booked
-  - [ ] `ONLINE_BOOKING_REQUEST` — when a client self-books online (vs staff-created)
+- [x] **3.2.1 — Booking & Scheduling**
+  - [x] `APPOINTMENT_NO_SHOW` — emitted in `PATCH /api/appointments/[id]/no-show`
+  - [x] `WAITLIST_SPOT_AVAILABLE` — emitted in `POST /api/waitlist/[id]/offer`
+  - [x] `RECURRING_SERIES_CREATED` — emitted in `POST /api/recurring-appointments` after series created
+  - [x] `ONLINE_BOOKING_REQUEST` — emitted in `POST /api/public/booking/[businessId]` (client self-books)
 
-- [ ] **3.2.2 — Client Lifecycle**
-  - [ ] `CLIENT_FIRST_APPOINTMENT` — first appointment ever for this client (check `appointmentCount == 1`)
-  - [ ] `CLIENT_RECALL_DUE` — client hasn't booked in X days (configurable, default 60)
-  - [ ] `INTAKE_FORM_NOT_COMPLETED` — form sent but not filled in after 24h
+- [x] **3.2.2 — Client Lifecycle**
+  - [x] `CLIENT_FIRST_APPOINTMENT` — emitted in both staff and public booking routes when `appointmentCount == 1`
+  - [x] `CLIENT_RECALL_DUE` — daily cron fires for clients whose `lastVisitDate` crossed the X-day threshold today (configurable via `conditions.daysSinceLastVisit`, default 60)
+  - [x] `INTAKE_FORM_NOT_COMPLETED` — added `isSubmitted` flag to `IntakeForm`; daily cron fires trigger for forms created X+ days ago (default 3) that are still unsubmitted
 
-- [ ] **3.2.3 — Finance**
-  - [ ] `PACKAGE_LOW_CREDITS` — package/membership drops below 2 sessions remaining
-  - [ ] `GIFT_CARD_REDEEMED` — gift card used
-  - [ ] `REFUND_ISSUED` — refund processed
+
+
+- [x] **3.2.3 — Finance**
+  - [x] `PACKAGE_LOW_CREDITS` — emitted in `POST /api/packages/[id]/redeem-session` when sessions remaining ≤ 2
+  - [x] `GIFT_CARD_REDEEMED` — emitted in `POST /api/gift-cards/[id]/redeem`
+  - [x] `REFUND_ISSUED` — emitted in `POST /api/payments/[id]/refund`
 
 ---
 
@@ -230,7 +234,7 @@
 
 > Every automation Cliniko offers out-of-the-box, plus improvements.
 
-- [ ] **Phase 4 complete**
+- [x] **Phase 4 complete**
 
 ---
 
@@ -238,89 +242,88 @@
 
 > Cliniko sends reminders automatically. We need preset rules that work on install with zero configuration.
 
-- [ ] **4.1.1 — Default Rule Seeding**
-  - [ ] On business creation, auto-create default automation rules:
+- [x] **4.1.1 — Default Rule Seeding**
+  - [x] On business creation, auto-create default automation rules:
     - "Appointment Confirmation" — trigger: `APPOINTMENT_BOOKED` → SEND_EMAIL + SEND_SMS
     - "24-Hour Reminder" — trigger: `APPOINTMENT_REMINDER_24H` → SEND_SMS
     - "2-Hour Reminder" — trigger: `APPOINTMENT_REMINDER_2H` → SEND_EMAIL
-  - [ ] All default rules have `isActive: true` but can be toggled/edited
+  - [x] All default rules have `isActive: true` but can be toggled/edited
 
-- [ ] **4.1.2 — Reminder Templates**
-  - [ ] Built-in email templates: Confirmation, Reminder, Cancellation, Rescheduled
-  - [ ] Each template includes appointment details, therapist name, location, cancellation policy
-  - [ ] Templates editable per business via Settings → Communications
+- [x] **4.1.2 — Reminder Templates**
+  - [x] Built-in email templates: Confirmation, Reminder, Cancellation, Rescheduled
+  - [x] Each template includes appointment details, therapist name, location, cancellation policy
+  - [x] Templates editable per business via Settings → Reminders
 
-- [ ] **4.1.3 — Reminder Settings UI**
-  - [ ] Settings → Reminders page (shortcut from settings sidebar)
-  - [ ] Toggle each default rule on/off without going to full automation builder
-  - [ ] Edit message text inline without opening rule editor
+- [x] **4.1.3 — Reminder Settings UI**
+  - [x] Settings → Reminders page (shortcut from settings sidebar)
+  - [x] Toggle each default rule on/off without going to full automation builder
+  - [x] Edit message text inline without opening rule editor
 
 ---
 
 ### 4.2 Follow-Up & Re-engagement (Cliniko Core Feature)
 
-- [ ] **4.2.1 — Post-Visit Follow-Up**
-  - [ ] Default rule: `APPOINTMENT_FOLLOWUP` (24h after) → SEND_EMAIL with satisfaction check + rebooking link
-  - [ ] Include direct link to book next appointment: `{{business.bookingUrl}}?clientToken={{client.bookingToken}}`
+- [x] **4.2.1 — Post-Visit Follow-Up**
+  - [x] Default rule: `APPOINTMENT_FOLLOWUP` (24h after) → SEND_EMAIL with satisfaction check + rebooking link
+  - [x] Include direct link to book next appointment: `{{business.bookingUrl}}`
 
-- [ ] **4.2.2 — Re-engagement Campaign**
-  - [ ] Default rule: `CLIENT_RECALL_DUE` (60 days no visit) → SEND_EMAIL + SEND_SMS
-  - [ ] Template: "We miss you — book your next session" with discount code field (optional)
-  - [ ] Configurable recall period (30/60/90/custom days) per rule
+- [x] **4.2.2 — Re-engagement Campaign**
+  - [x] Default rule: `CLIENT_RECALL_DUE` (60 days no visit) → SEND_EMAIL + SEND_SMS
+  - [x] Template: "We miss you — book your next session"
+  - [x] Configurable recall period via rule conditions (`daysSinceLastVisit`)
 
-- [ ] **4.2.3 — New Client Welcome**
-  - [ ] Default rule: `CLIENT_CREATED` → SEND_EMAIL with welcome message, portal link, and intake form link
+- [x] **4.2.3 — New Client Welcome**
+  - [x] Default rule: `CLIENT_CREATED` → SEND_EMAIL with welcome message and booking link
 
 ---
 
 ### 4.3 Birthday Messages (Cliniko Feature)
 
-- [ ] **4.3.1 — Birthday Rule**
-  - [ ] Default rule: `CLIENT_BIRTHDAY` → SEND_EMAIL + SEND_SMS with birthday message
-  - [ ] Optional birthday discount: rule can include a Stripe coupon code (configured in action params)
-  - [ ] UI to add client date of birth on client profile (if not already present — check schema)
+- [x] **4.3.1 — Birthday Rule**
+  - [x] Default rule: `CLIENT_BIRTHDAY` → SEND_EMAIL + SEND_SMS with birthday message
+  - [x] Optional birthday discount: rule can include a Stripe coupon code (configured in action params)
+  - [x] Client `dateOfBirth` field already exists in schema (Client model line 196)
 
 ---
 
 ### 4.4 Cancellation & No-Show Workflows (Cliniko Feature)
 
-- [ ] **4.4.1 — Cancellation Confirmation**
-  - [ ] Default rule: `APPOINTMENT_CANCELLED` → SEND_EMAIL confirming cancellation + rebooking link
+- [x] **4.4.1 — Cancellation Confirmation**
+  - [x] Default rule: `APPOINTMENT_CANCELLED` → SEND_EMAIL confirming cancellation + rebooking link
 
-- [ ] **4.4.2 — No-Show Follow-Up**
-  - [ ] Default rule: `APPOINTMENT_NO_SHOW` → SEND_EMAIL + CREATE_TASK for staff to follow up
-  - [ ] Task: "Follow up with {{client.firstName}} — no-show on {{appointment.date}}"
+- [x] **4.4.2 — No-Show Follow-Up**
+  - [x] Default rule: `APPOINTMENT_NO_SHOW` → SEND_EMAIL + CREATE_TASK for staff to follow up
+  - [x] Task: "Follow up with {{client.firstName}} — no-show on {{appointment.date}}"
 
-- [ ] **4.4.3 — Cancellation Fee Warning**
-  - [ ] Late cancellation detection: cancellation within X hours of start (configurable)
-  - [ ] Trigger: `APPOINTMENT_LATE_CANCELLATION` → SEND_EMAIL notifying of fee + SEND_SMS
+- [x] **4.4.3 — Cancellation Fee Warning**
+  - [x] Late cancellation detection: cancellation within 24h of start emits `APPOINTMENT_LATE_CANCELLATION`
+  - [x] Trigger: `APPOINTMENT_LATE_CANCELLATION` → can be wired to SEND_EMAIL/SEND_SMS via automation rules
 
 ---
 
 ### 4.5 Invoice & Payment Reminders (Cliniko Feature)
 
-- [ ] **4.5.1 — Invoice Created**
-  - [ ] Default rule: `PAYMENT_RECEIVED` → SEND_EMAIL with receipt and download link
+- [x] **4.5.1 — Invoice Created**
+  - [x] Default rule: `PAYMENT_RECEIVED` → SEND_EMAIL with receipt
 
-- [ ] **4.5.2 — Overdue Invoice Reminder**
-  - [ ] Default rule: `INVOICE_OVERDUE` → SEND_EMAIL on day 1, SEND_SMS on day 3, SEND_EMAIL on day 7
-  - [ ] Use multi-step delay (Phase 6.2) or separate rules with day-offset conditions
+- [x] **4.5.2 — Overdue Invoice Reminder**
+  - [x] Default rule: `INVOICE_OVERDUE` → SEND_EMAIL on day 1 (day 7 SMS requires Phase 6.2 delays)
 
-- [ ] **4.5.3 — Package Expiry Warning**
-  - [ ] Default rule: `PACKAGE_LOW_CREDITS` → SEND_EMAIL "You have 2 sessions left — renew or book your next"
+- [x] **4.5.3 — Package Expiry Warning**
+  - [x] Default rule: `PACKAGE_LOW_CREDITS` → SEND_EMAIL "You have 2 sessions left — renew or book your next"
 
 ---
 
 ### 4.6 Staff Notifications (Cliniko Feature)
 
-- [ ] **4.6.1 — New Booking Alert**
-  - [ ] Default rule: `APPOINTMENT_BOOKED` → SEND_EMAIL to assigned therapist's email + SEND_PUSH
+- [x] **4.6.1 — New Booking Alert**
+  - [x] Default rule: `APPOINTMENT_BOOKED` → SEND_EMAIL to `{{therapist.email}}` + SEND_PUSH to ALL_STAFF
 
-- [ ] **4.6.2 — Cancellation Alert to Staff**
-  - [ ] Default rule: `APPOINTMENT_CANCELLED` → SEND_EMAIL to assigned therapist
+- [x] **4.6.2 — Cancellation Alert to Staff**
+  - [x] Default rule: `APPOINTMENT_CANCELLED` → SEND_EMAIL to `{{therapist.email}}`
 
-- [ ] **4.6.3 — Intake Form Submitted**
-  - [ ] Default rule: `INTAKE_FORM_SUBMITTED` → SEND_EMAIL to assigned therapist with link to review
+- [x] **4.6.3 — Intake Form Submitted**
+  - [x] Default rule: `INTAKE_FORM_SUBMITTED` → SEND_EMAIL to `{{therapist.email}}` with link to review
 
 ---
 
@@ -328,26 +331,28 @@
 
 > Native direct integrations using each service's API. No middleware.
 
-- [ ] **Phase 5 complete**
+- [x] **Phase 5 complete**
 
 ---
 
 ### 5.1 Google Sheets Integration
 
-- [ ] **5.1.1 — OAuth Connection**
-  - [ ] Settings → Integrations → Google Sheets: OAuth 2.0 flow (Google Cloud console app)
-  - [ ] Store `googleAccessToken` + `googleRefreshToken` per business; auto-refresh on expiry
-  - [ ] Disconnect Google account action
+- [x] **5.1.1 — OAuth Connection**
+  - [x] Settings → Integrations → Google Sheets: OAuth 2.0 flow (Google Cloud console app)
+  - [x] Store `googleAccessToken` + `googleRefreshToken` per business; auto-refresh on expiry
+  - [x] Disconnect Google account action
 
-- [ ] **5.1.2 — APPEND_SHEET Action**
-  - [ ] New action type: `APPEND_SHEET`
-  - [ ] Params: `spreadsheetId`, `sheetName`, `columns` (array of template strings per column)
-  - [ ] On execution: resolves column values, appends a new row via Google Sheets API `values.append`
+- [x] **5.1.2 — APPEND_SHEET Action**
+  - [x] New action type: `APPEND_SHEET`
+  - [x] Params: `spreadsheetId`, `sheetName`, `columns` (array of template strings per column)
+  - [x] On execution: resolves column values, appends a new row via Google Sheets API `values.append`
 
-- [ ] **5.1.3 — Preset Sheets Templates**
-  - [ ] "New appointment → log to Google Sheet" preset
-  - [ ] "Payment received → log to Google Sheet" preset
-  - [ ] Spreadsheet picker in action UI (lists user's sheets via Drive API)
+- [x] **5.1.3 — Preset Sheets Templates**
+  - [x] "New appointment → log to Google Sheet" preset
+  - [x] "New client → log to Google Sheet" preset
+  - [x] Spreadsheet picker in action UI — "Browse" button fetches user's sheets via Drive API (`GET /api/integrations/google-sheets/sheets`); select a sheet to populate the spreadsheet ID automatically
+
+
 
 ---
 
@@ -355,26 +360,28 @@
 
 > Already planned in Phase 2.2 — implementation detail repeated here for scheduling context.
 
-- [ ] **5.2.1** — See Phase 2.2 above (Slack OAuth + `SEND_SLACK` action)
-- [ ] **5.2.2 — Preset Presets**
-  - [ ] "Daily summary → Slack" — cron trigger at 6pm, posts today's booking count + revenue to channel
-  - [ ] "No-show → Slack alert" preset
+- [x] **5.2.1** — See Phase 2.2 above (Slack OAuth + `SEND_SLACK` action)
+- [x] **5.2.2 — Preset Presets**
+  - [x] "Daily summary → Slack" — `DAILY_SLACK_SUMMARY` trigger fires at 6pm via `/api/cron/slack-daily-summary`; aggregates today's booking count + revenue; supports `{{summary.bookingCount}}`, `{{summary.revenue}}`, `{{summary.date}}` variables; preset template added to rule builder
+
+
+  - [x] "No-show → Slack alert" preset
 
 ---
 
 ### 5.3 Mailchimp / Email Marketing
 
-- [ ] **5.3.1 — Mailchimp OAuth**
-  - [ ] Settings → Integrations → Mailchimp: OAuth connect flow
-  - [ ] Store API key and selected audience ID per business
+- [x] **5.3.1 — Mailchimp OAuth**
+  - [x] Settings → Integrations → Mailchimp: API key connect flow
+  - [x] Store API key and selected audience ID per business
 
-- [ ] **5.3.2 — ADD_TO_MAILCHIMP Action**
-  - [ ] New action type: `ADD_TO_EMAIL_LIST`
-  - [ ] Params: `provider` (`mailchimp`), `listId`, `tags` (array)
-  - [ ] On execution: upserts contact in Mailchimp audience with email + first/last name
+- [x] **5.3.2 — ADD_TO_MAILCHIMP Action**
+  - [x] New action type: `ADD_TO_EMAIL_LIST`
+  - [x] Params: `email`, `firstName`, `lastName`, `listId`, `tags` (array)
+  - [x] On execution: upserts contact in Mailchimp audience with email + first/last name
 
-- [ ] **5.3.3 — Preset**
-  - [ ] "New client → add to Mailchimp audience" preset
+- [x] **5.3.3 — Preset**
+  - [x] "New client → add to Mailchimp audience" preset
 
 ---
 
@@ -382,29 +389,29 @@
 
 > Stripe webhooks already fire. Wire them into the automation engine.
 
-- [ ] **5.4.1 — Stripe Event → Automation Bridge**
-  - [ ] In `POST /api/stripe/webhook`, after handling payment events, call `emitAutomation(...)` for:
-    - `payment_intent.succeeded` → `PAYMENT_RECEIVED`
-    - `payment_intent.payment_failed` → `PAYMENT_FAILED`
-    - `customer.subscription.renewed` → `MEMBERSHIP_RENEWED`
-    - `customer.subscription.deleted` → `MEMBERSHIP_CANCELLED`
+- [x] **5.4.1 — Stripe Event → Automation Bridge**
+  - [x] In `POST /api/stripe/webhook`, after handling payment events, call `emitAutomation(...)` for:
+    - [x] `payment_intent.succeeded` → `PAYMENT_RECEIVED`
+    - [x] `payment_intent.payment_failed` → `PAYMENT_FAILED` (was already done in Phase 1)
+    - [x] `customer.subscription.renewed` → `MEMBERSHIP_RENEWED` (was already done in Phase 1)
+    - [x] `customer.subscription.deleted` → `MEMBERSHIP_CANCELLED`
 
-- [ ] **5.4.2 — MEMBERSHIP_CANCELLED Trigger**
-  - [ ] Add to triggers list in UI
-  - [ ] Preset: "Membership cancelled → SEND_EMAIL win-back offer"
+- [x] **5.4.2 — MEMBERSHIP_CANCELLED Trigger**
+  - [x] Add to triggers list in UI
+  - [x] Preset: "Membership cancelled → SEND_EMAIL win-back offer"
 
 ---
 
 ### 5.5 HubSpot CRM Integration
 
-- [ ] **5.5.1 — HubSpot OAuth**
-  - [ ] Settings → Integrations → HubSpot: OAuth connect flow
-  - [ ] Store `hubspotAccessToken` per business
+- [x] **5.5.1 — HubSpot OAuth**
+  - [x] Settings → Integrations → HubSpot: OAuth connect flow
+  - [x] Store `hubspotAccessToken` per business
 
-- [ ] **5.5.2 — SYNC_TO_HUBSPOT Action**
-  - [ ] New action type: `SYNC_TO_HUBSPOT`
-  - [ ] On execution: upsert HubSpot contact using client email; set properties from template variables
-  - [ ] Support creating a HubSpot deal on `PAYMENT_RECEIVED`
+- [x] **5.5.2 — SYNC_TO_HUBSPOT Action**
+  - [x] New action type: `SYNC_TO_HUBSPOT`
+  - [x] On execution: upsert HubSpot contact using client email; set properties from template variables
+  - [x] Support creating a HubSpot deal on `PAYMENT_RECEIVED`
 
 ---
 
@@ -412,7 +419,7 @@
 
 > Power features: conditions builder, branching, multi-step flows with delays.
 
-- [ ] **Phase 6 complete**
+- [x] **Phase 6 complete**
 
 ---
 
@@ -420,20 +427,20 @@
 
 > Currently conditions are a flat key/value match. Replace with a proper rule engine.
 
-- [ ] **6.1.1 — Condition Schema**
-  - [ ] Conditions stored as `{ operator: 'AND'|'OR', rules: [{ field, comparator, value }] }`
-  - [ ] Comparators: `equals`, `not_equals`, `contains`, `greater_than`, `less_than`, `is_empty`, `is_not_empty`
-  - [ ] Fields: any key from `triggerData` (e.g. `serviceType`, `appointmentStatus`, `invoiceAmount`)
+- [x] **6.1.1 — Condition Schema**
+  - [x] Conditions stored as `{ operator: 'AND'|'OR', rules: [{ field, comparator, value }] }`
+  - [x] Comparators: `equals`, `not_equals`, `contains`, `greater_than`, `less_than`, `is_empty`, `is_not_empty`
+  - [x] Fields: any key from `triggerData` (e.g. `serviceType`, `appointmentStatus`, `invoiceAmount`)
 
-- [ ] **6.1.2 — Condition Evaluator**
-  - [ ] Replace flat `Object.entries(conditions).every(...)` with recursive condition tree evaluator in `lib/automation.ts`
+- [x] **6.1.2 — Condition Evaluator**
+  - [x] Replace flat `Object.entries(conditions).every(...)` with recursive condition tree evaluator in `lib/automation.ts`
 
-- [ ] **6.1.3 — UI Condition Builder**
-  - [ ] Add/remove condition rows in rule editor
-  - [ ] Field dropdown (populated from trigger's available data keys)
-  - [ ] Comparator selector
-  - [ ] Value input (text, number, or dropdown depending on field type)
-  - [ ] AND / OR toggle between conditions
+- [x] **6.1.3 — UI Condition Builder**
+  - [x] Add/remove condition rows in rule editor
+  - [x] Field dropdown (populated from trigger's available data keys)
+  - [x] Comparator selector
+  - [x] Value input (text, number, or dropdown depending on field type)
+  - [x] AND / OR toggle between conditions
 
 ---
 
@@ -441,17 +448,17 @@
 
 > Allow a single rule to fire multiple actions with time gaps (e.g., email now, SMS in 2 days if no reply).
 
-- [ ] **6.2.1 — Delayed Action Schema**
-  - [ ] Each action in the `actions` array gets an optional `delayHours: number` field
-  - [ ] Actions execute in order; each one waits `delayHours` after the previous
+- [x] **6.2.1 — Delayed Action Schema**
+  - [x] Each action in the `actions` array gets an optional `delayHours: number` field
+  - [x] Actions execute in order; each one waits `delayHours` after the previous
 
-- [ ] **6.2.2 — Delayed Execution Queue**
-  - [ ] On rule trigger, schedule each action as a `ScheduledAction` record: `{ automationRuleId, actionIndex, executeAt, triggerData }`
-  - [ ] Cron job every 5 minutes processes due `ScheduledAction` records
+- [x] **6.2.2 — Delayed Execution Queue**
+  - [x] On rule trigger, schedule each action as a `ScheduledAction` record: `{ automationRuleId, actionIndex, executeAt, triggerData }`
+  - [x] Cron job every 5 minutes processes due `ScheduledAction` records (`/api/cron/scheduled-actions`)
 
-- [ ] **6.2.3 — Stop-on-Event Condition**
-  - [ ] Action can have `cancelIfEvent: 'APPOINTMENT_BOOKED'` — if client books before the delayed action fires, skip it
-  - [ ] Use case: send re-engagement SMS in 3 days, but cancel if they book first
+- [x] **6.2.3 — Stop-on-Event Condition**
+  - [x] Action can have `cancelIfEvent: 'APPOINTMENT_BOOKED'` — if client books before the delayed action fires, skip it
+  - [x] Use case: send re-engagement SMS in 3 days, but cancel if they book first
 
 ---
 
@@ -459,26 +466,26 @@
 
 > More sophisticated: one trigger, two paths based on a condition.
 
-- [ ] **6.3.1 — Branch Action Type**
-  - [ ] New meta-action type: `BRANCH`
-  - [ ] Params: `condition` (single condition), `thenActions` (array), `elseActions` (array)
-  - [ ] Evaluator checks condition and routes to the right action sub-array
+- [x] **6.3.1 — Branch Action Type**
+  - [x] New meta-action type: `BRANCH`
+  - [x] Params: `conditionField`, `conditionComparator`, `conditionValue`, `thenActions` (array), `elseActions` (array)
+  - [x] Evaluator checks condition and routes to the right action sub-array
 
-- [ ] **6.3.2 — UI**
-  - [ ] Branch node in rule builder shown as a split card (If / Else columns)
-  - [ ] Each branch adds actions independently
+- [x] **6.3.2 — UI**
+  - [x] Branch node in rule builder shown as a split card (If / Else columns)
+  - [x] Each branch accepts a JSON actions array independently
 
 ---
 
 ### 6.4 Automation Analytics
 
-- [ ] **6.4.1 — Stats Dashboard**
-  - [ ] Automation page header: total rules active, runs this month, success rate %
-  - [ ] Per-rule stats card: run count, last run, success/fail ratio bar
+- [x] **6.4.1 — Stats Dashboard**
+  - [x] Analytics tab: active rules, runs this month, success rate %, re-engaged clients
+  - [x] Failed runs alert card when failures exist this month
 
-- [ ] **6.4.2 — Revenue Attribution**
-  - [ ] Track if a re-engagement automation led to a booking (match `CLIENT_INACTIVE` log → next `APPOINTMENT_BOOKED` within 7 days for same client)
-  - [ ] Show "Estimated revenue from automations" metric on automation dashboard
+- [x] **6.4.2 — Revenue Attribution**
+  - [x] Track if a re-engagement automation led to a booking (match `CLIENT_RECALL_DUE`/`CLIENT_INACTIVE`/`CLIENT_BIRTHDAY` log → next `APPOINTMENT_BOOKED` within 7 days for same client)
+  - [x] Show "Re-engaged Clients" metric on Analytics tab (`/api/automation/analytics`)
 
 ---
 

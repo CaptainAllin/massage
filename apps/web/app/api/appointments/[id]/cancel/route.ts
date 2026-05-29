@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { requireAuth, res, AuthError } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
+import { emitAutomation } from '@/lib/automation';
 import { AppointmentStatus, WaitlistStatus } from '@prisma/client';
 import crypto from 'crypto';
 
@@ -66,6 +67,24 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
     // Auto-notify matching waitlisted clients
     notifyWaitlist(businessId, appointment, user.id).catch(() => {});
+
+    // Emit cancellation automation triggers
+    const triggerData = {
+      appointmentId: id,
+      clientId: appointment.clientId,
+      therapistId: appointment.therapistId,
+      businessId,
+    };
+    emitAutomation('APPOINTMENT_CANCELLED', businessId, triggerData);
+
+    // Detect late cancellation (within 24h of start time by default)
+    const hoursUntilStart = (appointment.startTime.getTime() - Date.now()) / (1000 * 60 * 60);
+    if (hoursUntilStart >= 0 && hoursUntilStart <= 24) {
+      emitAutomation('APPOINTMENT_LATE_CANCELLATION', businessId, {
+        ...triggerData,
+        hoursUntilStart: Math.round(hoursUntilStart * 10) / 10,
+      });
+    }
 
     return res.ok(updated, 'Appointment cancelled');
   } catch (err) {

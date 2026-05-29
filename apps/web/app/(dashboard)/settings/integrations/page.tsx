@@ -4,7 +4,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Button, Card, CardContent } from '@massage/ui';
 import {
   ArrowLeft, X, RefreshCw, Link2, Link2Off, AlertTriangle,
-  ChevronDown, ChevronUp, Loader2, GitMerge, ArrowUpDown, Webhook, Key, Hash
+  ChevronDown, ChevronUp, Loader2, GitMerge, ArrowUpDown, Webhook, Key, Hash,
+  Sheet, Users, Building2,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useBusinessId } from '@/lib/hooks/use-business-id';
@@ -406,6 +407,344 @@ function SlackCard({ businessId }: { businessId: string }) {
   );
 }
 
+// ─── Google Sheets Card ───────────────────────────────────────────────────────
+
+function GoogleSheetsCard({ businessId }: { businessId: string }) {
+  const [connected, setConnected] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [disconnecting, setDisconnecting] = useState(false);
+  const [connecting, setConnecting] = useState(false);
+
+  const fetchStatus = useCallback(async () => {
+    try {
+      const res = await apiClient.get(`/api/integrations/google-sheets/status?businessId=${businessId}`);
+      setConnected(res.data?.data?.connected ?? false);
+    } finally {
+      setLoading(false);
+    }
+  }, [businessId]);
+
+  useEffect(() => { fetchStatus(); }, [fetchStatus]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('google')) {
+      fetchStatus();
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [fetchStatus]);
+
+  const handleConnect = async () => {
+    setConnecting(true);
+    try {
+      const res = await apiClient.get(`/api/integrations/google-sheets/connect?businessId=${businessId}`);
+      if (res.data?.data?.authUrl) window.location.href = res.data.data.authUrl;
+    } catch {
+      setConnecting(false);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    if (!confirm('Disconnect Google Sheets? Automation APPEND_SHEET actions will stop working.')) return;
+    setDisconnecting(true);
+    try {
+      await apiClient.post('/api/integrations/google-sheets/disconnect', { businessId });
+      setConnected(false);
+    } finally {
+      setDisconnecting(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardContent className="p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 flex items-center justify-center rounded-xl bg-muted">
+              <Sheet className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-foreground">Google Sheets</h3>
+                {!loading && (
+                  <span
+                    className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium"
+                    style={{
+                      background: connected ? '#dcfce7' : '#f3f4f6',
+                      color: connected ? '#16a34a' : '#6b7280',
+                    }}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: connected ? '#16a34a' : '#6b7280' }} />
+                    {connected ? 'Connected' : 'Not connected'}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Append rows to Google Sheets from automation rules. Used by the APPEND_SHEET action.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            ) : connected ? (
+              <Button variant="outline" size="sm" onClick={handleDisconnect} disabled={disconnecting}>
+                {disconnecting ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Link2Off className="h-3.5 w-3.5 mr-1.5" />}
+                Disconnect
+              </Button>
+            ) : (
+              <Button variant="primary" size="sm" onClick={handleConnect} disabled={connecting}>
+                {connecting ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Link2 className="h-3.5 w-3.5 mr-1.5" />}
+                Connect
+              </Button>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Mailchimp Card ───────────────────────────────────────────────────────────
+
+function MailchimpCard({ businessId }: { businessId: string }) {
+  const [connected, setConnected] = useState(false);
+  const [audienceId, setAudienceId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [apiKey, setApiKey] = useState('');
+  const [newAudienceId, setNewAudienceId] = useState('');
+
+  const fetchStatus = useCallback(async () => {
+    try {
+      const res = await apiClient.get(`/api/integrations/mailchimp/status?businessId=${businessId}`);
+      setConnected(res.data?.data?.connected ?? false);
+      setAudienceId(res.data?.data?.audienceId ?? null);
+    } finally {
+      setLoading(false);
+    }
+  }, [businessId]);
+
+  useEffect(() => { fetchStatus(); }, [fetchStatus]);
+
+  const handleSave = async () => {
+    if (!apiKey.trim()) return;
+    setSaving(true);
+    try {
+      await apiClient.post('/api/integrations/mailchimp/connect', {
+        businessId,
+        apiKey: apiKey.trim(),
+        audienceId: newAudienceId.trim() || undefined,
+      });
+      setShowForm(false);
+      setApiKey('');
+      await fetchStatus();
+    } catch {
+      // error handled by apiClient
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    if (!confirm('Disconnect Mailchimp? Automation ADD_TO_EMAIL_LIST actions will stop working.')) return;
+    setDisconnecting(true);
+    try {
+      await apiClient.post('/api/integrations/mailchimp/disconnect', { businessId });
+      setConnected(false);
+      setAudienceId(null);
+    } finally {
+      setDisconnecting(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardContent className="p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 flex items-center justify-center rounded-xl bg-muted">
+              <Users className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-foreground">Mailchimp</h3>
+                {!loading && (
+                  <span
+                    className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium"
+                    style={{
+                      background: connected ? '#dcfce7' : '#f3f4f6',
+                      color: connected ? '#16a34a' : '#6b7280',
+                    }}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: connected ? '#16a34a' : '#6b7280' }} />
+                    {connected ? 'Connected' : 'Not connected'}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Add clients to Mailchimp audiences from automation rules. Used by the ADD_TO_EMAIL_LIST action.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            ) : connected ? (
+              <Button variant="outline" size="sm" onClick={handleDisconnect} disabled={disconnecting}>
+                {disconnecting ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Link2Off className="h-3.5 w-3.5 mr-1.5" />}
+                Disconnect
+              </Button>
+            ) : (
+              <Button variant="primary" size="sm" onClick={() => setShowForm((v) => !v)}>
+                <Link2 className="h-3.5 w-3.5 mr-1.5" />
+                Connect
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {connected && audienceId && (
+          <div className="mt-4 pt-4 border-t border-border text-sm">
+            <span className="text-muted-foreground text-xs">Default audience ID</span>
+            <p className="font-medium mt-0.5 font-mono">{audienceId}</p>
+          </div>
+        )}
+
+        {showForm && !connected && (
+          <div className="mt-4 pt-4 border-t border-border space-y-2">
+            <p className="text-xs text-muted-foreground">Enter your Mailchimp API key. Find it in Account → Extras → API keys.</p>
+            <input
+              type="password"
+              placeholder="Mailchimp API key (ends in -us1, -us2, etc.)"
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              className="w-full text-xs px-2 py-1.5 rounded border border-border focus:outline-none"
+            />
+            <input
+              placeholder="Default audience ID (optional — can set per action)"
+              value={newAudienceId}
+              onChange={(e) => setNewAudienceId(e.target.value)}
+              className="w-full text-xs px-2 py-1.5 rounded border border-border focus:outline-none"
+            />
+            <div className="flex gap-2">
+              <Button variant="primary" size="sm" onClick={handleSave} disabled={saving || !apiKey.trim()}>
+                {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
+                Save
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => { setShowForm(false); setApiKey(''); }}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── HubSpot Card ─────────────────────────────────────────────────────────────
+
+function HubSpotCard({ businessId }: { businessId: string }) {
+  const [connected, setConnected] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [disconnecting, setDisconnecting] = useState(false);
+  const [connecting, setConnecting] = useState(false);
+
+  const fetchStatus = useCallback(async () => {
+    try {
+      const res = await apiClient.get(`/api/integrations/hubspot/status?businessId=${businessId}`);
+      setConnected(res.data?.data?.connected ?? false);
+    } finally {
+      setLoading(false);
+    }
+  }, [businessId]);
+
+  useEffect(() => { fetchStatus(); }, [fetchStatus]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('hubspot')) {
+      fetchStatus();
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [fetchStatus]);
+
+  const handleConnect = async () => {
+    setConnecting(true);
+    try {
+      const res = await apiClient.get(`/api/integrations/hubspot/connect?businessId=${businessId}`);
+      if (res.data?.data?.authUrl) window.location.href = res.data.data.authUrl;
+    } catch {
+      setConnecting(false);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    if (!confirm('Disconnect HubSpot? Automation SYNC_TO_HUBSPOT actions will stop working.')) return;
+    setDisconnecting(true);
+    try {
+      await apiClient.post('/api/integrations/hubspot/disconnect', { businessId });
+      setConnected(false);
+    } finally {
+      setDisconnecting(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardContent className="p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 flex items-center justify-center rounded-xl bg-muted">
+              <Building2 className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-foreground">HubSpot CRM</h3>
+                {!loading && (
+                  <span
+                    className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium"
+                    style={{
+                      background: connected ? '#dcfce7' : '#f3f4f6',
+                      color: connected ? '#16a34a' : '#6b7280',
+                    }}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: connected ? '#16a34a' : '#6b7280' }} />
+                    {connected ? 'Connected' : 'Not connected'}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Sync clients and deals to HubSpot CRM from automation rules. Used by the SYNC_TO_HUBSPOT action.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            ) : connected ? (
+              <Button variant="outline" size="sm" onClick={handleDisconnect} disabled={disconnecting}>
+                {disconnecting ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Link2Off className="h-3.5 w-3.5 mr-1.5" />}
+                Disconnect
+              </Button>
+            ) : (
+              <Button variant="primary" size="sm" onClick={handleConnect} disabled={connecting}>
+                {connecting ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Link2 className="h-3.5 w-3.5 mr-1.5" />}
+                Connect
+              </Button>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function IntegrationsPage() {
@@ -568,6 +907,16 @@ export default function IntegrationsPage() {
         <div className="space-y-4">
           <h2 className="text-sm font-semibold text-foreground">Messaging</h2>
           <SlackCard businessId={businessId} />
+        </div>
+      )}
+
+      {/* Automation integrations */}
+      {businessId && (
+        <div className="space-y-4">
+          <h2 className="text-sm font-semibold text-foreground">Automation</h2>
+          <GoogleSheetsCard businessId={businessId} />
+          <MailchimpCard businessId={businessId} />
+          <HubSpotCard businessId={businessId} />
         </div>
       )}
 

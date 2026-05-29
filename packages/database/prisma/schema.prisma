@@ -64,6 +64,11 @@ model Business {
   clientPortalSettings       Json?
   slackAccessToken           String?
   slackDefaultChannel        String?
+  googleAccessToken          String?
+  googleRefreshToken         String?
+  mailchimpApiKey            String?
+  mailchimpAudienceId        String?
+  hubspotAccessToken         String?
   aiPromptTemplates          AIPromptTemplate[]
   aiUsage                    AIUsage[]
   analyticsSnapshots         AnalyticsSnapshot[]
@@ -83,6 +88,7 @@ model Business {
   intakeForms                IntakeForm[]
   automationLogs             AutomationLog[]
   automationRules            AutomationRule[]
+  scheduledActions           ScheduledAction[]
   insuranceProviders         InsuranceProvider[]
   insuranceClaims            InsuranceClaim[]
   claimReimbursements        ClaimReimbursement[]
@@ -319,6 +325,7 @@ model IntakeForm {
   clientId    String
   templateId  String?
   formData    Json
+  isSubmitted Boolean             @default(false)
   submittedAt DateTime            @default(now())
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
@@ -1625,7 +1632,8 @@ model AutomationRule {
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
   business    Business        @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  logs        AutomationLog[]
+  logs             AutomationLog[]
+  scheduledActions ScheduledAction[]
 
   @@index([businessId])
   @@index([isActive])
@@ -1649,6 +1657,24 @@ model AutomationLog {
   @@index([businessId])
   @@index([executedAt])
   @@map("automation_logs")
+}
+
+model ScheduledAction {
+  id               String         @id @default(cuid())
+  automationRuleId String
+  businessId       String
+  actionIndex      Int
+  executeAt        DateTime
+  triggerData      Json
+  status           String         @default("PENDING")
+  cancelIfEvent    String?
+  createdAt        DateTime       @default(now())
+  rule             AutomationRule @relation(fields: [automationRuleId], references: [id], onDelete: Cascade)
+  business         Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+  @@index([status, executeAt])
+  @@map("scheduled_actions")
 }
 
 enum PayrollStatus {

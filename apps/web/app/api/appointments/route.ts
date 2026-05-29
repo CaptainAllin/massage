@@ -126,14 +126,17 @@ export const POST = withAuth(async (req, user) => {
   });
 
   emitWebhookEvent(businessId, 'appointment.created', { id: appointment.id, clientId: primaryClientId, therapistId, startTime: start, status: 'SCHEDULED' }).catch(() => {});
-  emitAutomation('APPOINTMENT_BOOKED', businessId, {
-    appointmentId: appointment.id,
-    clientId: primaryClientId,
-    therapistId,
-    serviceType: (rest as any).serviceType ?? null,
-    startTime: start.toISOString(),
-    businessId,
-  });
+
+  const automationPayload = {
+    appointmentId: appointment.id, clientId: primaryClientId, therapistId,
+    serviceType: (rest as any).serviceType ?? null, startTime: start.toISOString(), businessId,
+  };
+  emitAutomation('APPOINTMENT_BOOKED', businessId, automationPayload);
+
+  const totalAppointments = await prisma.appointment.count({ where: { clientId: primaryClientId, businessId } });
+  if (totalAppointments === 1) {
+    emitAutomation('CLIENT_FIRST_APPOINTMENT', businessId, automationPayload);
+  }
 
   return res.created(appointment, 'Appointment created successfully');
 });

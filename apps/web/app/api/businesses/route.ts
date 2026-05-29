@@ -1,5 +1,6 @@
 import { requireAuth, res, AuthError } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
+import { seedDefaultAutomationRules } from '@/lib/automation';
 import { NextRequest } from 'next/server';
 
 export async function GET(req: NextRequest) {
@@ -83,6 +84,10 @@ export async function POST(req: NextRequest) {
         entityId: business.id,
       },
     });
+
+    seedDefaultAutomationRules(business.id).catch((err) =>
+      console.error('[automation] seedDefaultAutomationRules error:', err),
+    );
 
     return res.created(business);
   } catch (err) {

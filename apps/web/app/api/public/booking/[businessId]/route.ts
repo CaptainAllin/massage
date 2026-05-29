@@ -5,6 +5,7 @@ import { AppointmentStatus } from '@prisma/client';
 import { checkAvailability } from '@/lib/check-availability';
 import { sendBookingConfirmation } from '@/lib/email';
 import { sendBookingConfirmationSms } from '@/lib/sms';
+import { emitAutomation } from '@/lib/automation';
 
 // GET — return business info + active therapists with availability days
 export async function GET(
@@ -188,6 +189,18 @@ export async function POST(
         appointment: { startTime: start, serviceType: serviceType || 'Massage', duration },
         therapist: { firstName: therapist.user.firstName || '', lastName: therapist.user.lastName || '' },
       }).catch((err) => console.error('[BOOKING SMS]', err));
+    }
+
+    const automationPayload = {
+      appointmentId: appointment.id, clientId: client.id, therapistId,
+      serviceType: serviceType || null, startTime: start.toISOString(), businessId,
+    };
+    emitAutomation('ONLINE_BOOKING_REQUEST', businessId, automationPayload);
+
+    // Fire CLIENT_FIRST_APPOINTMENT if this is the client's first booking
+    const totalAppointments = await prisma.appointment.count({ where: { clientId: client.id, businessId } });
+    if (totalAppointments === 1) {
+      emitAutomation('CLIENT_FIRST_APPOINTMENT', businessId, automationPayload);
     }
 
     return res.created(

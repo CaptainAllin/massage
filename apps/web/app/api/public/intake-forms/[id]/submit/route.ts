@@ -26,6 +26,7 @@ export async function POST(
       where: { id },
       data: {
         formData: { ...formData, _completed: true },
+        isSubmitted: true,
         submittedAt: new Date(),
       },
     });

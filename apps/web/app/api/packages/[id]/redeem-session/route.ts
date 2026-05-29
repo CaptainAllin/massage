@@ -1,6 +1,7 @@
 import { requireAuth, res, AuthError } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
 import { NextRequest } from 'next/server';
+import { emitAutomation } from '@/lib/automation';
 
 export async function POST(
   req: NextRequest,
@@ -67,6 +68,14 @@ export async function POST(
         },
       },
     });
+
+    const sessionsRemaining = packagePurchase.totalSessions - sessionsUsed;
+    if (sessionsRemaining <= 2 && sessionsRemaining > 0) {
+      emitAutomation('PACKAGE_LOW_CREDITS', businessId, {
+        packageId: id, clientId: packagePurchase.clientId, businessId,
+        sessionsRemaining, packageName: packagePurchase.name, appointmentId,
+      });
+    }
 
     return res.ok(updatedPackage);
   } catch (err) {

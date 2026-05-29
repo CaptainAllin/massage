@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { requireAuth, res, AuthError, logAudit } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
+import { emitAutomation } from '@/lib/automation';
 
 async function updateInvoicePaymentStatus(invoiceId: string) {
   const invoice = await prisma.invoice.findUnique({
@@ -52,6 +53,11 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     if (payment.invoiceId) await updateInvoicePaymentStatus(payment.invoiceId);
     await logAudit(req, { userId: user.id, businessId, action: 'PAYMENT_REFUNDED', entityType: 'Payment', entityId: params.id, metadata: { refundAmount, reason } });
+
+    emitAutomation('REFUND_ISSUED', businessId, {
+      paymentId: params.id, clientId: updated.client?.id ?? null, businessId,
+      refundAmount, reason: reason ?? null, invoiceId: payment.invoiceId ?? null,
+    });
 
     return res.ok(updated, 'Payment refunded');
   } catch (err) {

@@ -1,5 +1,6 @@
 import { withAuth, requireBusinessAccess, res, logAudit } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
+import { emitAutomation } from '@/lib/automation';
 
 export const POST = withAuth(async (req, user, { params }: { params: { id: string } }) => {
   const body = await req.json();
@@ -40,6 +41,11 @@ export const POST = withAuth(async (req, user, { params }: { params: { id: strin
     entityType: 'GiftCard',
     entityId: params.id,
     metadata: { amount, remainingBalance: giftCard.balance - amount },
+  });
+
+  emitAutomation('GIFT_CARD_REDEEMED', giftCard.businessId, {
+    giftCardId: params.id, clientId: giftCard.purchasedById ?? null, businessId: giftCard.businessId,
+    amount, remainingBalance: giftCard.balance - amount,
   });
 
   return res.ok({ redemption, remainingBalance: giftCard.balance - amount });
