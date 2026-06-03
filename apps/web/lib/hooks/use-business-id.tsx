@@ -34,10 +34,11 @@ export function BusinessIdProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [businessId, setBusinessId] = useState<string | undefined>(undefined);
 
-  // Seed from localStorage on mount (deferred to avoid SSR/client mismatch)
+  // Populate from localStorage after hydration to keep SSR/client HTML in sync.
   useEffect(() => {
     const cached = readLocalBusinessId();
     if (cached) setBusinessId(cached);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Update from user metadata when it resolves

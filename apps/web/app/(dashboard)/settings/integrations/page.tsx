@@ -306,7 +306,7 @@ function SlackCard({ businessId }: { businessId: string }) {
 
   const fetchStatus = useCallback(async () => {
     try {
-      const res = await apiClient.get(`/api/integrations/slack/status?businessId=${businessId}`);
+      const res = await apiClient.get(`/integrations/slack/status?businessId=${businessId}`);
       setConnected(res.data?.data?.connected ?? false);
       setChannel(res.data?.data?.channel ?? null);
     } finally {
@@ -330,7 +330,7 @@ function SlackCard({ businessId }: { businessId: string }) {
   const handleConnect = async () => {
     setConnecting(true);
     try {
-      const res = await apiClient.get(`/api/integrations/slack/connect?businessId=${businessId}`);
+      const res = await apiClient.get(`/integrations/slack/connect?businessId=${businessId}`);
       if (res.data?.data?.authUrl) window.location.href = res.data.data.authUrl;
     } catch {
       setConnecting(false);
@@ -341,7 +341,7 @@ function SlackCard({ businessId }: { businessId: string }) {
     if (!confirm('Disconnect Slack? Automation Slack actions will stop working.')) return;
     setDisconnecting(true);
     try {
-      await apiClient.post('/api/integrations/slack/disconnect', { businessId });
+      await apiClient.post('/integrations/slack/disconnect', { businessId });
       setConnected(false);
       setChannel(null);
     } finally {
@@ -417,7 +417,7 @@ function GoogleSheetsCard({ businessId }: { businessId: string }) {
 
   const fetchStatus = useCallback(async () => {
     try {
-      const res = await apiClient.get(`/api/integrations/google-sheets/status?businessId=${businessId}`);
+      const res = await apiClient.get(`/integrations/google-sheets/status?businessId=${businessId}`);
       setConnected(res.data?.data?.connected ?? false);
     } finally {
       setLoading(false);
@@ -438,7 +438,7 @@ function GoogleSheetsCard({ businessId }: { businessId: string }) {
   const handleConnect = async () => {
     setConnecting(true);
     try {
-      const res = await apiClient.get(`/api/integrations/google-sheets/connect?businessId=${businessId}`);
+      const res = await apiClient.get(`/integrations/google-sheets/connect?businessId=${businessId}`);
       if (res.data?.data?.authUrl) window.location.href = res.data.data.authUrl;
     } catch {
       setConnecting(false);
@@ -449,7 +449,7 @@ function GoogleSheetsCard({ businessId }: { businessId: string }) {
     if (!confirm('Disconnect Google Sheets? Automation APPEND_SHEET actions will stop working.')) return;
     setDisconnecting(true);
     try {
-      await apiClient.post('/api/integrations/google-sheets/disconnect', { businessId });
+      await apiClient.post('/integrations/google-sheets/disconnect', { businessId });
       setConnected(false);
     } finally {
       setDisconnecting(false);
@@ -520,7 +520,7 @@ function MailchimpCard({ businessId }: { businessId: string }) {
 
   const fetchStatus = useCallback(async () => {
     try {
-      const res = await apiClient.get(`/api/integrations/mailchimp/status?businessId=${businessId}`);
+      const res = await apiClient.get(`/integrations/mailchimp/status?businessId=${businessId}`);
       setConnected(res.data?.data?.connected ?? false);
       setAudienceId(res.data?.data?.audienceId ?? null);
     } finally {
@@ -534,7 +534,7 @@ function MailchimpCard({ businessId }: { businessId: string }) {
     if (!apiKey.trim()) return;
     setSaving(true);
     try {
-      await apiClient.post('/api/integrations/mailchimp/connect', {
+      await apiClient.post('/integrations/mailchimp/connect', {
         businessId,
         apiKey: apiKey.trim(),
         audienceId: newAudienceId.trim() || undefined,
@@ -553,7 +553,7 @@ function MailchimpCard({ businessId }: { businessId: string }) {
     if (!confirm('Disconnect Mailchimp? Automation ADD_TO_EMAIL_LIST actions will stop working.')) return;
     setDisconnecting(true);
     try {
-      await apiClient.post('/api/integrations/mailchimp/disconnect', { businessId });
+      await apiClient.post('/integrations/mailchimp/disconnect', { businessId });
       setConnected(false);
       setAudienceId(null);
     } finally {
@@ -656,7 +656,7 @@ function HubSpotCard({ businessId }: { businessId: string }) {
 
   const fetchStatus = useCallback(async () => {
     try {
-      const res = await apiClient.get(`/api/integrations/hubspot/status?businessId=${businessId}`);
+      const res = await apiClient.get(`/integrations/hubspot/status?businessId=${businessId}`);
       setConnected(res.data?.data?.connected ?? false);
     } finally {
       setLoading(false);
@@ -677,7 +677,7 @@ function HubSpotCard({ businessId }: { businessId: string }) {
   const handleConnect = async () => {
     setConnecting(true);
     try {
-      const res = await apiClient.get(`/api/integrations/hubspot/connect?businessId=${businessId}`);
+      const res = await apiClient.get(`/integrations/hubspot/connect?businessId=${businessId}`);
       if (res.data?.data?.authUrl) window.location.href = res.data.data.authUrl;
     } catch {
       setConnecting(false);
@@ -688,7 +688,7 @@ function HubSpotCard({ businessId }: { businessId: string }) {
     if (!confirm('Disconnect HubSpot? Automation SYNC_TO_HUBSPOT actions will stop working.')) return;
     setDisconnecting(true);
     try {
-      await apiClient.post('/api/integrations/hubspot/disconnect', { businessId });
+      await apiClient.post('/integrations/hubspot/disconnect', { businessId });
       setConnected(false);
     } finally {
       setDisconnecting(false);
@@ -762,7 +762,7 @@ export default function IntegrationsPage() {
   const fetchIntegrations = useCallback(async () => {
     if (!businessId) return;
     try {
-      const res = await apiClient.get(`/api/integrations?businessId=${businessId}`);
+      const res = await apiClient.get(`/integrations?businessId=${businessId}`);
       setIntegrations(res.data?.data || []);
     } finally {
       setLoadingIntegrations(false);
@@ -773,8 +773,8 @@ export default function IntegrationsPage() {
     if (!businessId) return;
     try {
       const [logsRes, conflictsRes] = await Promise.all([
-        apiClient.get(`/api/integrations/sync-logs?businessId=${businessId}&limit=20`),
-        apiClient.get(`/api/integrations/conflicts?businessId=${businessId}`),
+        apiClient.get(`/integrations/sync-logs?businessId=${businessId}&limit=20`),
+        apiClient.get(`/integrations/conflicts?businessId=${businessId}`),
       ]);
       setSyncLogs(logsRes.data?.data?.logs || []);
       setConflicts(conflictsRes.data?.data || []);
@@ -804,7 +804,7 @@ export default function IntegrationsPage() {
     if (!businessId) return;
     setConnectingProvider(provider);
     try {
-      const endpoint = provider === 'XERO' ? '/api/integrations/xero/connect' : '/api/integrations/quickbooks/connect';
+      const endpoint = provider === 'XERO' ? '/integrations/xero/connect' : '/integrations/quickbooks/connect';
       const res = await apiClient.get(`${endpoint}?businessId=${businessId}`);
       if (res.data?.data?.authUrl) {
         window.location.href = res.data.data.authUrl;
@@ -816,21 +816,21 @@ export default function IntegrationsPage() {
 
   const handleDisconnect = async (provider: Provider) => {
     if (!businessId) return;
-    const endpoint = provider === 'XERO' ? '/api/integrations/xero/disconnect' : '/api/integrations/quickbooks/disconnect';
+    const endpoint = provider === 'XERO' ? '/integrations/xero/disconnect' : '/integrations/quickbooks/disconnect';
     await apiClient.post(endpoint, { businessId });
     await fetchIntegrations();
   };
 
   const handleSync = async (provider: Provider) => {
     if (!businessId) return;
-    const endpoint = provider === 'XERO' ? '/api/integrations/xero/sync' : '/api/integrations/quickbooks/sync';
+    const endpoint = provider === 'XERO' ? '/integrations/xero/sync' : '/integrations/quickbooks/sync';
     await apiClient.post(endpoint, { businessId });
     await Promise.all([fetchIntegrations(), fetchLogs()]);
   };
 
   const handleResolveConflict = async (winner: 'local' | 'external') => {
     if (!activeConflict || !businessId) return;
-    await apiClient.post('/api/integrations/conflicts', {
+    await apiClient.post('/integrations/conflicts', {
       businessId,
       conflictId: activeConflict.id,
       winner,

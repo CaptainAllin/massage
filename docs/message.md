@@ -1,15 +1,15 @@
-- On payment page, when you click on a certain payment, it open ups a new page, and in this payment details page, there should be more information for eg: the client's name is not displayed there, this is the payment details, this should have all the information related to the payment.
+1. I like the option c too, but I also want the app to reflect that so for example if the owner is booked in therapist schedule, it should be shown that its not owner but as a therapist
 
-- throughout the app we are still using the us format for many data fields, such as when we entering the phone number it shows us format, it should be showing the country selected. for eg: therapist number in settings/ team tab . look into the app throughout for this and change the data formatiing to what the country is selected. also the dummy text such as shown the dummy phone number should also dissappear when the user starts typing new data. and the dummy text should be greyish color to signify its dummy data
+2. B
 
-- In settings page, in teams tab, there should be option to add/edit the email address for the therapist or an employee
+3. D
 
-- Business profile number is also showing the us format, it should be showing the country selected. also there should be option to add multiple numbers for business if needed
+4. I like the option b if the user is on a computer but on mobile I like option C.
 
-- In business profile, remove the province and add state/ provinnce depending on the conuntry selected, for eg: in Australia, we use state, in Canada, we use province  and it should be drop down list and when user starts typing the list should start narrowing down
+Clarifying questions:
 
-- In settings page, in business profile, the dummy data and data fields should be according to the country selected, for eg: in Australia post code is 4 digit number, so dummy data should represent that, and dummy data should dissappear when the user starts typing
-
-- do the same changes that I have listed above to clients as well as their phone numbers etc show american format. do it throughout the app any number formatting or data formatting should be according to the country selected
-
-- In the client field add the emergency contact name and number and their relationship to the client
+1. I expect it to be more small teams, and also dont forget in future I want to target large practices too, 
+2. they normally call, but when the business owner uses our app, they will try to promote the clients to use the online portal so they can have all the perks offered to client and quick bookings
+3. I think they should be able to book without account, but they will have suggestions on the benefits of signing up, for example if they sign up, they will have faster booking next time, loyalty points, and other perks, so they will be encouraged to sign up. 
+4. I want the staff to be able to sign up, then owner can add them to the business and assign them the role, for their business, as one therapist might be working at multiple businesses.
+5. I want more fine-grained controls over what each role can see/do. The owner to control the settings of the business, for example, they should be able to set the working hours, holidays, sick leaves, vacation, etc. and these should be reflected in the online portal, so clients can see the availability of the business and book accordingly.

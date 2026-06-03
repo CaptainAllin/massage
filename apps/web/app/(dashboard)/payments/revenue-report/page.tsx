@@ -6,17 +6,18 @@ import { Card, CardContent, Button } from '@massage/ui';
 import { ArrowLeft, BarChart2, TrendingUp, Receipt } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useBusinessId } from '@/lib/hooks/use-business-id';
+import { useBusiness } from '@/lib/hooks/use-business';
 import { useRevenueReport } from '@/lib/hooks/use-payments';
+import { formatCurrency } from '@/lib/format';
 
 type ReportType = 'daily' | 'monthly' | 'tax';
-
-function fmt(n: number) {
-  return `$${n.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
 
 export default function RevenueReportPage() {
   const router = useRouter();
   const businessId = useBusinessId();
+  const { data: business } = useBusiness(businessId);
+  const currency = (business as any)?.currency || 'AUD';
+  const fmt = (n: number) => formatCurrency(n, currency);
 
   const [type, setType] = useState<ReportType>('monthly');
   const [startDate, setStartDate] = useState(() => {
@@ -122,7 +123,7 @@ export default function RevenueReportPage() {
               <BarChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="label" tick={{ fontSize: 12 }} />
-                <YAxis tickFormatter={(v) => `$${v}`} tick={{ fontSize: 12 }} />
+                <YAxis tickFormatter={(v) => fmt(Number(v))} tick={{ fontSize: 12 }} />
                 <Tooltip formatter={(value) => fmt(Number(value))} />
                 {type !== 'tax' ? (
                   <>

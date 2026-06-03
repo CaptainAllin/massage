@@ -31,9 +31,11 @@ export const POST = withAuth(async (req, _user) => {
 
     // Create Stripe subscription (requires a price ID)
     // For now, create a one-off subscription with inline price
+    const businessCurrency = (await prisma.business.findUnique({ where: { id: businessId }, select: { currency: true } }))?.currency || 'AUD';
+
     const subscription = await stripe.subscriptions.create({
       customer: stripeCustomer.stripeCustomerId,
-      items: [{ price_data: { currency: 'usd', unit_amount: Math.round(pricePerMonth * 100), recurring: { interval: 'month' }, product_data: { name: name || 'Membership' } } }],
+      items: [{ price_data: { currency: businessCurrency.toLowerCase(), unit_amount: Math.round(pricePerMonth * 100), recurring: { interval: 'month' }, product_data: { name: name || 'Membership' } } }],
       ...(paymentMethodId && { default_payment_method: paymentMethodId }),
       metadata: { clientId, businessId },
     });
@@ -41,6 +43,7 @@ export const POST = withAuth(async (req, _user) => {
     const membership = await prisma.membership.create({
       data: {
         businessId, clientId, name, sessionsPerMonth, pricePerMonth,
+        currency: businessCurrency,
         status: 'ACTIVE',
         startDate: new Date(),
         stripeSubscriptionId: subscription.id,

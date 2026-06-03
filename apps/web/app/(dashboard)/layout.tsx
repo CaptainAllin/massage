@@ -1,16 +1,50 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { Sidebar, Header } from '@massage/ui';
 import { useAuth, useRole } from '@massage/auth';
 import { QuickCallProvider } from '@/components/quick-call/QuickCallContext';
 import { QuickCallModal } from '@/components/quick-call/QuickCallModal';
 import { BusinessIdProvider } from '@/lib/hooks/use-business-id';
+import { useBusinessId } from '@/lib/hooks/use-business-id';
 import { OnboardingProvider, useOnboardingContext } from '@/components/onboarding/OnboardingProvider';
 import { WelcomeModal } from '@/components/onboarding/WelcomeModal';
 import { CongratsModal } from '@/components/onboarding/CongratsModal';
 import { DashboardHeaderActions } from './DashboardHeaderActions';
+import { apiClient } from '@/lib/api-client';
+
+// Prefetch the most-visited pages' API data in the background so navigating
+// to them feels instant. Runs once after the businessId is known.
+function BackgroundPrefetcher() {
+  const businessId = useBusinessId();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!businessId) return;
+    const now = new Date().toISOString();
+    const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+    const prefetch = (key: unknown[], fn: () => Promise<unknown>) =>
+      queryClient.prefetchQuery({ queryKey: key, queryFn: fn, staleTime: 5 * 60 * 1000 });
+
+    prefetch(['appointments', businessId, {}], () =>
+      apiClient.get('/appointments', { params: { businessId } }).then((r) => r.data.data)
+    );
+    prefetch(['clients', businessId, {}], () =>
+      apiClient.get('/clients', { params: { businessId } }).then((r) => r.data.data)
+    );
+    prefetch(['payments', businessId, {}], () =>
+      apiClient.get('/payments', { params: { businessId } }).then((r) => r.data.data)
+    );
+  // Only prefetch once per businessId
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [businessId]);
+
+  return null;
+}
 
 function CalendarPlusIcon() {
   return (
@@ -82,6 +116,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
         </main>
       </div>
 
+      <BackgroundPrefetcher />
       <QuickCallModal />
 
       {loaded && !welcomeShown && (

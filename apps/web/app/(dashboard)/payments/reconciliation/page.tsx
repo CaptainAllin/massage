@@ -5,15 +5,16 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, Button, Badge } from '@massage/ui';
 import { ArrowLeft, AlertTriangle, CreditCard, FileText, CheckSquare } from 'lucide-react';
 import { useBusinessId } from '@/lib/hooks/use-business-id';
+import { useBusiness } from '@/lib/hooks/use-business';
 import { useReconciliation } from '@/lib/hooks/use-payments';
-
-function fmt(n: number) {
-  return `$${n.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
+import { formatCurrency } from '@/lib/format';
 
 export default function ReconciliationPage() {
   const router = useRouter();
   const businessId = useBusinessId();
+  const { data: business } = useBusiness(businessId);
+  const currency = (business as any)?.currency || 'AUD';
+  const fmt = (n: number) => formatCurrency(n, currency);
   const { data, isLoading } = useReconciliation(businessId);
   const [activeTab, setActiveTab] = useState<'unmatched' | 'overdue' | 'partial'>('overdue');
 
@@ -44,6 +45,7 @@ export default function ReconciliationPage() {
           color="text-red-600"
           active={activeTab === 'overdue'}
           onClick={() => setActiveTab('overdue')}
+          fmt={fmt}
         />
         <SummaryCard
           label="Partial Payments"
@@ -53,6 +55,7 @@ export default function ReconciliationPage() {
           color="text-orange-600"
           active={activeTab === 'partial'}
           onClick={() => setActiveTab('partial')}
+          fmt={fmt}
         />
         <SummaryCard
           label="Unmatched Payments"
@@ -62,6 +65,7 @@ export default function ReconciliationPage() {
           color="text-blue-600"
           active={activeTab === 'unmatched'}
           onClick={() => setActiveTab('unmatched')}
+          fmt={fmt}
         />
       </div>
 
@@ -92,6 +96,7 @@ export default function ReconciliationPage() {
                         link: `/invoices/${inv.id}`,
                       }))}
                       onNavigate={(link) => router.push(link)}
+                      fmt={fmt}
                     />
                   )}
                 </>
@@ -117,6 +122,7 @@ export default function ReconciliationPage() {
                         link: `/invoices/${inv.id}`,
                       }))}
                       onNavigate={(link) => router.push(link)}
+                      fmt={fmt}
                     />
                   )}
                 </>
@@ -145,6 +151,7 @@ export default function ReconciliationPage() {
                         link: `/payments/${p.id}`,
                       }))}
                       onNavigate={(link) => router.push(link)}
+                      fmt={fmt}
                     />
                   )}
                 </>
@@ -158,10 +165,10 @@ export default function ReconciliationPage() {
 }
 
 function SummaryCard({
-  label, count, amount, icon, color, active, onClick,
+  label, count, amount, icon, color, active, onClick, fmt,
 }: {
   label: string; count: number; amount: number; icon: React.ReactNode;
-  color: string; active: boolean; onClick: () => void;
+  color: string; active: boolean; onClick: () => void; fmt: (n: number) => string;
 }) {
   return (
     <button
@@ -172,16 +179,17 @@ function SummaryCard({
     >
       <div className="flex items-center gap-2 mb-2">{icon}<span className="text-sm font-medium text-gray-700">{label}</span></div>
       <p className={`text-2xl font-bold ${color}`}>{count}</p>
-      <p className="text-sm text-gray-500 mt-1">{`$${amount.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} outstanding`}</p>
+      <p className="text-sm text-gray-500 mt-1">{`${fmt(amount)} outstanding`}</p>
     </button>
   );
 }
 
 function ReconciliationTable({
-  rows, onNavigate,
+  rows, onNavigate, fmt,
 }: {
   rows: Array<{ id: string; label: string; client: string; amount: number; date: string; badge: React.ReactNode; link: string }>;
   onNavigate: (link: string) => void;
+  fmt: (n: number) => string;
 }) {
   return (
     <div className="overflow-x-auto">
@@ -206,7 +214,7 @@ function ReconciliationTable({
               <td className="py-2 px-3 text-gray-700">{row.client}</td>
               <td className="py-2 px-3 text-gray-500">{row.date}</td>
               <td className="py-2 px-3 text-right font-semibold text-red-600">
-                {`$${row.amount.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                {fmt(row.amount)}
               </td>
               <td className="py-2 px-3">{row.badge}</td>
             </tr>

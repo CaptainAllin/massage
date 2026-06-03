@@ -8,7 +8,7 @@ export function useRooms(businessId: string | undefined, onlyActive = false) {
       const params = new URLSearchParams({ businessId: businessId! });
       if (onlyActive) params.set('isActive', 'true');
       const response = await apiClient.get(`/rooms?${params}`);
-      return response.data as any[];
+      return response.data.data as any[];
     },
     enabled: !!businessId,
   });

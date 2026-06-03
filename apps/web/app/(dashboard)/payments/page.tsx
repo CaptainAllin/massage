@@ -10,6 +10,8 @@ import { usePayments, usePaymentStats } from '@/lib/hooks/use-payments';
 import { PaymentFilters, PaymentStatus } from '@massage/types';
 
 import { useBusinessId } from '@/lib/hooks/use-business-id';
+import { useBusiness } from '@/lib/hooks/use-business';
+import { formatCurrency } from '@/lib/format';
 import { PaymentsTour } from '@/components/payments/PaymentsTour';
 export default function PaymentsPage() {
   const router = useRouter();
@@ -19,6 +21,8 @@ export default function PaymentsPage() {
 
   const { data: paymentsData, isLoading, refetch } = usePayments(businessId, filters);
   const { data: stats, refetch: refetchStats } = usePaymentStats(businessId);
+  const { data: business } = useBusiness(businessId);
+  const currency = (business as any)?.currency || 'AUD';
 
   const handleFilterChange = (newFilters: PaymentFilters) => {
     setFilters(newFilters);
@@ -70,7 +74,7 @@ export default function PaymentsPage() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total Revenue</p>
                   <p className="text-2xl font-bold text-gray-900 mt-1">
-                    ${stats.totalRevenue.toFixed(2)}
+                    {formatCurrency(stats.totalRevenue, currency)}
                   </p>
                 </div>
                 <div className="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center">
@@ -86,7 +90,7 @@ export default function PaymentsPage() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">Pending Payments</p>
                   <p className="text-2xl font-bold text-gray-900 mt-1">
-                    ${stats.totalPending.toFixed(2)}
+                    {formatCurrency(stats.totalPending, currency)}
                   </p>
                   <p className="text-xs text-gray-500 mt-1">
                     {stats.byStatus?.[PaymentStatus.PENDING]?.count || 0} payments
@@ -105,7 +109,7 @@ export default function PaymentsPage() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">Refunded</p>
                   <p className="text-2xl font-bold text-gray-900 mt-1">
-                    ${stats.totalRefunded.toFixed(2)}
+                    {formatCurrency(stats.totalRefunded, currency)}
                   </p>
                   <p className="text-xs text-gray-500 mt-1">
                     {stats.byStatus?.[PaymentStatus.REFUNDED]?.count || 0} refunds

@@ -6,7 +6,7 @@ export function useLocations(businessId: string | undefined) {
     queryKey: ['locations', businessId],
     queryFn: async () => {
       const response = await apiClient.get(`/locations?businessId=${businessId}`);
-      return response.data as any[];
+      return response.data.data as any[];
     },
     enabled: !!businessId,
   });

@@ -313,6 +313,6 @@ export function useCheckAvailability(
       return response.data.data;
     },
     enabled: !!therapistId && !!startTime && !!endTime,
-    staleTime: 1000, // Keep fresh for 1 second
+    staleTime: 30 * 1000,
   });
 }

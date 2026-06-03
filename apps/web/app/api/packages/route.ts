@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
         totalSessions,
         sessionsUsed: 0,
         totalPrice,
-        currency: currency || 'USD',
+        currency: currency || (await prisma.business.findUnique({ where: { id: businessId }, select: { currency: true } }))?.currency || 'AUD',
         status: 'ACTIVE',
         expirationDate: expirationDate ? new Date(expirationDate) : null,
       },

@@ -8,8 +8,21 @@ const MAX_AGE_MS = 60 * 60 * 1000; // 1 hour
 
 const PERSIST_KEYS = new Set(['dashboard', 'appointments', 'clients', 'clients-meta', 'business']);
 
+function restoreCache(client: QueryClient) {
+  if (typeof window === 'undefined') return;
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return;
+    const { timestamp, data } = JSON.parse(raw);
+    if (Date.now() - timestamp > MAX_AGE_MS) return;
+    hydrate(client, data);
+  } catch {
+    // ignore corrupt cache
+  }
+}
+
 function createQueryClient() {
-  return new QueryClient({
+  const client = new QueryClient({
     defaultOptions: {
       queries: {
         staleTime: 5 * 60 * 1000,
@@ -19,27 +32,15 @@ function createQueryClient() {
       },
     },
   });
+  // Hydrate synchronously so the very first render sees cached data —
+  // avoids the flash of loading state caused by useEffect running too late.
+  restoreCache(client);
+  return client;
 }
 
 export function QueryProvider({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(createQueryClient);
-  const hydrated = useRef(false);
   const persistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Restore cache from localStorage on mount
-  useEffect(() => {
-    if (hydrated.current) return;
-    hydrated.current = true;
-    try {
-      const raw = localStorage.getItem(CACHE_KEY);
-      if (!raw) return;
-      const { timestamp, data } = JSON.parse(raw);
-      if (Date.now() - timestamp > MAX_AGE_MS) return;
-      hydrate(queryClient, data);
-    } catch {
-      // ignore corrupt cache
-    }
-  }, [queryClient]);
 
   // Persist cache to localStorage, debounced to avoid thrashing on rapid updates
   useEffect(() => {

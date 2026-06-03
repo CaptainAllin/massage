@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, Button, Input, Badge } from '@massage/ui';
 import { Building2, Users, Bell, Palette, Save, Upload, Loader2, Check, BellRing, MapPin, CalendarCheck, Globe, Lock, UserCheck, ShieldCheck, KeyRound, Trash2, Plus, Link2, FileText, LayoutDashboard, ExternalLink, Copy, CheckCheck, Phone, Pencil, Search, X, Info, MessageSquare, ChevronRight, SlidersHorizontal, Code2 } from 'lucide-react';
 import Link from 'next/link';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useBusinessId } from '@/lib/hooks/use-business-id';
 import { useBusiness, useUpdateBusiness } from '@/lib/hooks/use-business';
 import { useTherapists, useCreateTherapist } from '@/lib/hooks/use-therapists';
@@ -20,38 +21,6 @@ import { listPasskeys, enrollPasskey, revokePasskey, type PasskeyFactor } from '
 
 type Panel = 'overview' | 'business' | 'team' | 'notifications' | 'branding' | 'booking' | 'clinical' | 'security' | 'portal' | 'api';
 
-interface NavItem {
-  id: string;
-  label: string;
-  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
-  desc: string;
-  href?: string;
-}
-interface NavGroup { group: string; items: NavItem[] }
-
-const NAV: NavGroup[] = [
-  { group: 'General', items: [
-    { id: 'overview',    label: 'Overview',          icon: SlidersHorizontal, desc: 'Status & quick links' },
-    { id: 'business',   label: 'Business profile',   icon: Building2,         desc: 'Details clients see' },
-    { id: 'locations',  label: 'Locations & rooms',  icon: MapPin,            desc: 'Sites & treatment rooms', href: '/settings/locations' },
-  ]},
-  { group: 'Team & access', items: [
-    { id: 'team',       label: 'Team',               icon: Users,             desc: 'Members, roles & rates' },
-    { id: 'security',   label: 'Security',           icon: ShieldCheck,       desc: 'Passkeys & 2-factor' },
-    { id: 'portal',     label: 'Client portal',      icon: LayoutDashboard,   desc: 'Self-service for clients' },
-  ]},
-  { group: 'Client experience', items: [
-    { id: 'branding',   label: 'Branding',           icon: Palette,           desc: 'Logo, colors & email' },
-    { id: 'booking',    label: 'Online booking',     icon: CalendarCheck,     desc: 'Who can book & how' },
-    { id: 'notifications', label: 'Notifications',   icon: Bell,              desc: 'Reminders & channels' },
-    { id: 'clinical',   label: 'Clinical notes',     icon: FileText,          desc: 'Draft visibility' },
-  ]},
-  { group: 'Connections', items: [
-    { id: 'comms',        label: 'Communications',   icon: MessageSquare,     desc: 'Twilio, SendGrid, WhatsApp', href: '/settings/communications' },
-    { id: 'integrations', label: 'Integrations',     icon: Link2,             desc: 'Accounting, CRM & more',    href: '/settings/integrations' },
-    { id: 'api',          label: 'Developer API',    icon: Code2,             desc: 'Keys & webhooks' },
-  ]},
-];
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 
@@ -1646,7 +1615,7 @@ function ClientPortalTab({ businessId }: { businessId: string }) {
 
 // ─── Overview panel ───────────────────────────────────────────────────────────
 
-function OverviewPanel({ go }: { go: (p: Panel) => void }) {
+function OverviewPanel({ go }: { go: (p: string) => void }) {
   const businessId = useBusinessId();
   const { data: business } = useBusiness(businessId || '');
   const { data: therapists } = useTherapists(businessId || '');
@@ -1779,70 +1748,13 @@ function ApiPanel() {
   );
 }
 
-// ─── Command palette ──────────────────────────────────────────────────────────
-
-function CommandPalette({ onClose, go }: { onClose: () => void; go: (p: Panel) => void }) {
-  const [q, setQ] = useState('');
-  const inputRef = useRef<HTMLInputElement>(null);
-  const allItems = NAV.flatMap((grp) => grp.items.map((it) => ({ ...it, group: grp.group })));
-
-  useEffect(() => { inputRef.current?.focus(); }, []);
-
-  const filtered = !q.trim()
-    ? allItems
-    : allItems.filter((it) => it.label.toLowerCase().includes(q.toLowerCase()) || it.desc.toLowerCase().includes(q.toLowerCase()));
-
-  return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(30,24,48,0.34)', backdropFilter: 'blur(3px)', zIndex: 80, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: '11vh' }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: 580, maxWidth: '92vw', background: '#fff', borderRadius: 18, boxShadow: '0 18px 50px rgba(28,20,54,0.22), 0 4px 12px rgba(28,20,54,0.12)', border: '1px solid #EFE9F2', overflow: 'hidden' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 20px', borderBottom: '1px solid #EFE9F2' }}>
-          <Search className="h-[18px] w-[18px]" style={{ color: '#5D4AA8', flexShrink: 0 }} />
-          <input
-            ref={inputRef}
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Search every setting…"
-            style={{ flex: 1, border: 'none', outline: 'none', fontSize: 15.5, color: '#1E1830', fontFamily: 'inherit', background: 'transparent' }}
-          />
-          <span style={{ fontSize: 11, color: '#7A7090', padding: '3px 7px', borderRadius: 6, background: '#F3F4F7', border: '1px solid #EFE9F2' }}>esc</span>
-        </div>
-        <div style={{ maxHeight: 380, overflowY: 'auto', padding: 10 }}>
-          <div style={{ padding: '8px 12px 6px', fontSize: 10.5, color: '#7A7090', letterSpacing: 1.2, textTransform: 'uppercase' as const, fontWeight: 600 }}>Settings</div>
-          {filtered.map((it) => {
-            const Ic = it.icon;
-            return (
-              <button
-                key={it.id}
-                onClick={() => { it.href ? (window.location.href = it.href) : go(it.id as Panel); onClose(); }}
-                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 11, border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
-              >
-                <span style={{ width: 30, height: 30, borderRadius: 9, background: '#EDE5F4', color: '#5D4AA8', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Ic className="h-4 w-4" />
-                </span>
-                <span style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ fontSize: 13.5, fontWeight: 600, color: '#1E1830', display: 'block' }}>{it.label}</span>
-                  <span style={{ fontSize: 11.5, color: '#7A7090' }}>{it.desc}</span>
-                </span>
-                <span style={{ fontSize: 10.5, color: '#9E96B0', textTransform: 'uppercase' as const, letterSpacing: 0.6, whiteSpace: 'nowrap' as const }}>{it.group}</span>
-              </button>
-            );
-          })}
-          {filtered.length === 0 && (
-            <div style={{ padding: '30px 12px', textAlign: 'center' as const, color: '#7A7090', fontSize: 13 }}>No settings match &ldquo;{q}&rdquo;.</div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─── Save bar ─────────────────────────────────────────────────────────────────
 
 function SaveBar({ status, onSave, onDiscard }: { status: 'clean' | 'dirty' | 'saved'; onSave: () => void; onDiscard: () => void }) {
   if (status === 'clean') return null;
   const saved = status === 'saved';
   return (
-    <div style={{ position: 'fixed', left: 230, right: 0, bottom: 0, display: 'flex', justifyContent: 'center', pointerEvents: 'none', padding: '0 0 22px', zIndex: 40 }}>
+    <div style={{ position: 'fixed', left: 250, right: 0, bottom: 0, display: 'flex', justifyContent: 'center', pointerEvents: 'none', padding: '0 0 22px', zIndex: 40 }}>
       <div style={{ pointerEvents: 'auto', display: 'flex', alignItems: 'center', gap: 16, padding: '11px 11px 11px 20px', borderRadius: 14, background: saved ? '#E9F7F0' : '#231C3D', border: saved ? '1px solid #C2E8D5' : 'none', boxShadow: '0 8px 28px rgba(28,20,54,0.12), 0 2px 6px rgba(28,20,54,0.06)' }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 13, fontWeight: 500, color: saved ? '#1B8A5A' : '#fff' }}>
           <span style={{ width: 8, height: 8, borderRadius: 4, background: saved ? '#1B8A5A' : '#E8A893', boxShadow: saved ? 'none' : '0 0 0 4px rgba(232,168,147,0.2)' }} />
@@ -1868,38 +1780,29 @@ function SaveBar({ status, onSave, onDiscard }: { status: 'clean' | 'dirty' | 's
 
 export default function SettingsPage() {
   const businessId = useBusinessId();
-  const { data: business } = useBusiness(businessId || '');
-  const [active, setActive] = useState<Panel>('overview');
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [status, setStatus] = useState<'clean' | 'dirty' | 'saved'>('clean');
   const [resetKey, setResetKey] = useState(0);
-  const [paletteOpen, setPaletteOpen] = useState(false);
-  const contentRef = useRef<HTMLDivElement>(null);
   const savedTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
-  // ⌘K palette keyboard shortcut
-  useEffect(() => {
-    const h = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); setPaletteOpen((o) => !o); }
-      if (e.key === 'Escape') setPaletteOpen(false);
-    };
-    window.addEventListener('keydown', h);
-    return () => window.removeEventListener('keydown', h);
-  }, []);
+  const active = (searchParams.get('tab') || 'overview') as Panel;
 
-  const go = (id: Panel) => {
-    setActive(id);
+  useEffect(() => {
     setStatus('clean');
-    setResetKey((k) => k + 1);
-    if (contentRef.current) contentRef.current.scrollTop = 0;
+    document.getElementById('settings-content')?.scrollTo(0, 0);
+  }, [active]);
+
+  const go = (id: string) => {
+    router.push(`/settings?tab=${id}`);
   };
 
-  // Dirty tracking via event bubbling from panel content
   const handleContentChange = useCallback(() => {
     setStatus((s) => (s === 'clean' ? 'dirty' : s));
   }, []);
 
   const handleSave = () => {
-    const form = contentRef.current?.querySelector('form');
+    const form = document.getElementById('settings-content')?.querySelector('form');
     if (form) form.requestSubmit();
     clearTimeout(savedTimerRef.current);
     savedTimerRef.current = setTimeout(() => {
@@ -1912,8 +1815,6 @@ export default function SettingsPage() {
     setStatus('clean');
     setResetKey((k) => k + 1);
   };
-
-  const businessName = business?.name || 'Your Practice';
 
   const renderPanel = () => {
     if (!businessId) return <div style={{ padding: 40, color: '#7A7090', fontSize: 13 }}>Loading settings…</div>;
@@ -1932,114 +1833,16 @@ export default function SettingsPage() {
     }
   };
 
-  // Break out of dashboard main's padding (24px top, 28px sides, 32px bottom)
-  // Dashboard header is h-14 = 56px
   return (
-    <div
-      className="-mt-6 -mx-7 -mb-8"
-      style={{ height: 'calc(100vh - 56px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
-    >
-      {/* ── Settings header ─────────────────────────────────────────── */}
-      <header style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '11px 30px', borderBottom: '1px solid #EFE9F2', background: '#FBF8FD', flexShrink: 0 }}>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 11.5, color: '#7A7090' }}>
-            <span>Workspace</span>
-            <ChevronRight className="h-3 w-3" />
-            <span style={{ color: '#5D4AA8', fontWeight: 600 }}>Settings</span>
-          </div>
-          <div style={{ fontSize: 18, fontWeight: 600, color: '#1E1830', letterSpacing: -0.3, marginTop: 2 }}>{businessName}</div>
-        </div>
-        <button
-          onClick={() => setPaletteOpen(true)}
-          style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10, height: 40, padding: '0 14px', borderRadius: 999, border: '1px solid #E5DEEC', background: '#fff', color: '#7A7090', fontFamily: 'inherit', fontSize: 13, cursor: 'pointer', width: 320 }}
-        >
-          <Search className="h-4 w-4" />
-          <span style={{ flex: 1, textAlign: 'left' }}>Search every setting…</span>
-          <span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 6, background: '#F3F4F7', border: '1px solid #EFE9F2' }}>⌘K</span>
-        </button>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '2px 9px', borderRadius: 999, background: '#E9F7F0', color: '#1B8A5A', fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap' }}>
-          <span style={{ width: 6, height: 6, borderRadius: 3, background: '#1B8A5A', flexShrink: 0 }} />
-          Synced
-        </span>
-        <div style={{ width: 1, height: 24, background: '#E5DEEC', flexShrink: 0 }} />
-        <div style={{ width: 36, height: 36, borderRadius: 18, background: '#EDE5F4', color: '#5D4AA8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, flexShrink: 0, letterSpacing: -0.5 }}>
-          {businessName.slice(0, 2).toUpperCase()}
-        </div>
-      </header>
-
-      {/* ── Body ────────────────────────────────────────────────────── */}
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-
-        {/* ── Settings rail ─── */}
-        <nav style={{ width: 250, flexShrink: 0, overflowY: 'auto', padding: '20px 14px 28px', borderRight: '1px solid #EFE9F2', background: '#FBF8FD', scrollbarWidth: 'thin' as const }}>
-          <button
-            onClick={() => setPaletteOpen(true)}
-            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 9, height: 38, padding: '0 12px', borderRadius: 11, border: '1px solid #E5DEEC', background: '#fff', color: '#7A7090', fontFamily: 'inherit', fontSize: 13, cursor: 'pointer', marginBottom: 18 }}
-          >
-            <Search className="h-4 w-4" />
-            <span style={{ flex: 1, textAlign: 'left' }}>Search settings…</span>
-            <span style={{ fontSize: 10.5, padding: '2px 6px', borderRadius: 5, background: '#F3F4F7', border: '1px solid #EFE9F2' }}>⌘K</span>
-          </button>
-
-          {NAV.map((grp) => (
-            <div key={grp.group} style={{ marginBottom: 16 }}>
-              <div style={{ padding: '0 10px 8px', fontSize: 10.5, color: '#7A7090', letterSpacing: 1.3, textTransform: 'uppercase' as const, fontWeight: 600 }}>{grp.group}</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {grp.items.map((it) => {
-                  const on = it.id === active;
-                  const Ic = it.icon;
-                  if (it.href) {
-                    return (
-                      <Link key={it.id} href={it.href} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '9px 11px', borderRadius: 11, textDecoration: 'none' }}>
-                        <span style={{ width: 30, height: 30, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: '#EDE5F4', color: '#5D4AA8' }}>
-                          <Ic className="h-4 w-4" />
-                        </span>
-                        <span style={{ flex: 1, minWidth: 0 }}>
-                          <span style={{ fontSize: 13, fontWeight: 500, color: '#3D3450', display: 'block', lineHeight: 1.3 }}>{it.label}</span>
-                          <span style={{ fontSize: 11, color: '#7A7090', display: 'block', lineHeight: 1.3, marginTop: 1 }}>{it.desc}</span>
-                        </span>
-                        <ExternalLink className="h-3 w-3" style={{ color: '#9E96B0', flexShrink: 0 }} />
-                      </Link>
-                    );
-                  }
-                  return (
-                    <button
-                      key={it.id}
-                      onClick={() => go(it.id as Panel)}
-                      style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '9px 11px', borderRadius: 11, border: 'none', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', background: on ? '#fff' : 'transparent', boxShadow: on ? '0 1px 2px rgba(28,20,54,0.05)' : 'none', outline: on ? `1px solid #EFE9F2` : 'none' }}
-                    >
-                      <span style={{ width: 30, height: 30, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: on ? 'linear-gradient(135deg, #5D4AA8, #7665C2)' : '#EDE5F4', color: on ? '#fff' : '#5D4AA8' }}>
-                        <Ic className="h-4 w-4" />
-                      </span>
-                      <span style={{ flex: 1, minWidth: 0 }}>
-                        <span style={{ fontSize: 13, fontWeight: on ? 600 : 500, color: on ? '#1E1830' : '#3D3450', display: 'block', lineHeight: 1.3 }}>{it.label}</span>
-                        <span style={{ fontSize: 11, color: '#7A7090', display: 'block', lineHeight: 1.3, marginTop: 1 }}>{it.desc}</span>
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </nav>
-
-        {/* ── Content area ─── */}
-        <main
-          ref={contentRef}
-          key={active + '-' + resetKey}
-          onInput={handleContentChange}
-          onChange={handleContentChange as any}
-          style={{ flex: 1, minWidth: 0, overflowY: 'auto', padding: '22px 30px 90px', scrollbarWidth: 'thin' as const }}
-        >
-          <div style={{ maxWidth: 1080, margin: '0 auto' }}>
-            {renderPanel()}
-          </div>
-        </main>
+    <>
+      <div
+        key={`${active}-${resetKey}`}
+        onInput={handleContentChange}
+        onChange={handleContentChange as any}
+      >
+        {renderPanel()}
       </div>
-
-      {/* ── Save bar & palette ─── */}
       <SaveBar status={status} onSave={handleSave} onDiscard={handleDiscard} />
-      {paletteOpen && <CommandPalette go={go} onClose={() => setPaletteOpen(false)} />}
-    </div>
+    </>
   );
 }

@@ -4,6 +4,7 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { Table, Column, Badge, Pagination } from '@massage/ui';
 import { Payment, PaymentStatus, PaymentMethod } from '@massage/types';
+import { formatCurrency } from '@/lib/format';
 
 export interface PaymentsListProps {
   payments: Payment[];
@@ -93,7 +94,7 @@ export const PaymentsList: React.FC<PaymentsListProps> = ({
       sortable: true,
       render: (payment) => {
         const amount = payment.amount - (payment.refundedAmount || 0);
-        return `$${amount.toFixed(2)} ${payment.currency}`;
+        return formatCurrency(amount, payment.currency || 'AUD');
       },
     },
     {

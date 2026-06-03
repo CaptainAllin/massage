@@ -37,14 +37,16 @@ export const GET = withAuth(async (req, user) => {
 
 export const POST = withAuth(async (req, user) => {
   const body = await req.json();
-  const { businessId, clientId, amount, currency = 'USD', paymentMethod, ...rest } = body;
+  const { businessId, clientId, amount, currency, paymentMethod, ...rest } = body;
 
   if (!businessId || !clientId || !amount || !paymentMethod) {
     return res.badRequest('businessId, clientId, amount, paymentMethod are required');
   }
 
+  const effectiveCurrency = currency || (await prisma.business.findUnique({ where: { id: businessId }, select: { currency: true } }))?.currency || 'AUD';
+
   const payment = await prisma.payment.create({
-    data: { businessId, clientId, amount, currency, paymentMethod, status: 'PENDING', ...rest },
+    data: { businessId, clientId, amount, currency: effectiveCurrency, paymentMethod, status: 'PENDING', ...rest },
     include: { client: true, invoice: true },
   });
 
