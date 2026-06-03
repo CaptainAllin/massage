@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, Button, Input, Badge } from '@massage/ui';
-import { Building2, Users, Bell, Palette, Save, Upload, Loader2, Check, BellRing, MapPin, CalendarCheck, Globe, Lock, UserCheck, Clock, ShieldCheck, KeyRound, Trash2, Plus, Link2, FileText, LayoutDashboard, ExternalLink, Copy, CheckCheck, Phone, Pencil, Search, X, Info, MessageSquare } from 'lucide-react';
+import { Building2, Users, Bell, Palette, Save, Upload, Loader2, Check, BellRing, MapPin, CalendarCheck, Globe, Lock, UserCheck, ShieldCheck, KeyRound, Trash2, Plus, Link2, FileText, LayoutDashboard, ExternalLink, Copy, CheckCheck, Phone, Pencil, Search, X, Info, MessageSquare, ChevronRight, SlidersHorizontal, Code2 } from 'lucide-react';
 import Link from 'next/link';
 import { useBusinessId } from '@/lib/hooks/use-business-id';
 import { useBusiness, useUpdateBusiness } from '@/lib/hooks/use-business';
@@ -18,17 +18,39 @@ import { apiClient } from '@/lib/api-client';
 import { usePushNotifications } from '@/lib/hooks/use-push-notifications';
 import { listPasskeys, enrollPasskey, revokePasskey, type PasskeyFactor } from '@/lib/supabase/passkeys';
 
-type Tab = 'business' | 'team' | 'notifications' | 'branding' | 'booking' | 'clinical' | 'security' | 'portal';
+type Panel = 'overview' | 'business' | 'team' | 'notifications' | 'branding' | 'booking' | 'clinical' | 'security' | 'portal' | 'api';
 
-const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
-  { id: 'business', label: 'Business', icon: <Building2 className="h-4 w-4" /> },
-  { id: 'team', label: 'Team', icon: <Users className="h-4 w-4" /> },
-  { id: 'notifications', label: 'Notifications', icon: <Bell className="h-4 w-4" /> },
-  { id: 'branding', label: 'Branding', icon: <Palette className="h-4 w-4" /> },
-  { id: 'booking', label: 'Booking', icon: <CalendarCheck className="h-4 w-4" /> },
-  { id: 'clinical', label: 'Clinical Notes', icon: <FileText className="h-4 w-4" /> },
-  { id: 'security', label: 'Security', icon: <ShieldCheck className="h-4 w-4" /> },
-  { id: 'portal', label: 'Client Portal', icon: <LayoutDashboard className="h-4 w-4" /> },
+interface NavItem {
+  id: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
+  desc: string;
+  href?: string;
+}
+interface NavGroup { group: string; items: NavItem[] }
+
+const NAV: NavGroup[] = [
+  { group: 'General', items: [
+    { id: 'overview',    label: 'Overview',          icon: SlidersHorizontal, desc: 'Status & quick links' },
+    { id: 'business',   label: 'Business profile',   icon: Building2,         desc: 'Details clients see' },
+    { id: 'locations',  label: 'Locations & rooms',  icon: MapPin,            desc: 'Sites & treatment rooms', href: '/settings/locations' },
+  ]},
+  { group: 'Team & access', items: [
+    { id: 'team',       label: 'Team',               icon: Users,             desc: 'Members, roles & rates' },
+    { id: 'security',   label: 'Security',           icon: ShieldCheck,       desc: 'Passkeys & 2-factor' },
+    { id: 'portal',     label: 'Client portal',      icon: LayoutDashboard,   desc: 'Self-service for clients' },
+  ]},
+  { group: 'Client experience', items: [
+    { id: 'branding',   label: 'Branding',           icon: Palette,           desc: 'Logo, colors & email' },
+    { id: 'booking',    label: 'Online booking',     icon: CalendarCheck,     desc: 'Who can book & how' },
+    { id: 'notifications', label: 'Notifications',   icon: Bell,              desc: 'Reminders & channels' },
+    { id: 'clinical',   label: 'Clinical notes',     icon: FileText,          desc: 'Draft visibility' },
+  ]},
+  { group: 'Connections', items: [
+    { id: 'comms',        label: 'Communications',   icon: MessageSquare,     desc: 'Twilio, SendGrid, WhatsApp', href: '/settings/communications' },
+    { id: 'integrations', label: 'Integrations',     icon: Link2,             desc: 'Accounting, CRM & more',    href: '/settings/integrations' },
+    { id: 'api',          label: 'Developer API',    icon: Code2,             desc: 'Keys & webhooks' },
+  ]},
 ];
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
@@ -1622,132 +1644,402 @@ function ClientPortalTab({ businessId }: { businessId: string }) {
   );
 }
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
+// ─── Overview panel ───────────────────────────────────────────────────────────
+
+function OverviewPanel({ go }: { go: (p: Panel) => void }) {
+  const businessId = useBusinessId();
+  const { data: business } = useBusiness(businessId || '');
+  const { data: therapists } = useTherapists(businessId || '');
+  const { data: locations } = useLocations(businessId || '');
+
+  const teamCount = (therapists as any[])?.length ?? 0;
+  const locationCount = (locations as any[])?.length ?? 0;
+
+  const tasks = [
+    { id: 'business' as Panel, label: 'Business profile', sub: business?.name ? 'Name, contact & address set' : 'Name, contact & address', done: !!(business?.name) },
+    { id: 'team' as Panel,     label: 'Invite your team', sub: teamCount > 0 ? `${teamCount} team member${teamCount > 1 ? 's' : ''}` : 'No team members yet', done: teamCount > 0 },
+    { id: 'branding' as Panel, label: 'Upload your logo', sub: (business as any)?.logo ? 'Logo uploaded' : 'Logo not set', done: !!(business as any)?.logo },
+    { id: 'security' as Panel, label: 'Turn on passkeys', sub: 'Recommended for owners', done: false },
+    { id: 'portal' as Panel,   label: 'Enable client portal', sub: (business as any)?.clientPortalEnabled ? 'Portal is live' : 'Give clients self-service', done: !!(business as any)?.clientPortalEnabled },
+  ];
+
+  const doneN = tasks.filter((t) => t.done).length;
+  const pct = Math.round((doneN / tasks.length) * 100);
+  const R = 30, circ = 2 * Math.PI * R;
+
+  return (
+    <div>
+      <div style={{ marginBottom: 14 }}>
+        <p style={{ fontSize: 11, color: '#5D4AA8', letterSpacing: 1.5, textTransform: 'uppercase' as const, fontWeight: 600, marginBottom: 6, margin: '0 0 6px' }}>Workspace settings</p>
+        <h1 style={{ margin: 0, fontSize: 24, fontWeight: 600, color: '#1E1830', letterSpacing: -0.6, lineHeight: 1.1 }}>Everything about your practice</h1>
+        <p style={{ margin: '6px 0 0', fontSize: 13, color: '#7A7090', lineHeight: 1.45, maxWidth: 620 }}>Manage your clinic, team, client experience and connected services — all in one place.</p>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 16, alignItems: 'start', marginBottom: 16 }}>
+        {/* Setup card */}
+        <div style={{ background: '#fff', borderRadius: 18, border: '1px solid #EFE9F2', boxShadow: '0 1px 2px rgba(28,20,54,0.05)', padding: 18 }}>
+          <p style={{ fontSize: 15, fontWeight: 600, color: '#1E1830', margin: '0 0 3px' }}>Finish setting up</p>
+          <p style={{ fontSize: 12.5, color: '#7A7090', margin: '0 0 14px', lineHeight: 1.5 }}>A few steps left to get the most out of Iris.</p>
+          <div style={{ display: 'flex', gap: 18, alignItems: 'center', marginBottom: 14 }}>
+            <div style={{ position: 'relative', width: 76, height: 76, flexShrink: 0 }}>
+              <svg width="76" height="76" viewBox="0 0 76 76">
+                <circle cx="38" cy="38" r={R} fill="none" stroke="#EFE9F2" strokeWidth="7" />
+                <circle cx="38" cy="38" r={R} fill="none" stroke="#5D4AA8" strokeWidth="7" strokeLinecap="round"
+                  strokeDasharray={circ} strokeDashoffset={circ * (1 - pct / 100)} transform="rotate(-90 38 38)" />
+              </svg>
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ fontSize: 19, fontWeight: 700, color: '#1E1830', lineHeight: 1 }}>{pct}%</span>
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: 14.5, fontWeight: 600, color: '#1E1830' }}>{doneN} of {tasks.length} complete</div>
+              <div style={{ fontSize: 12.5, color: '#7A7090', marginTop: 3, lineHeight: 1.5 }}>Complete remaining steps to unlock online booking and reminders.</div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {tasks.map((tk) => (
+              <button key={tk.id} onClick={() => go(tk.id)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 11, border: `1px solid ${tk.done ? 'transparent' : '#EFE9F2'}`, background: tk.done ? 'transparent' : '#fff', cursor: 'pointer', textAlign: 'left', width: '100%', fontFamily: 'inherit' }}>
+                <span style={{ width: 22, height: 22, borderRadius: 11, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: tk.done ? '#5D4AA8' : 'transparent', border: tk.done ? 'none' : '2px solid #E5DEEC', color: '#fff' }}>
+                  {tk.done && <Check className="h-3 w-3" />}
+                </span>
+                <span style={{ flex: 1 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: '#1E1830', display: 'block' }}>{tk.label}</span>
+                  <span style={{ fontSize: 11.5, color: '#7A7090' }}>{tk.sub}</span>
+                </span>
+                {!tk.done && <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, background: '#F7E5DD', color: '#C97E68', fontWeight: 600, whiteSpace: 'nowrap' as const }}>Do this</span>}
+                <ChevronRight className="h-4 w-4" style={{ color: '#9E96B0', flexShrink: 0 }} />
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Right column */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            {[
+              { l: 'Team', v: String(teamCount), sub: `${teamCount} active`, id: 'team' as Panel, Icon: Users },
+              { l: 'Locations', v: String(locationCount), sub: `${locationCount} site${locationCount !== 1 ? 's' : ''}`, id: 'overview' as Panel, href: '/settings/locations', Icon: MapPin },
+            ].map((s) => (
+              <button key={s.l} onClick={() => s.href ? (window.location.href = s.href) : go(s.id)} style={{ background: '#fff', borderRadius: 18, border: '1px solid #EFE9F2', boxShadow: '0 1px 2px rgba(28,20,54,0.05)', padding: 16, textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit' }}>
+                <span style={{ width: 34, height: 34, borderRadius: 10, background: '#EDE5F4', color: '#5D4AA8', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+                  <s.Icon className="h-4 w-4" />
+                </span>
+                <div style={{ fontSize: 26, fontWeight: 700, color: '#1E1830', letterSpacing: -0.6, lineHeight: 1 }}>{s.v}</div>
+                <div style={{ fontSize: 12.5, fontWeight: 600, color: '#3D3450', marginTop: 8 }}>{s.l}</div>
+                <div style={{ fontSize: 11, color: '#7A7090', marginTop: 2 }}>{s.sub}</div>
+              </button>
+            ))}
+          </div>
+
+          <div style={{ background: '#fff', borderRadius: 18, border: '1px solid #EFE9F2', boxShadow: '0 1px 2px rgba(28,20,54,0.05)', padding: 18 }}>
+            <p style={{ fontSize: 13, fontWeight: 600, color: '#1E1830', margin: '0 0 12px' }}>Quick links</p>
+            {[
+              { label: 'Communications', desc: 'Configure Twilio, SendGrid', href: '/settings/communications' },
+              { label: 'Integrations', desc: 'Xero, QuickBooks & more', href: '/settings/integrations' },
+              { label: 'Scheduling rules', desc: 'Availability windows', href: '/settings/scheduling' },
+              { label: 'Reminders', desc: 'Automated messages', href: '/settings/reminders' },
+            ].map((lk, i) => (
+              <Link key={lk.href} href={lk.href} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderTop: i === 0 ? 'none' : '1px solid #EFE9F2', textDecoration: 'none' }}>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: 12.5, fontWeight: 600, color: '#1E1830', margin: 0 }}>{lk.label}</p>
+                  <p style={{ fontSize: 11, color: '#7A7090', margin: 0 }}>{lk.desc}</p>
+                </div>
+                <ChevronRight className="h-4 w-4" style={{ color: '#9E96B0' }} />
+              </Link>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── API panel ────────────────────────────────────────────────────────────────
+
+function ApiPanel() {
+  return (
+    <div>
+      <div style={{ marginBottom: 14 }}>
+        <p style={{ fontSize: 11, color: '#5D4AA8', letterSpacing: 1.5, textTransform: 'uppercase' as const, fontWeight: 600, margin: '0 0 6px' }}>Connections</p>
+        <h1 style={{ margin: 0, fontSize: 24, fontWeight: 600, color: '#1E1830', letterSpacing: -0.6 }}>Developer API</h1>
+        <p style={{ margin: '6px 0 0', fontSize: 13, color: '#7A7090', lineHeight: 1.45 }}>Programmatic access to your data. Keys and webhooks coming soon.</p>
+      </div>
+      <div style={{ background: '#fff', borderRadius: 18, border: '1px solid #EFE9F2', padding: '40px 32px', textAlign: 'center' as const }}>
+        <div style={{ width: 56, height: 56, borderRadius: 16, background: '#EDE5F4', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', color: '#5D4AA8' }}>
+          <Code2 className="h-7 w-7" />
+        </div>
+        <p style={{ fontSize: 15.5, fontWeight: 600, color: '#1E1830', margin: '0 0 8px' }}>API access coming soon</p>
+        <p style={{ fontSize: 13, color: '#7A7090', maxWidth: 380, margin: '0 auto 20px', lineHeight: 1.55 }}>API keys and webhook configuration will be available in a future update. You&apos;ll be able to build custom integrations and automations.</p>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 18px', borderRadius: 10, background: '#EDE5F4', color: '#5D4AA8', fontSize: 13, fontWeight: 600 }}>
+          <ExternalLink className="h-4 w-4" />
+          Join the waitlist
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Command palette ──────────────────────────────────────────────────────────
+
+function CommandPalette({ onClose, go }: { onClose: () => void; go: (p: Panel) => void }) {
+  const [q, setQ] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+  const allItems = NAV.flatMap((grp) => grp.items.map((it) => ({ ...it, group: grp.group })));
+
+  useEffect(() => { inputRef.current?.focus(); }, []);
+
+  const filtered = !q.trim()
+    ? allItems
+    : allItems.filter((it) => it.label.toLowerCase().includes(q.toLowerCase()) || it.desc.toLowerCase().includes(q.toLowerCase()));
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(30,24,48,0.34)', backdropFilter: 'blur(3px)', zIndex: 80, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: '11vh' }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: 580, maxWidth: '92vw', background: '#fff', borderRadius: 18, boxShadow: '0 18px 50px rgba(28,20,54,0.22), 0 4px 12px rgba(28,20,54,0.12)', border: '1px solid #EFE9F2', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 20px', borderBottom: '1px solid #EFE9F2' }}>
+          <Search className="h-[18px] w-[18px]" style={{ color: '#5D4AA8', flexShrink: 0 }} />
+          <input
+            ref={inputRef}
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search every setting…"
+            style={{ flex: 1, border: 'none', outline: 'none', fontSize: 15.5, color: '#1E1830', fontFamily: 'inherit', background: 'transparent' }}
+          />
+          <span style={{ fontSize: 11, color: '#7A7090', padding: '3px 7px', borderRadius: 6, background: '#F3F4F7', border: '1px solid #EFE9F2' }}>esc</span>
+        </div>
+        <div style={{ maxHeight: 380, overflowY: 'auto', padding: 10 }}>
+          <div style={{ padding: '8px 12px 6px', fontSize: 10.5, color: '#7A7090', letterSpacing: 1.2, textTransform: 'uppercase' as const, fontWeight: 600 }}>Settings</div>
+          {filtered.map((it) => {
+            const Ic = it.icon;
+            return (
+              <button
+                key={it.id}
+                onClick={() => { it.href ? (window.location.href = it.href) : go(it.id as Panel); onClose(); }}
+                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 11, border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
+              >
+                <span style={{ width: 30, height: 30, borderRadius: 9, background: '#EDE5F4', color: '#5D4AA8', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Ic className="h-4 w-4" />
+                </span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ fontSize: 13.5, fontWeight: 600, color: '#1E1830', display: 'block' }}>{it.label}</span>
+                  <span style={{ fontSize: 11.5, color: '#7A7090' }}>{it.desc}</span>
+                </span>
+                <span style={{ fontSize: 10.5, color: '#9E96B0', textTransform: 'uppercase' as const, letterSpacing: 0.6, whiteSpace: 'nowrap' as const }}>{it.group}</span>
+              </button>
+            );
+          })}
+          {filtered.length === 0 && (
+            <div style={{ padding: '30px 12px', textAlign: 'center' as const, color: '#7A7090', fontSize: 13 }}>No settings match &ldquo;{q}&rdquo;.</div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Save bar ─────────────────────────────────────────────────────────────────
+
+function SaveBar({ status, onSave, onDiscard }: { status: 'clean' | 'dirty' | 'saved'; onSave: () => void; onDiscard: () => void }) {
+  if (status === 'clean') return null;
+  const saved = status === 'saved';
+  return (
+    <div style={{ position: 'fixed', left: 230, right: 0, bottom: 0, display: 'flex', justifyContent: 'center', pointerEvents: 'none', padding: '0 0 22px', zIndex: 40 }}>
+      <div style={{ pointerEvents: 'auto', display: 'flex', alignItems: 'center', gap: 16, padding: '11px 11px 11px 20px', borderRadius: 14, background: saved ? '#E9F7F0' : '#231C3D', border: saved ? '1px solid #C2E8D5' : 'none', boxShadow: '0 8px 28px rgba(28,20,54,0.12), 0 2px 6px rgba(28,20,54,0.06)' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 13, fontWeight: 500, color: saved ? '#1B8A5A' : '#fff' }}>
+          <span style={{ width: 8, height: 8, borderRadius: 4, background: saved ? '#1B8A5A' : '#E8A893', boxShadow: saved ? 'none' : '0 0 0 4px rgba(232,168,147,0.2)' }} />
+          {saved ? 'All changes saved' : 'You have unsaved changes'}
+        </span>
+        {!saved && (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={onDiscard} style={{ height: 34, padding: '0 14px', borderRadius: 9, border: '1px solid rgba(255,255,255,0.18)', background: 'transparent', color: 'rgba(255,255,255,0.85)', fontFamily: 'inherit', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
+              Discard
+            </button>
+            <button onClick={onSave} style={{ height: 34, padding: '0 16px', borderRadius: 9, border: 'none', background: 'linear-gradient(135deg, #7665C2, #5D4AA8)', color: '#fff', fontFamily: 'inherit', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Save className="h-3.5 w-3.5" />
+              Save changes
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function SettingsPage() {
   const businessId = useBusinessId();
-  const [activeTab, setActiveTab] = useState<Tab>('business');
+  const { data: business } = useBusiness(businessId || '');
+  const [active, setActive] = useState<Panel>('overview');
+  const [status, setStatus] = useState<'clean' | 'dirty' | 'saved'>('clean');
+  const [resetKey, setResetKey] = useState(0);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
+  // ⌘K palette keyboard shortcut
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); setPaletteOpen((o) => !o); }
+      if (e.key === 'Escape') setPaletteOpen(false);
+    };
+    window.addEventListener('keydown', h);
+    return () => window.removeEventListener('keydown', h);
+  }, []);
+
+  const go = (id: Panel) => {
+    setActive(id);
+    setStatus('clean');
+    setResetKey((k) => k + 1);
+    if (contentRef.current) contentRef.current.scrollTop = 0;
+  };
+
+  // Dirty tracking via event bubbling from panel content
+  const handleContentChange = useCallback(() => {
+    setStatus((s) => (s === 'clean' ? 'dirty' : s));
+  }, []);
+
+  const handleSave = () => {
+    const form = contentRef.current?.querySelector('form');
+    if (form) form.requestSubmit();
+    clearTimeout(savedTimerRef.current);
+    savedTimerRef.current = setTimeout(() => {
+      setStatus('saved');
+      savedTimerRef.current = setTimeout(() => setStatus('clean'), 2400);
+    }, 250);
+  };
+
+  const handleDiscard = () => {
+    setStatus('clean');
+    setResetKey((k) => k + 1);
+  };
+
+  const businessName = business?.name || 'Your Practice';
+
+  const renderPanel = () => {
+    if (!businessId) return <div style={{ padding: 40, color: '#7A7090', fontSize: 13 }}>Loading settings…</div>;
+    switch (active) {
+      case 'overview':      return <OverviewPanel go={go} />;
+      case 'business':      return <BusinessTab businessId={businessId} />;
+      case 'team':          return <TeamTab businessId={businessId} />;
+      case 'notifications': return <NotificationsTab businessId={businessId} />;
+      case 'branding':      return <BrandingTab businessId={businessId} />;
+      case 'booking':       return <BookingTab businessId={businessId} />;
+      case 'clinical':      return <ClinicalTab businessId={businessId} />;
+      case 'security':      return <SecurityTab />;
+      case 'portal':        return <ClientPortalTab businessId={businessId} />;
+      case 'api':           return <ApiPanel />;
+      default:              return null;
+    }
+  };
+
+  // Break out of dashboard main's padding (24px top, 28px sides, 32px bottom)
+  // Dashboard header is h-14 = 56px
   return (
-    <div className="space-y-5 max-w-4xl">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: '#5D4AA8', letterSpacing: '1.4px' }}>Tools</p>
-        <h1 className="text-2xl font-semibold font-display" style={{ color: '#1E1830', letterSpacing: '-0.4px' }}>Settings</h1>
-        <p className="text-sm mt-0.5" style={{ color: '#7A7090' }}>
-          Manage your practice, team, notifications, and branding.
-        </p>
-      </div>
+    <div
+      className="-mt-6 -mx-7 -mb-8"
+      style={{ height: 'calc(100vh - 56px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+    >
+      {/* ── Settings header ─────────────────────────────────────────── */}
+      <header style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '11px 30px', borderBottom: '1px solid #EFE9F2', background: '#FBF8FD', flexShrink: 0 }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 11.5, color: '#7A7090' }}>
+            <span>Workspace</span>
+            <ChevronRight className="h-3 w-3" />
+            <span style={{ color: '#5D4AA8', fontWeight: 600 }}>Settings</span>
+          </div>
+          <div style={{ fontSize: 18, fontWeight: 600, color: '#1E1830', letterSpacing: -0.3, marginTop: 2 }}>{businessName}</div>
+        </div>
+        <button
+          onClick={() => setPaletteOpen(true)}
+          style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10, height: 40, padding: '0 14px', borderRadius: 999, border: '1px solid #E5DEEC', background: '#fff', color: '#7A7090', fontFamily: 'inherit', fontSize: 13, cursor: 'pointer', width: 320 }}
+        >
+          <Search className="h-4 w-4" />
+          <span style={{ flex: 1, textAlign: 'left' }}>Search every setting…</span>
+          <span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 6, background: '#F3F4F7', border: '1px solid #EFE9F2' }}>⌘K</span>
+        </button>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '2px 9px', borderRadius: 999, background: '#E9F7F0', color: '#1B8A5A', fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap' }}>
+          <span style={{ width: 6, height: 6, borderRadius: 3, background: '#1B8A5A', flexShrink: 0 }} />
+          Synced
+        </span>
+        <div style={{ width: 1, height: 24, background: '#E5DEEC', flexShrink: 0 }} />
+        <div style={{ width: 36, height: 36, borderRadius: 18, background: '#EDE5F4', color: '#5D4AA8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, flexShrink: 0, letterSpacing: -0.5 }}>
+          {businessName.slice(0, 2).toUpperCase()}
+        </div>
+      </header>
 
-      {/* Tab Navigation */}
-      <div style={{ borderBottom: '1px solid #EFE9F2' }}>
-        <nav className="-mb-px flex gap-6 overflow-x-auto">
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className="flex items-center gap-2 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors"
-              style={
-                activeTab === tab.id
-                  ? { borderBottomColor: '#5D4AA8', color: '#5D4AA8' }
-                  : { borderBottomColor: 'transparent', color: '#7A7090' }
-              }
-            >
-              {tab.icon}
-              {tab.label}
-            </button>
+      {/* ── Body ────────────────────────────────────────────────────── */}
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+
+        {/* ── Settings rail ─── */}
+        <nav style={{ width: 250, flexShrink: 0, overflowY: 'auto', padding: '20px 14px 28px', borderRight: '1px solid #EFE9F2', background: '#FBF8FD', scrollbarWidth: 'thin' as const }}>
+          <button
+            onClick={() => setPaletteOpen(true)}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 9, height: 38, padding: '0 12px', borderRadius: 11, border: '1px solid #E5DEEC', background: '#fff', color: '#7A7090', fontFamily: 'inherit', fontSize: 13, cursor: 'pointer', marginBottom: 18 }}
+          >
+            <Search className="h-4 w-4" />
+            <span style={{ flex: 1, textAlign: 'left' }}>Search settings…</span>
+            <span style={{ fontSize: 10.5, padding: '2px 6px', borderRadius: 5, background: '#F3F4F7', border: '1px solid #EFE9F2' }}>⌘K</span>
+          </button>
+
+          {NAV.map((grp) => (
+            <div key={grp.group} style={{ marginBottom: 16 }}>
+              <div style={{ padding: '0 10px 8px', fontSize: 10.5, color: '#7A7090', letterSpacing: 1.3, textTransform: 'uppercase' as const, fontWeight: 600 }}>{grp.group}</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {grp.items.map((it) => {
+                  const on = it.id === active;
+                  const Ic = it.icon;
+                  if (it.href) {
+                    return (
+                      <Link key={it.id} href={it.href} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '9px 11px', borderRadius: 11, textDecoration: 'none' }}>
+                        <span style={{ width: 30, height: 30, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: '#EDE5F4', color: '#5D4AA8' }}>
+                          <Ic className="h-4 w-4" />
+                        </span>
+                        <span style={{ flex: 1, minWidth: 0 }}>
+                          <span style={{ fontSize: 13, fontWeight: 500, color: '#3D3450', display: 'block', lineHeight: 1.3 }}>{it.label}</span>
+                          <span style={{ fontSize: 11, color: '#7A7090', display: 'block', lineHeight: 1.3, marginTop: 1 }}>{it.desc}</span>
+                        </span>
+                        <ExternalLink className="h-3 w-3" style={{ color: '#9E96B0', flexShrink: 0 }} />
+                      </Link>
+                    );
+                  }
+                  return (
+                    <button
+                      key={it.id}
+                      onClick={() => go(it.id as Panel)}
+                      style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '9px 11px', borderRadius: 11, border: 'none', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', background: on ? '#fff' : 'transparent', boxShadow: on ? '0 1px 2px rgba(28,20,54,0.05)' : 'none', outline: on ? `1px solid #EFE9F2` : 'none' }}
+                    >
+                      <span style={{ width: 30, height: 30, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: on ? 'linear-gradient(135deg, #5D4AA8, #7665C2)' : '#EDE5F4', color: on ? '#fff' : '#5D4AA8' }}>
+                        <Ic className="h-4 w-4" />
+                      </span>
+                      <span style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ fontSize: 13, fontWeight: on ? 600 : 500, color: on ? '#1E1830' : '#3D3450', display: 'block', lineHeight: 1.3 }}>{it.label}</span>
+                        <span style={{ fontSize: 11, color: '#7A7090', display: 'block', lineHeight: 1.3, marginTop: 1 }}>{it.desc}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           ))}
         </nav>
+
+        {/* ── Content area ─── */}
+        <main
+          ref={contentRef}
+          key={active + '-' + resetKey}
+          onInput={handleContentChange}
+          onChange={handleContentChange as any}
+          style={{ flex: 1, minWidth: 0, overflowY: 'auto', padding: '22px 30px 90px', scrollbarWidth: 'thin' as const }}
+        >
+          <div style={{ maxWidth: 1080, margin: '0 auto' }}>
+            {renderPanel()}
+          </div>
+        </main>
       </div>
 
-      {/* Tab Content */}
-      <Card>
-        <CardContent className="p-6">
-          {!businessId ? (
-            <p className="text-sm text-muted-foreground">Loading business settings…</p>
-          ) : (
-            <>
-              {activeTab === 'business' && <BusinessTab businessId={businessId} />}
-              {activeTab === 'team' && <TeamTab businessId={businessId} />}
-              {activeTab === 'notifications' && <NotificationsTab businessId={businessId} />}
-              {activeTab === 'branding' && <BrandingTab businessId={businessId} />}
-              {activeTab === 'booking' && <BookingTab businessId={businessId} />}
-              {activeTab === 'clinical' && <ClinicalTab businessId={businessId} />}
-              {activeTab === 'security' && <SecurityTab />}
-              {activeTab === 'portal' && <ClientPortalTab businessId={businessId} />}
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: '#5D4AA8', letterSpacing: '1.4px' }}>More Settings</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Link
-            href="/settings/reminders"
-            className="flex items-center gap-3 p-4 bg-card border border-border rounded-xl hover:bg-muted transition-colors"
-          >
-            <div className="h-10 w-10 bg-[#EDE5F4] rounded-lg flex items-center justify-center flex-shrink-0">
-              <BellRing className="h-5 w-5 text-[#5D4AA8]" />
-            </div>
-            <div>
-              <p className="font-medium text-foreground">Reminders &amp; Notifications</p>
-              <p className="text-sm text-muted-foreground">Toggle and customise automated messages</p>
-            </div>
-          </Link>
-
-          <Link
-            href="/settings/locations"
-            className="flex items-center gap-3 p-4 bg-card border border-border rounded-xl hover:bg-muted transition-colors"
-          >
-            <div className="h-10 w-10 bg-[#EDE5F4] rounded-lg flex items-center justify-center flex-shrink-0">
-              <MapPin className="h-5 w-5 text-[#5D4AA8]" />
-            </div>
-            <div>
-              <p className="font-medium text-foreground">Locations &amp; Rooms</p>
-              <p className="text-sm text-muted-foreground">Manage your business locations and treatment rooms</p>
-            </div>
-          </Link>
-
-          <Link
-            href="/settings/scheduling"
-            className="flex items-center gap-3 p-4 bg-card border border-border rounded-xl hover:bg-muted transition-colors"
-          >
-            <div className="h-10 w-10 bg-[#EDE5F4] rounded-lg flex items-center justify-center flex-shrink-0">
-              <Clock className="h-5 w-5 text-[#5D4AA8]" />
-            </div>
-            <div>
-              <p className="font-medium text-foreground">Availability Rules</p>
-              <p className="text-sm text-muted-foreground">Restrict booking windows for therapists, rooms, or services</p>
-            </div>
-          </Link>
-
-          <Link
-            href="/settings/communications"
-            className="flex items-center gap-3 p-4 bg-card border border-border rounded-xl hover:bg-muted transition-colors"
-          >
-            <div className="h-10 w-10 bg-[#EDE5F4] rounded-lg flex items-center justify-center flex-shrink-0">
-              <MessageSquare className="h-5 w-5 text-[#5D4AA8]" />
-            </div>
-            <div>
-              <p className="font-medium text-foreground">Communications</p>
-              <p className="text-sm text-muted-foreground">Configure Twilio, SendGrid, and WhatsApp credentials</p>
-            </div>
-          </Link>
-
-          <Link
-            href="/settings/integrations"
-            className="flex items-center gap-3 p-4 bg-card border border-border rounded-xl hover:bg-muted transition-colors"
-          >
-            <div className="h-10 w-10 bg-[#EDE5F4] rounded-lg flex items-center justify-center flex-shrink-0">
-              <Link2 className="h-5 w-5 text-[#5D4AA8]" />
-            </div>
-            <div>
-              <p className="font-medium text-foreground">Integrations</p>
-              <p className="text-sm text-muted-foreground">Connect Xero or QuickBooks for invoice and payment sync</p>
-            </div>
-          </Link>
-        </div>
-      </div>
+      {/* ── Save bar & palette ─── */}
+      <SaveBar status={status} onSave={handleSave} onDiscard={handleDiscard} />
+      {paletteOpen && <CommandPalette go={go} onClose={() => setPaletteOpen(false)} />}
     </div>
   );
 }
