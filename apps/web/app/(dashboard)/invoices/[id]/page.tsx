@@ -5,6 +5,8 @@ import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, Button, Skeleton, Badge, Tabs, Tab } from '@massage/ui';
 import { ArrowLeft, Edit, Trash2, DollarSign, Download, Send, MessageSquare, ChevronDown } from 'lucide-react';
 import { useBusinessId } from '@/lib/hooks/use-business-id';
+import { useBusiness } from '@/lib/hooks/use-business';
+import { formatCurrency } from '@/lib/format';
 import {
   useInvoice,
   useDeleteInvoice,
@@ -20,6 +22,9 @@ export default function InvoiceDetailPage() {
   const router = useRouter();
   const invoiceId = params.id as string;
   const businessId = useBusinessId();
+  const { data: business } = useBusiness(businessId);
+  const currency = (business as any)?.currency || 'AUD';
+  const fmt = (amount: number) => formatCurrency(amount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const { data: invoice, isLoading } = useInvoice(invoiceId, businessId);
   const deleteMutation = useDeleteInvoice(businessId);
@@ -241,17 +246,17 @@ export default function InvoiceDetailPage() {
               <CardContent className="p-6">
                 <h3 className="text-lg font-semibold mb-4">Summary</h3>
                 <div className="space-y-3">
-                  <SummaryRow label="Subtotal" value={`$${invoice.subtotal.toFixed(2)}`} />
+                  <SummaryRow label="Subtotal" value={fmt(invoice.subtotal)} />
                   {invoice.taxAmount > 0 && (
-                    <SummaryRow label="Tax" value={`$${invoice.taxAmount.toFixed(2)}`} />
+                    <SummaryRow label="Tax" value={fmt(invoice.taxAmount)} />
                   )}
                   {invoice.discountAmount > 0 && (
-                    <SummaryRow label="Discount" value={`-$${invoice.discountAmount.toFixed(2)}`} />
+                    <SummaryRow label="Discount" value={`-${fmt(invoice.discountAmount)}`} />
                   )}
                   <div className="border-t pt-3">
                     <SummaryRow
                       label="Total"
-                      value={`$${invoice.total.toFixed(2)}`}
+                      value={fmt(invoice.total)}
                       isTotal
                     />
                   </div>
@@ -259,11 +264,11 @@ export default function InvoiceDetailPage() {
                     <>
                       <SummaryRow
                         label="Amount Paid"
-                        value={`$${invoice.amountPaid.toFixed(2)}`}
+                        value={fmt(invoice.amountPaid)}
                       />
                       <SummaryRow
                         label="Amount Due"
-                        value={`$${invoice.amountDue.toFixed(2)}`}
+                        value={fmt(invoice.amountDue)}
                         isTotal
                       />
                     </>

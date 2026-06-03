@@ -33,7 +33,10 @@ import {
   Code2,
   ChevronRight,
   Search,
+  Pin,
 } from 'lucide-react';
+
+const PINNED_GROUPS_KEY = 'iris-sidebar-pinned-groups';
 
 export interface MenuItem {
   label: string;
@@ -268,7 +271,7 @@ function NavItem({ item, active, onClick }: { item: MenuItem; active: boolean; o
           ? {
               background: 'linear-gradient(90deg, #5D4AA8, #7665C2)',
               color: '#FFFFFF',
-              boxShadow: '0 4px 12px rgba(93,74,168,0.20)',
+              boxShadow: '0 1px 2px rgba(28,20,54,0.08)',
             }
           : {
               color: '#3D3450',
@@ -304,6 +307,87 @@ const GROUP_LABEL_STYLE: React.CSSProperties = {
   fontFamily: 'Sora, system-ui, sans-serif',
 };
 
+function CollapsibleGroup({
+  group,
+  isPinned,
+  isOpen,
+  hasActiveItem,
+  isActive,
+  onToggle,
+  onTogglePin,
+  onClose,
+}: {
+  group: MenuGroup;
+  isPinned: boolean;
+  isOpen: boolean;
+  hasActiveItem: boolean;
+  isActive: (href: string) => boolean;
+  onToggle: () => void;
+  onTogglePin: (e: React.MouseEvent) => void;
+  onClose?: () => void;
+}) {
+  const [hovered, setHovered] = React.useState(false);
+
+  return (
+    <div>
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={onToggle}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(); } }}
+        className="w-full flex items-center justify-between rounded-xl px-3 py-2 transition-colors cursor-pointer"
+        style={{
+          background: hasActiveItem ? 'rgba(93,74,168,0.06)' : hovered ? '#F8F5FC' : '#FFFFFF',
+          border: `1px solid ${hasActiveItem ? 'rgba(93,74,168,0.18)' : '#F1EEF6'}`,
+        }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+      >
+        <span style={{ ...GROUP_LABEL_STYLE, color: hasActiveItem ? '#5D4AA8' : '#7A7090' }}>
+          {group.label}
+        </span>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={onTogglePin}
+            title={isPinned ? 'Unpin section' : 'Pin section open'}
+            className="rounded p-0.5 transition-all"
+            style={{
+              opacity: isPinned || hovered ? 1 : 0,
+              color: isPinned ? '#5D4AA8' : '#B0A8C0',
+            }}
+          >
+            <Pin
+              size={11}
+              style={{
+                transform: isPinned ? 'none' : 'rotate(45deg)',
+                transition: 'transform 0.15s ease',
+              }}
+            />
+          </button>
+          <span style={{ fontSize: '11px', color: '#B0A8C0' }}>{group.items.length}</span>
+          {!isPinned && (
+            <ChevronRight
+              size={12}
+              style={{
+                color: '#B0A8C0',
+                transform: isOpen ? 'rotate(90deg)' : 'none',
+                transition: 'transform 0.15s ease',
+              }}
+            />
+          )}
+        </div>
+      </div>
+      {isOpen && (
+        <div className="mt-1 space-y-0.5">
+          {group.items.map((item) => (
+            <NavItem key={item.href} item={item} active={isActive(item.href)} onClick={onClose} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function MenuContent({
   userRole,
   userName,
@@ -321,6 +405,16 @@ function MenuContent({
 }) {
   const pathname = usePathname();
   const [openGroups, setOpenGroups] = React.useState<Set<string>>(new Set());
+  const [pinnedGroups, setPinnedGroups] = React.useState<Set<string>>(new Set());
+
+  React.useEffect(() => {
+    try {
+      const stored = localStorage.getItem(PINNED_GROUPS_KEY);
+      if (stored) setPinnedGroups(new Set(JSON.parse(stored)));
+    } catch {
+      // ignore corrupt / unavailable storage
+    }
+  }, []);
 
   // Auto-expand any group that contains the current path
   React.useEffect(() => {
@@ -340,10 +434,27 @@ function MenuContent({
   }, [pathname]);
 
   const toggleGroup = (label: string) => {
+    if (pinnedGroups.has(label)) return; // pinned groups stay open
     setOpenGroups((prev) => {
       const next = new Set(prev);
       if (next.has(label)) next.delete(label);
       else next.add(label);
+      return next;
+    });
+  };
+
+  const togglePin = (label: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setPinnedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(label)) {
+        next.delete(label);
+      } else {
+        next.add(label);
+        // also open it
+        setOpenGroups((og) => new Set([...og, label]));
+      }
+      try { localStorage.setItem(PINNED_GROUPS_KEY, JSON.stringify([...next])); } catch {}
       return next;
     });
   };
@@ -382,46 +493,19 @@ function MenuContent({
 
         {/* Collapsible groups */}
         <div className="space-y-1.5">
-          {filteredGroups.map((group) => {
-            const isOpen = openGroups.has(group.label);
-            const hasActiveItem = group.items.some((item) => isActive(item.href));
-            return (
-              <div key={group.label}>
-                <button
-                  onClick={() => toggleGroup(group.label)}
-                  className="w-full flex items-center justify-between rounded-xl px-3 py-2 transition-colors"
-                  style={{
-                    background: hasActiveItem ? 'rgba(93,74,168,0.06)' : '#FFFFFF',
-                    border: `1px solid ${hasActiveItem ? 'rgba(93,74,168,0.18)' : '#F1EEF6'}`,
-                  }}
-                  onMouseEnter={(e) => { if (!hasActiveItem) (e.currentTarget as HTMLElement).style.background = '#F8F5FC'; }}
-                  onMouseLeave={(e) => { if (!hasActiveItem) (e.currentTarget as HTMLElement).style.background = '#FFFFFF'; }}
-                >
-                  <span style={{ ...GROUP_LABEL_STYLE, color: hasActiveItem ? '#5D4AA8' : '#7A7090' }}>
-                    {group.label}
-                  </span>
-                  <div className="flex items-center gap-1.5">
-                    <span style={{ fontSize: '11px', color: '#B0A8C0' }}>{group.items.length}</span>
-                    <ChevronRight
-                      size={12}
-                      style={{
-                        color: '#B0A8C0',
-                        transform: isOpen ? 'rotate(90deg)' : 'none',
-                        transition: 'transform 0.15s ease',
-                      }}
-                    />
-                  </div>
-                </button>
-                {isOpen && (
-                  <div className="mt-1 space-y-0.5">
-                    {group.items.map((item) => (
-                      <NavItem key={item.href} item={item} active={isActive(item.href)} onClick={onClose} />
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+          {filteredGroups.map((group) => (
+            <CollapsibleGroup
+              key={group.label}
+              group={group}
+              isPinned={pinnedGroups.has(group.label)}
+              isOpen={pinnedGroups.has(group.label) || openGroups.has(group.label)}
+              hasActiveItem={group.items.some((item) => isActive(item.href))}
+              isActive={isActive}
+              onToggle={() => toggleGroup(group.label)}
+              onTogglePin={(e) => togglePin(group.label, e)}
+              onClose={onClose}
+            />
+          ))}
         </div>
 
         {/* Jump to anything hint */}

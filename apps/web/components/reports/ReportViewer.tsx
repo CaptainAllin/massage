@@ -19,6 +19,7 @@ import {
   Line,
 } from 'recharts';
 import { BookingHeatmap } from '../analytics/BookingHeatmap';
+import { formatCurrency as fmtCurrency } from '@/lib/format';
 import type {
   ReportType,
   RevenueReportData,
@@ -31,8 +32,8 @@ import type {
 
 const COLORS = ['#5D4AA8', '#7665C2', '#E8A893', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
-const formatCurrency = (amount: number) =>
-  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
+const makeFmtCurrency = (currency: string) => (amount: number) =>
+  fmtCurrency(amount, currency, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
 const formatPercent = (value: number) => `${value.toFixed(1)}%`;
 
@@ -69,14 +70,15 @@ function DataTable({ headers, rows }: { headers: string[]; rows: (string | numbe
   );
 }
 
-function CurrencyTooltip({ active, payload, label }: any) {
+function CurrencyTooltip({ active, payload, label, currency = 'AUD' }: any) {
+  const fmt = makeFmtCurrency(currency);
   if (!active || !payload?.length) return null;
   return (
     <div className="rounded-lg border bg-white p-3 shadow-lg text-sm">
       <p className="font-medium text-gray-900 mb-1">{label}</p>
       {payload.map((p: any) => (
         <p key={p.name} style={{ color: p.color }}>
-          {p.name}: <span className="font-semibold">{formatCurrency(p.value)}</span>
+          {p.name}: <span className="font-semibold">{fmt(p.value)}</span>
         </p>
       ))}
     </div>
@@ -103,6 +105,7 @@ interface ReportViewerProps {
   selectedFields?: string[];
   onExport?: () => void;
   onClose?: () => void;
+  currency?: string;
 }
 
 function downloadCSV(filename: string, rows: string[][]) {
@@ -116,7 +119,8 @@ function downloadCSV(filename: string, rows: string[][]) {
   URL.revokeObjectURL(url);
 }
 
-export function ReportViewer({ reportType, data, selectedFields, onExport, onClose }: ReportViewerProps) {
+export function ReportViewer({ reportType, data, selectedFields, onExport, onClose, currency = 'AUD' }: ReportViewerProps) {
+  const formatCurrency = makeFmtCurrency(currency);
   const show = (field: string) => !selectedFields || selectedFields.length === 0 || selectedFields.includes(field);
 
   const handleDownloadCSV = () => {
@@ -178,8 +182,8 @@ export function ReportViewer({ reportType, data, selectedFields, onExport, onClo
               <AreaChart data={d.monthlyRevenue.map(m => ({ ...m, label: formatMonth(m.month) }))}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                 <XAxis dataKey="label" tick={{ fontSize: 12 }} />
-                <YAxis tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 12 }} />
-                <Tooltip content={<CurrencyTooltip />} />
+                <YAxis tickFormatter={v => makeFmtCurrency(currency)(v / 1000) + 'k'} tick={{ fontSize: 12 }} />
+                <Tooltip content={<CurrencyTooltip currency={currency} />} />
                 <Legend />
                 <Area type="monotone" dataKey="revenue" name="This Year" stroke="#5D4AA8" fill="#5D4AA8" fillOpacity={0.15} strokeWidth={2} />
                 <Area type="monotone" dataKey="prevYearRevenue" name="Prior Year" stroke="#9ca3af" fill="#9ca3af" fillOpacity={0.1} strokeWidth={1.5} strokeDasharray="4 2" />
@@ -196,9 +200,9 @@ export function ReportViewer({ reportType, data, selectedFields, onExport, onClo
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={d.byTherapist} layout="vertical" margin={{ left: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis type="number" tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 11 }} />
+                <XAxis type="number" tickFormatter={v => makeFmtCurrency(currency)(v / 1000) + 'k'} tick={{ fontSize: 11 }} />
                 <YAxis type="category" dataKey="therapistName" tick={{ fontSize: 12 }} width={90} />
-                <Tooltip content={<CurrencyTooltip />} />
+                <Tooltip content={<CurrencyTooltip currency={currency} />} />
                 <Bar dataKey="revenue" name="Revenue" fill="#5D4AA8" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -514,8 +518,8 @@ export function ReportViewer({ reportType, data, selectedFields, onExport, onClo
                 <BarChart data={ageingData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                   <XAxis dataKey="label" tick={{ fontSize: 12 }} />
-                  <YAxis tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 12 }} />
-                  <Tooltip content={<CurrencyTooltip />} />
+                  <YAxis tickFormatter={v => makeFmtCurrency(currency)(v / 1000) + 'k'} tick={{ fontSize: 12 }} />
+                  <Tooltip content={<CurrencyTooltip currency={currency} />} />
                   <Bar dataKey="amount" name="Amount" radius={[4, 4, 0, 0]}>
                     {ageingData.map((_, i) => (
                       <Cell key={i} fill={i === 0 ? '#10b981' : i === 1 ? '#f59e0b' : i === 2 ? '#f97316' : i === 3 ? '#ef4444' : '#b91c1c'} />
@@ -541,8 +545,8 @@ export function ReportViewer({ reportType, data, selectedFields, onExport, onClo
                 <LineChart data={d.avgInvoiceValueTrend.map(m => ({ ...m, label: formatMonth(m.month) }))}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                   <XAxis dataKey="label" tick={{ fontSize: 12 }} />
-                  <YAxis tickFormatter={v => `$${v}`} tick={{ fontSize: 12 }} />
-                  <Tooltip content={<CurrencyTooltip />} />
+                  <YAxis tickFormatter={v => makeFmtCurrency(currency)(v)} tick={{ fontSize: 12 }} />
+                  <Tooltip content={<CurrencyTooltip currency={currency} />} />
                   <Line type="monotone" dataKey="avgValue" name="Avg Invoice Value" stroke="#5D4AA8" strokeWidth={2} dot={{ r: 4 }} />
                 </LineChart>
               </ResponsiveContainer>

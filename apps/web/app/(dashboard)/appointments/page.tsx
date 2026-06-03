@@ -15,6 +15,7 @@ import { TimeOffModal } from '@/components/appointments/TimeOffModal';
 import { WaitlistPanel } from '@/components/appointments/WaitlistPanel';
 import { useClients } from '@/lib/hooks/use-clients';
 import { useTherapists } from '@/lib/hooks/use-therapists';
+import { useWaitlist } from '@/lib/hooks/use-waitlist';
 import { ClockIcon, UserGroupIcon, LinkIcon } from '@heroicons/react/24/outline';
 import { useBusinessId } from '@/lib/hooks/use-business-id';
 import { useOnboardingContext } from '@/components/onboarding/OnboardingProvider';
@@ -40,6 +41,8 @@ export default function AppointmentsPage() {
 
   const { data: clients } = useClients(businessId);
   const { data: therapists } = useTherapists(businessId, { isActive: true });
+  // Prefetch waitlist so it's cached before the user switches tabs
+  useWaitlist(businessId);
 
   const handleAppointmentClick = (appointment: AppointmentWithRelations) => {
     setSelectedAppointment(appointment);

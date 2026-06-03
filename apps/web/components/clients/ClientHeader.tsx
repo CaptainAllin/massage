@@ -246,7 +246,7 @@ export const ClientHeader: React.FC<ClientHeaderProps> = ({
             )}
             <button
               onClick={onBook}
-              className="flex items-center gap-2 px-4 py-[7px] rounded-full text-[13px] font-medium text-white iris-gradient-primary iris-shadow-primary"
+              className="iris-cta flex items-center gap-2 px-4 py-[7px] rounded-full text-[13px] font-medium text-white iris-gradient-primary iris-shadow-cta"
             >
               <CalendarPlus className="w-4 h-4" />
               Book session

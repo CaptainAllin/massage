@@ -16,19 +16,20 @@ async function updateInvoicePaymentStatus(invoiceId: string) {
 
 export const POST = withAuth(async (req, user) => {
   const body = await req.json();
-  const { paymentId, businessId, checkNumber, notes } = body;
+  const { paymentId, businessId, notes } = body;
   if (!paymentId || !businessId) return res.badRequest('paymentId and businessId are required');
 
   const payment = await prisma.payment.findFirst({ where: { id: paymentId, businessId } });
   if (!payment) return res.notFound('Payment not found');
   if (payment.status !== 'PENDING') return res.badRequest('Payment has already been processed');
 
-  const checkNote = checkNumber ? `Check #${checkNumber}` : 'Check payment';
-  const combinedNotes = [payment.notes, checkNote, notes].filter(Boolean).join('\n');
-
   const updated = await prisma.payment.update({
     where: { id: paymentId },
-    data: { status: 'COMPLETED', paidAt: new Date(), notes: combinedNotes },
+    data: {
+      status: 'COMPLETED',
+      paidAt: new Date(),
+      notes: notes ? `${payment.notes || ''}\n${notes}`.trim() : payment.notes,
+    },
     include: { client: true, invoice: true },
   });
 
@@ -38,11 +39,11 @@ export const POST = withAuth(async (req, user) => {
     data: {
       userId: user.id,
       businessId,
-      action: 'PAYMENT_COMPLETED_CHECK',
+      action: 'PAYMENT_COMPLETED_EFTPOS',
       entityType: 'Payment',
       entityId: paymentId,
     },
   });
 
-  return res.ok(updated, 'Check payment completed');
+  return res.ok(updated, 'EFTPOS payment completed');
 });

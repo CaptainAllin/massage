@@ -9,13 +9,14 @@ interface WeekViewProps {
   onAppointmentClick: (appointment: AppointmentWithRelations) => void;
   onSlotClick: (date: Date, hour: number) => void;
   onAppointmentDrop?: (appointmentId: string, newStartTime: Date) => void;
+  therapistColorMap?: Map<string, string>;
 }
 
 const DRAGGABLE_STATUSES = new Set([AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED]);
 
-const HOURS = Array.from({ length: 14 }, (_, i) => i + 7); // 7am to 8pm
-const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const ROW_HEIGHT = 56; // px per hour
+const HOURS = Array.from({ length: 14 }, (_, i) => i + 7); // 7am–8pm
+const DAYS_OF_WEEK = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+const ROW_HEIGHT = 46; // px per hour — must match time gutter cell height
 
 export function WeekView({
   currentDate,
@@ -23,6 +24,7 @@ export function WeekView({
   onAppointmentClick,
   onSlotClick,
   onAppointmentDrop,
+  therapistColorMap,
 }: WeekViewProps) {
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 });
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -34,7 +36,6 @@ export function WeekView({
     [weekStart]
   );
 
-  // Scroll to current time on mount
   useEffect(() => {
     if (scrollRef.current) {
       const now = new Date();
@@ -61,7 +62,6 @@ export function WeekView({
   const getAppointmentsForSlot = (dayIndex: number, hour: number) =>
     appointmentsByDayAndHour[`${dayIndex}-${hour}`] || [];
 
-  // Calculate now-line position
   const now = new Date();
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
   const startMinutes = 7 * 60;
@@ -72,93 +72,91 @@ export function WeekView({
   return (
     <div
       className="rounded-2xl overflow-hidden"
-      style={{ background: '#fff', border: '1px solid #EFE9F2', boxShadow: '0 2px 12px rgba(93,74,168,0.06)' }}
+      style={{
+        '--ink': '#1E1830',
+        '--muted': '#7E748F',
+        '--primary': '#5D4AA8',
+        '--line2': '#F1EEF6',
+        '--surface': '#FFFFFF',
+        background: 'var(--surface)',
+        border: '1px solid var(--line2)',
+        boxShadow: '0 2px 12px rgba(93,74,168,0.06)',
+      } as React.CSSProperties}
     >
       <div className="overflow-x-auto">
-        <div style={{ minWidth: '600px' }}>
-          {/* Week header */}
-          <div className="grid grid-cols-8" style={{ borderBottom: '1px solid #EFE9F2' }}>
-            <div className="py-3 px-2" style={{ background: '#FBF8FD' }} />
-            {weekDates.map((date, index) => {
+        <div
+          ref={scrollRef}
+          style={{ minWidth: '600px', maxHeight: 'calc(100vh - 320px)', overflowY: 'auto' }}
+        >
+          {/* Sticky header row */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '48px repeat(7, 1fr)',
+            borderBottom: '1px solid var(--line2)',
+            position: 'sticky',
+            top: 0,
+            background: 'var(--surface)',
+            zIndex: 1,
+          }}>
+            <div />{/* empty corner above time gutter */}
+            {weekDates.map((date, i) => {
               const isToday = isSameDay(date, new Date());
               return (
-                <div
-                  key={index}
-                  className="py-3 px-2 text-center"
-                  style={{
-                    background: isToday ? '#F3F4F7' : '#FBF8FD',
-                    borderLeft: '1px solid #EFE9F2',
-                  }}
-                >
-                  <div
-                    className="text-xs font-semibold uppercase tracking-wide"
-                    style={{ color: isToday ? '#5D4AA8' : '#7A7090', letterSpacing: '0.8px' }}
-                  >
-                    {DAYS_OF_WEEK[index]}
+                <div key={i} style={{
+                  padding: '10px 8px',
+                  borderLeft: '1px solid var(--line2)',
+                  textAlign: 'center',
+                }}>
+                  <div style={{
+                    fontSize: 9.5,
+                    color: 'var(--muted)',
+                    letterSpacing: 1,
+                    marginBottom: 4,
+                  }}>
+                    {DAYS_OF_WEEK[i]}
                   </div>
-                  <div className="flex items-center justify-center mt-1">
-                    {isToday ? (
-                      <span
-                        className="w-[30px] h-[30px] rounded-full flex items-center justify-center text-sm font-semibold text-white"
-                        style={{ background: 'linear-gradient(135deg, #5D4AA8, #3F2F87)' }}
-                      >
-                        {format(date, 'd')}
-                      </span>
-                    ) : (
-                      <span className="text-sm font-medium" style={{ color: '#3D3450' }}>
-                        {format(date, 'd')}
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-xs mt-0.5 hidden sm:block" style={{ color: '#7A7090' }}>
-                    {format(date, 'MMM')}
+                  <div style={{
+                    fontSize: 16,
+                    fontWeight: 600,
+                    color: isToday ? '#fff' : 'var(--ink)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 28,
+                    height: 28,
+                    borderRadius: 14,
+                    background: isToday ? 'var(--primary)' : 'transparent',
+                  }}>
+                    {format(date, 'd')}
                   </div>
                 </div>
               );
             })}
           </div>
 
-          {/* Grid with now-line */}
-          <div
-            ref={scrollRef}
-            className="overflow-y-auto relative"
-            style={{ maxHeight: 'calc(100vh - 320px)' }}
-          >
-            {/* Now-line overlay */}
+          {/* Grid body with now-line */}
+          <div style={{ position: 'relative' }}>
             {showNowLine && todayColIndex >= 0 && (
               <div
                 className="absolute left-0 right-0 pointer-events-none z-10 flex items-center"
                 style={{ top: `${nowTopPx}px` }}
               >
-                <div
-                  style={{
-                    position: 'absolute',
-                    left: `calc(12.5% + ${(todayColIndex / 7) * 87.5}%)`,
-                    width: `${(1 / 7) * 87.5}%`,
-                    display: 'flex',
-                    alignItems: 'center',
-                  }}
-                >
-                  {/* Dot on the left */}
-                  <div
-                    style={{
-                      width: '8px',
-                      height: '8px',
-                      borderRadius: '50%',
-                      background: '#5D4AA8',
-                      flexShrink: 0,
-                      marginLeft: '-4px',
-                    }}
-                  />
-                  {/* Line */}
-                  <div
-                    style={{
-                      flex: 1,
-                      height: '1.5px',
-                      background: '#5D4AA8',
-                      boxShadow: '0 0 8px rgba(93,74,168,0.55)',
-                    }}
-                  />
+                <div style={{
+                  position: 'absolute',
+                  left: `calc(48px + ${todayColIndex} * ((100% - 48px) / 7))`,
+                  width: `calc((100% - 48px) / 7)`,
+                  display: 'flex',
+                  alignItems: 'center',
+                }}>
+                  <div style={{
+                    width: 8, height: 8, borderRadius: '50%',
+                    background: '#5D4AA8', flexShrink: 0, marginLeft: -4,
+                  }} />
+                  <div style={{
+                    flex: 1, height: 1.5,
+                    background: '#5D4AA8',
+                    boxShadow: '0 0 8px rgba(93,74,168,0.55)',
+                  }} />
                 </div>
               </div>
             )}
@@ -166,15 +164,23 @@ export function WeekView({
             {HOURS.map((hour) => (
               <div
                 key={hour}
-                className="grid grid-cols-8"
-                style={{ borderBottom: '1px solid #EFE9F2', minHeight: `${ROW_HEIGHT}px` }}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '48px repeat(7, 1fr)',
+                  borderBottom: '1px solid var(--line2)',
+                  minHeight: `${ROW_HEIGHT}px`,
+                }}
               >
-                {/* Hour label */}
-                <div
-                  className="px-2 py-1 text-xs flex items-start justify-end pt-1.5"
-                  style={{ background: '#FBF8FD', color: '#7A7090', fontVariantNumeric: 'tabular-nums' }}
-                >
-                  {format(setHours(new Date(), hour), 'h a')}
+                {/* Time gutter label */}
+                <div style={{
+                  height: ROW_HEIGHT,
+                  fontSize: 10,
+                  color: 'var(--muted)',
+                  paddingTop: 3,
+                  textAlign: 'right',
+                  paddingRight: 7,
+                }}>
+                  {hour <= 12 ? hour : hour - 12}{hour < 12 ? 'a' : 'p'}
                 </div>
 
                 {weekDates.map((date, dayIndex) => {
@@ -187,17 +193,13 @@ export function WeekView({
                   return (
                     <div
                       key={dayIndex}
-                      className="p-1 cursor-pointer transition-colors"
+                      className="p-1 cursor-pointer"
                       style={{
-                        borderLeft: '1px solid #EFE9F2',
-                        background: isDragOver
-                          ? '#EDE5F4'
-                          : isTodayCol
-                          ? '#FDFBFF'
-                          : 'transparent',
-                        outline: isDragOver ? '2px solid #5D4AA8' : 'none',
+                        borderLeft: '1px solid var(--line2)',
+                        background: isDragOver ? '#EDE5F4' : isTodayCol ? '#FDFBFF' : 'transparent',
+                        outline: isDragOver ? '2px solid var(--primary)' : 'none',
                         outlineOffset: '-2px',
-                        borderRadius: isDragOver ? '4px' : undefined,
+                        borderRadius: isDragOver ? 4 : undefined,
                         transition: 'background 0.1s, outline 0.1s',
                       }}
                       onMouseEnter={(e) => {
@@ -228,8 +230,7 @@ export function WeekView({
                         if (
                           isSameDay(newStart, originalStart) &&
                           newStart.getHours() === originalStart.getHours()
-                        )
-                          return;
+                        ) return;
                         onAppointmentDrop(id, newStart);
                       }}
                     >
@@ -257,7 +258,10 @@ export function WeekView({
                                   onAppointmentClick(appt);
                                 }}
                               >
-                                <AppointmentCard appointment={appt} />
+                                <AppointmentCard
+                                  appointment={appt}
+                                  therapistColor={therapistColorMap?.get(appt.therapistId ?? '')}
+                                />
                               </div>
                             );
                           })}

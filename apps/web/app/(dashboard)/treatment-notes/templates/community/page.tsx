@@ -170,7 +170,7 @@ export default function CommunityLibraryPage() {
         </div>
       ) : templates.length === 0 ? (
         <Card>
-          <CardContent className="p-10 text-center">
+          <CardContent className="py-12 text-center">
             <Globe className="h-10 w-10 text-gray-300 mx-auto mb-3" />
             <p className="text-gray-500">
               {debouncedSearch || categoryFilter !== 'all'

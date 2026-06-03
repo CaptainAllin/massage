@@ -9,6 +9,8 @@ import {
 import { TherapistComparisonChart, type TherapistPerformanceData } from '@/components/analytics/TherapistComparisonChart';
 import { KPICard } from '@/components/analytics/KPICard';
 import { useBusinessId } from '@/lib/hooks/use-business-id';
+import { useBusiness } from '@/lib/hooks/use-business';
+import { formatCurrency as fmtCurrency } from '@/lib/format';
 import {
   useTherapistPerformance, useTherapists, useCreateTherapist,
   type TherapistPerformanceRecord,
@@ -412,18 +414,24 @@ function TeamManagement({ businessId }: { businessId: string }) {
       </div>
 
       {isLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="rounded-2xl border p-5 animate-pulse" style={{ borderColor: '#EFE9F2' }}>
-              <div className="flex items-center gap-3 mb-3">
-                <div className="h-10 w-10 rounded-full bg-gray-200" />
-                <div className="space-y-1 flex-1">
-                  <div className="h-4 bg-gray-200 rounded w-3/4" />
-                  <div className="h-3 bg-gray-100 rounded w-1/2" />
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+            <div style={{ width: 18, height: 18, border: '2px solid #5D4AA8', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />
+            <span style={{ fontSize: 13.5, color: '#7A7090' }}>Loading therapists…</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="rounded-2xl border p-5 animate-pulse" style={{ borderColor: '#EFE9F2' }}>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="h-10 w-10 rounded-full bg-gray-200" />
+                  <div className="space-y-1 flex-1">
+                    <div className="h-4 bg-gray-200 rounded w-3/4" />
+                    <div className="h-3 bg-gray-100 rounded w-1/2" />
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       ) : (therapists as any[]).length === 0 ? (
         <div
@@ -545,13 +553,8 @@ function makeDateRange(preset: DatePreset) {
   };
 }
 
-function formatCurrency(cents: number) {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(cents / 100);
+function formatCurrency(cents: number, currency = 'AUD') {
+  return fmtCurrency(cents / 100, currency, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 
 function getRateBadge(rate: number) {
@@ -576,9 +579,10 @@ interface DetailPanelProps {
     rebookingRate: number;
   };
   onClose: () => void;
+  currency?: string;
 }
 
-function TherapistDetailPanel({ therapist, teamAvg, onClose }: DetailPanelProps) {
+function TherapistDetailPanel({ therapist, teamAvg, onClose, currency = 'AUD' }: DetailPanelProps) {
   const [detailPreset, setDetailPreset] = useState<DatePreset>('month');
   const businessId = useBusinessId();
   const dateRange = makeDateRange(detailPreset);
@@ -645,11 +649,11 @@ function TherapistDetailPanel({ therapist, teamAvg, onClose }: DetailPanelProps)
             {metrics.map(({ label, value, avg, format }) => {
               const diff = avg > 0 ? ((value - avg) / avg) * 100 : 0;
               const formatted =
-                format === 'currency' ? formatCurrency(value)
+                format === 'currency' ? formatCurrency(value, currency)
                 : format === 'percentage' ? `${value.toFixed(1)}%`
                 : value.toString();
               const avgFormatted =
-                format === 'currency' ? formatCurrency(avg)
+                format === 'currency' ? formatCurrency(avg, currency)
                 : format === 'percentage' ? `${avg.toFixed(1)}%`
                 : avg.toFixed(1);
               return (
@@ -677,7 +681,7 @@ function TherapistDetailPanel({ therapist, teamAvg, onClose }: DetailPanelProps)
   );
 }
 
-function PerformanceAnalytics({ businessId }: { businessId: string }) {
+function PerformanceAnalytics({ businessId, currency = 'AUD' }: { businessId: string; currency?: string }) {
   const [preset, setPreset] = useState<DatePreset>('month');
   const [metric, setMetric] = useState<MetricToggle>('revenue');
   const [sortKey, setSortKey] = useState<SortKey>('revenueGenerated');
@@ -750,7 +754,7 @@ function PerformanceAnalytics({ businessId }: { businessId: string }) {
       ),
     },
     { key: 'sessionsCompleted', header: 'Sessions', sortable: true, render: (t) => <span className="font-semibold">{t.sessionsCompleted}</span> },
-    { key: 'revenueGenerated', header: 'Revenue', sortable: true, render: (t) => <span className="font-semibold">{formatCurrency(t.revenueGenerated)}</span> },
+    { key: 'revenueGenerated', header: 'Revenue', sortable: true, render: (t) => <span className="font-semibold">{formatCurrency(t.revenueGenerated, currency)}</span> },
     { key: 'utilizationRate', header: 'Utilization', sortable: true, render: (t) => getRateBadge(t.utilizationRate) },
     { key: 'rebookingRate', header: 'Rebooking', sortable: true, render: (t) => getRateBadge(t.rebookingRate) },
     {
@@ -802,7 +806,7 @@ function PerformanceAnalytics({ businessId }: { businessId: string }) {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard title="Active Therapists" value={kpis?.activeTherapists ?? 0} format="number" icon={<Users className="h-4 w-4" />} isLoading={isLoading} />
         <KPICard title="Avg Sessions" value={kpis?.avgSessionsPerTherapist ?? 0} format="number" subtitle="Per therapist" icon={<Activity className="h-4 w-4" />} isLoading={isLoading} />
-        <KPICard title="Top Performer" value={kpis?.topPerformer ?? 'N/A'} subtitle={kpis?.topPerformerRevenue ? formatCurrency(kpis.topPerformerRevenue) : undefined} icon={<Award className="h-4 w-4" />} isLoading={isLoading} />
+        <KPICard title="Top Performer" value={kpis?.topPerformer ?? 'N/A'} subtitle={kpis?.topPerformerRevenue ? formatCurrency(kpis.topPerformerRevenue, currency) : undefined} icon={<Award className="h-4 w-4" />} isLoading={isLoading} />
         <KPICard title="Avg Utilization" value={kpis?.utilizationRate ?? 0} format="percentage" subtitle="Team average" isLoading={isLoading} />
       </div>
 
@@ -830,6 +834,7 @@ function PerformanceAnalytics({ businessId }: { businessId: string }) {
             data={chartData}
             metric={metric}
             title={metric === 'revenue' ? 'Revenue by Therapist' : 'Sessions by Therapist'}
+            currency={currency}
           />
         )}
       </div>
@@ -867,6 +872,7 @@ function PerformanceAnalytics({ businessId }: { businessId: string }) {
           therapist={selectedTherapist}
           teamAvg={kpis.teamAvg}
           onClose={() => setSelectedId(null)}
+          currency={currency}
         />
       )}
     </div>
@@ -879,6 +885,8 @@ type MainTab = 'team' | 'analytics';
 
 export default function TherapistsPage() {
   const businessId = useBusinessId();
+  const { data: business } = useBusiness(businessId);
+  const currency = (business as any)?.currency || 'AUD';
   const [activeTab, setActiveTab] = useState<MainTab>('team');
 
   return (
@@ -924,7 +932,7 @@ export default function TherapistsPage() {
       ) : activeTab === 'team' ? (
         <TeamManagement businessId={businessId} />
       ) : (
-        <PerformanceAnalytics businessId={businessId} />
+        <PerformanceAnalytics businessId={businessId} currency={currency} />
       )}
     </div>
   );

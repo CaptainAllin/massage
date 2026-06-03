@@ -19,6 +19,7 @@ interface MonthViewProps {
   appointments: AppointmentWithRelations[];
   onAppointmentClick: (appointment: AppointmentWithRelations) => void;
   onSlotClick: (date: Date, hour: number) => void;
+  therapistColorMap?: Map<string, string>;
 }
 
 const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -29,6 +30,7 @@ export function MonthView({
   appointments,
   onAppointmentClick,
   onSlotClick,
+  therapistColorMap,
 }: MonthViewProps) {
   const today = new Date();
 
@@ -144,7 +146,10 @@ export function MonthView({
                         onAppointmentClick(appt);
                       }}
                     >
-                      <AppointmentCard appointment={appt} />
+                      <AppointmentCard
+                        appointment={appt}
+                        therapistColor={therapistColorMap?.get(appt.therapistId ?? '')}
+                      />
                     </div>
                   ))}
                   {dayAppts.length > 3 && (

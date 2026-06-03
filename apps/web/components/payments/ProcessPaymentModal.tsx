@@ -8,7 +8,7 @@ export interface ProcessPaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
   onProcessCash: (data: { paymentId: string; notes?: string }) => Promise<void>;
-  onProcessCheck: (data: { paymentId: string; checkNumber?: string; notes?: string }) => Promise<void>;
+  onProcessCheque: (data: { paymentId: string; chequeNumber?: string; notes?: string }) => Promise<void>;
   paymentId: string;
   amount: number;
   currency: string;
@@ -18,13 +18,13 @@ export const ProcessPaymentModal: React.FC<ProcessPaymentModalProps> = ({
   isOpen,
   onClose,
   onProcessCash,
-  onProcessCheck,
+  onProcessCheque,
   paymentId,
   amount,
   currency,
 }) => {
-  const [method, setMethod] = useState<'cash' | 'check'>('cash');
-  const [checkNumber, setCheckNumber] = useState('');
+  const [method, setMethod] = useState<'cash' | 'cheque'>('cash');
+  const [chequeNumber, setChequeNumber] = useState('');
   const [notes, setNotes] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,9 +38,9 @@ export const ProcessPaymentModal: React.FC<ProcessPaymentModalProps> = ({
       if (method === 'cash') {
         await onProcessCash({ paymentId, notes: notes || undefined });
       } else {
-        await onProcessCheck({
+        await onProcessCheque({
           paymentId,
-          checkNumber: checkNumber || undefined,
+          chequeNumber: chequeNumber || undefined,
           notes: notes || undefined,
         });
       }
@@ -72,21 +72,21 @@ export const ProcessPaymentModal: React.FC<ProcessPaymentModalProps> = ({
           </label>
           <Select
             value={method}
-            onChange={(e) => setMethod(e.target.value as 'cash' | 'check')}
+            onChange={(e) => setMethod(e.target.value as 'cash' | 'cheque')}
             required
             options={[
               { value: 'cash', label: 'Cash' },
-              { value: 'check', label: 'Check' },
+              { value: 'cheque', label: 'Cheque' },
             ]}
           />
         </div>
 
-        {method === 'check' && (
+        {method === 'cheque' && (
           <Input
-            label="Check Number"
-            value={checkNumber}
-            onChange={(e) => setCheckNumber(e.target.value)}
-            placeholder="Enter check number"
+            label="Cheque Number"
+            value={chequeNumber}
+            onChange={(e) => setChequeNumber(e.target.value)}
+            placeholder="Enter cheque number"
           />
         )}
 

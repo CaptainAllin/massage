@@ -12,6 +12,27 @@ import {
   ReportSchedule,
   AIFeature,
   VoiceNoteStatus,
+  VideoSessionStatus,
+  PromotionChannel,
+  PromotionStatus,
+  InsuranceClaimStatus,
+  ReimbursementStatus,
+  GroupBookingStatus,
+  WaitlistStatus,
+  AccountingProvider,
+  AccountingStatus,
+  SyncDirection,
+  SyncLogStatus,
+  ExportFormat,
+  ExportStatus,
+  ScheduleFrequency,
+  AIProvider,
+  MessageChannel,
+  MessageLogStatus,
+  TaskPriority,
+  TaskStatus,
+  CommunityTemplateStatus,
+  PayrollStatus,
 } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -57,14 +78,14 @@ async function main() {
   // ── 1. Business Owner ────────────────────────────────────────────────────
   const ownerUser = await prisma.user.upsert({
     where: { email: OWNER_EMAIL },
-    update: { role: UserRole.BUSINESS_OWNER },
+    update: { role: UserRole.BUSINESS_OWNER, phoneNumber: '0412 345 678' },
     create: {
       email: OWNER_EMAIL,
       authUserId: OWNER_AUTH_ID,
       firstName: 'Alex',
       lastName: 'Rivera',
       role: UserRole.BUSINESS_OWNER,
-      phoneNumber: '+1-555-0001',
+      phoneNumber: '0412 345 678',
       profileImageUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${OWNER_EMAIL}`,
     },
   });
@@ -73,16 +94,23 @@ async function main() {
   // ── 2. Business ──────────────────────────────────────────────────────────
   const business = await prisma.business.upsert({
     where: { ownerId: ownerUser.id },
-    update: {},
+    update: {
+      phoneNumber: '03 9123 4567',
+      address: '45 Collins Street, Level 8',
+      city: 'Melbourne',
+      state: 'VIC',
+      postalCode: '3000',
+      country: 'AU',
+    },
     create: {
       name: 'Serenity Wellness Clinic',
       email: 'info@serenitywellness.com',
-      phoneNumber: '+1-555-935-5637',
-      address: '123 Healing Way, Suite 200',
-      city: 'San Francisco',
-      state: 'CA',
-      postalCode: '94102',
-      country: 'USA',
+      phoneNumber: '03 9123 4567',
+      address: '45 Collins Street, Level 8',
+      city: 'Melbourne',
+      state: 'VIC',
+      postalCode: '3000',
+      country: 'AU',
       website: 'https://serenitywellness.com',
       logo: 'https://api.dicebear.com/7.x/identicon/svg?seed=serenity',
       primaryColor: '#A8C3A0',
@@ -101,10 +129,10 @@ async function main() {
       authId: 'seed_therapist_001',
       firstName: 'Sarah',
       lastName: 'Johnson',
-      phone: '+1-555-0101',
+      phone: '0421 567 890',
       specializations: ['Deep Tissue', 'Swedish Massage', 'Sports Massage'],
       bio: 'Licensed massage therapist with 10+ years in therapeutic bodywork and sports rehab.',
-      license: 'CA-MT-12345',
+      license: 'VIC-MT-12345',
       licenseExpiry: new Date('2026-12-31'),
       rate: 120,
     },
@@ -113,10 +141,10 @@ async function main() {
       authId: 'seed_therapist_002',
       firstName: 'Mike',
       lastName: 'Chen',
-      phone: '+1-555-0102',
+      phone: '0434 678 901',
       specializations: ['Prenatal Massage', 'Hot Stone', 'Aromatherapy'],
       bio: 'Specializing in prenatal and relaxation techniques. Certified hot stone practitioner.',
-      license: 'CA-MT-67890',
+      license: 'VIC-MT-67890',
       licenseExpiry: new Date('2027-06-30'),
       rate: 110,
     },
@@ -125,10 +153,10 @@ async function main() {
       authId: 'seed_therapist_003',
       firstName: 'Lisa',
       lastName: 'Martinez',
-      phone: '+1-555-0103',
+      phone: '0447 789 012',
       specializations: ['Reflexology', 'Thai Massage', 'Lymphatic Drainage'],
       bio: 'Holistic practitioner trained in Thai massage and manual lymphatic drainage therapy.',
-      license: 'CA-MT-24680',
+      license: 'VIC-MT-24680',
       licenseExpiry: new Date('2027-03-31'),
       rate: 115,
     },
@@ -138,7 +166,7 @@ async function main() {
   for (const def of therapistDefs) {
     const u = await prisma.user.upsert({
       where: { authUserId: def.authId },
-      update: { email: def.email, firstName: def.firstName, lastName: def.lastName },
+      update: { email: def.email, firstName: def.firstName, lastName: def.lastName, phoneNumber: def.phone },
       create: {
         email: def.email,
         authUserId: def.authId,
@@ -209,21 +237,21 @@ async function main() {
 
   // ── 5. Clients (15) ──────────────────────────────────────────────────────
   const clientDefs = [
-    { first: 'Emma', last: 'Williams', email: 'emma.williams@example.com', phone: '+1-555-0201', dob: new Date('1988-03-14'), job: 'Software Engineer', goals: 'Reduce back pain from desk work', allergies: [], meds: [], physician: 'Dr. Smith' },
-    { first: 'James', last: 'Brown', email: 'james.brown@example.com', phone: '+1-555-0202', dob: new Date('1975-07-22'), job: 'Construction Manager', goals: 'Manage shoulder injury and improve range of motion', allergies: ['Peanuts'], meds: ['Aspirin'], physician: 'Dr. Jones' },
-    { first: 'Olivia', last: 'Davis', email: 'olivia.davis@example.com', phone: '+1-555-0203', dob: new Date('1992-11-05'), job: 'Graphic Designer', goals: 'Relieve neck tension and headaches', allergies: ['Lavender oil'], meds: [], physician: 'Dr. Smith' },
-    { first: 'Noah', last: 'Miller', email: 'noah.miller@example.com', phone: '+1-555-0204', dob: new Date('1983-01-30'), job: 'Accountant', goals: 'General relaxation, stress relief', allergies: [], meds: ['Ibuprofen'], physician: 'Dr. Patel' },
-    { first: 'Sophia', last: 'Garcia', email: 'sophia.garcia@example.com', phone: '+1-555-0205', dob: new Date('1995-06-18'), job: 'Nurse Practitioner', goals: 'Prenatal care, relaxation', allergies: [], meds: ['Prenatal vitamins'], physician: 'Dr. Lee' },
-    { first: 'Liam', last: 'Wilson', email: 'liam.wilson@example.com', phone: '+1-555-0206', dob: new Date('1980-09-12'), job: 'Personal Trainer', goals: 'Sports recovery, muscle maintenance', allergies: [], meds: [], physician: 'Dr. Kim' },
-    { first: 'Ava', last: 'Taylor', email: 'ava.taylor@example.com', phone: '+1-555-0207', dob: new Date('1990-04-25'), job: 'Teacher', goals: 'Stress reduction, improve sleep quality', allergies: ['Eucalyptus oil'], meds: [], physician: 'Dr. Smith' },
-    { first: 'William', last: 'Anderson', email: 'william.anderson@example.com', phone: '+1-555-0208', dob: new Date('1968-12-08'), job: 'Retired', goals: 'Manage arthritis pain, maintain mobility', allergies: [], meds: ['Metformin', 'Atorvastatin'], physician: 'Dr. Patel' },
-    { first: 'Isabella', last: 'Thomas', email: 'isabella.thomas@example.com', phone: '+1-555-0209', dob: new Date('1998-08-15'), job: 'Student', goals: 'Sports massage after track meets', allergies: [], meds: [], physician: 'Dr. Jones' },
-    { first: 'Benjamin', last: 'Jackson', email: 'benjamin.jackson@example.com', phone: '+1-555-0210', dob: new Date('1985-02-27'), job: 'Chef', goals: 'Relief from repetitive strain, wrists and shoulders', allergies: ['Shellfish'], meds: [], physician: 'Dr. Kim' },
-    { first: 'Mia', last: 'White', email: 'mia.white@example.com', phone: '+1-555-0211', dob: new Date('1993-10-11'), job: 'Marketing Manager', goals: 'Tension headaches, jaw pain (TMJ)', allergies: [], meds: ['Zoloft'], physician: 'Dr. Chen' },
-    { first: 'Lucas', last: 'Harris', email: 'lucas.harris@example.com', phone: '+1-555-0212', dob: new Date('1977-05-03'), job: 'Firefighter', goals: 'Recovery from job-related physical stress', allergies: [], meds: [], physician: 'Dr. Patel' },
-    { first: 'Charlotte', last: 'Martin', email: 'charlotte.martin@example.com', phone: '+1-555-0213', dob: new Date('2000-01-19'), job: 'Yoga Instructor', goals: 'Deepen body awareness, fascia work', allergies: ['Nut oils'], meds: [], physician: 'Dr. Lee' },
-    { first: 'Henry', last: 'Thompson', email: 'henry.thompson@example.com', phone: '+1-555-0214', dob: new Date('1970-07-07'), job: 'Lawyer', goals: 'Lower back pain from long hours sitting', allergies: [], meds: ['Lisinopril'], physician: 'Dr. Jones' },
-    { first: 'Amelia', last: 'Moore', email: 'amelia.moore@example.com', phone: '+1-555-0215', dob: new Date('1987-03-22'), job: 'Photographer', goals: 'Shoulder and neck tension from carrying equipment', allergies: ['Lavender oil'], meds: [], physician: 'Dr. Smith' },
+    { first: 'Emma', last: 'Williams', email: 'emma.williams@example.com', phone: '0412 111 201', dob: new Date('1988-03-14'), job: 'Software Engineer', goals: 'Reduce back pain from desk work', allergies: [], meds: [], physician: 'Dr. Smith' },
+    { first: 'James', last: 'Brown', email: 'james.brown@example.com', phone: '0423 222 202', dob: new Date('1975-07-22'), job: 'Construction Manager', goals: 'Manage shoulder injury and improve range of motion', allergies: ['Peanuts'], meds: ['Aspirin'], physician: 'Dr. Jones' },
+    { first: 'Olivia', last: 'Davis', email: 'olivia.davis@example.com', phone: '0434 333 203', dob: new Date('1992-11-05'), job: 'Graphic Designer', goals: 'Relieve neck tension and headaches', allergies: ['Lavender oil'], meds: [], physician: 'Dr. Smith' },
+    { first: 'Noah', last: 'Miller', email: 'noah.miller@example.com', phone: '0445 444 204', dob: new Date('1983-01-30'), job: 'Accountant', goals: 'General relaxation, stress relief', allergies: [], meds: ['Ibuprofen'], physician: 'Dr. Patel' },
+    { first: 'Sophia', last: 'Garcia', email: 'sophia.garcia@example.com', phone: '0456 555 205', dob: new Date('1995-06-18'), job: 'Nurse Practitioner', goals: 'Prenatal care, relaxation', allergies: [], meds: ['Prenatal vitamins'], physician: 'Dr. Lee' },
+    { first: 'Liam', last: 'Wilson', email: 'liam.wilson@example.com', phone: '0467 666 206', dob: new Date('1980-09-12'), job: 'Personal Trainer', goals: 'Sports recovery, muscle maintenance', allergies: [], meds: [], physician: 'Dr. Kim' },
+    { first: 'Ava', last: 'Taylor', email: 'ava.taylor@example.com', phone: '0478 777 207', dob: new Date('1990-04-25'), job: 'Teacher', goals: 'Stress reduction, improve sleep quality', allergies: ['Eucalyptus oil'], meds: [], physician: 'Dr. Smith' },
+    { first: 'William', last: 'Anderson', email: 'william.anderson@example.com', phone: '03 9008 0208', dob: new Date('1968-12-08'), job: 'Retired', goals: 'Manage arthritis pain, maintain mobility', allergies: [], meds: ['Metformin', 'Atorvastatin'], physician: 'Dr. Patel' },
+    { first: 'Isabella', last: 'Thomas', email: 'isabella.thomas@example.com', phone: '0489 999 209', dob: new Date('1998-08-15'), job: 'Student', goals: 'Sports massage after track meets', allergies: [], meds: [], physician: 'Dr. Jones' },
+    { first: 'Benjamin', last: 'Jackson', email: 'benjamin.jackson@example.com', phone: '0411 100 210', dob: new Date('1985-02-27'), job: 'Chef', goals: 'Relief from repetitive strain, wrists and shoulders', allergies: ['Shellfish'], meds: [], physician: 'Dr. Kim' },
+    { first: 'Mia', last: 'White', email: 'mia.white@example.com', phone: '0422 200 211', dob: new Date('1993-10-11'), job: 'Marketing Manager', goals: 'Tension headaches, jaw pain (TMJ)', allergies: [], meds: ['Zoloft'], physician: 'Dr. Chen' },
+    { first: 'Lucas', last: 'Harris', email: 'lucas.harris@example.com', phone: '0433 300 212', dob: new Date('1977-05-03'), job: 'Firefighter', goals: 'Recovery from job-related physical stress', allergies: [], meds: [], physician: 'Dr. Patel' },
+    { first: 'Charlotte', last: 'Martin', email: 'charlotte.martin@example.com', phone: '0444 400 213', dob: new Date('2000-01-19'), job: 'Yoga Instructor', goals: 'Deepen body awareness, fascia work', allergies: ['Nut oils'], meds: [], physician: 'Dr. Lee' },
+    { first: 'Henry', last: 'Thompson', email: 'henry.thompson@example.com', phone: '03 9014 0214', dob: new Date('1970-07-07'), job: 'Lawyer', goals: 'Lower back pain from long hours sitting', allergies: [], meds: ['Lisinopril'], physician: 'Dr. Jones' },
+    { first: 'Amelia', last: 'Moore', email: 'amelia.moore@example.com', phone: '0466 600 215', dob: new Date('1987-03-22'), job: 'Photographer', goals: 'Shoulder and neck tension from carrying equipment', allergies: ['Lavender oil'], meds: [], physician: 'Dr. Smith' },
   ];
 
   const clients: any[] = [];
@@ -232,7 +260,7 @@ async function main() {
     const authId = `seed_client_${String(i + 1).padStart(3, '0')}`;
     const u = await prisma.user.upsert({
       where: { authUserId: authId },
-      update: { email: def.email, firstName: def.first, lastName: def.last },
+      update: { email: def.email, firstName: def.first, lastName: def.last, phoneNumber: def.phone },
       create: {
         email: def.email,
         authUserId: authId,
@@ -245,7 +273,7 @@ async function main() {
     });
     const c = await prisma.client.upsert({
       where: { userId: u.id },
-      update: {},
+      update: { phoneNumber: def.phone },
       create: {
         businessId: business.id,
         userId: u.id,
@@ -254,12 +282,12 @@ async function main() {
         email: def.email,
         phoneNumber: def.phone,
         dateOfBirth: def.dob,
-        address: `${(i + 1) * 10 + 100} Oak Street`,
-        city: ['San Francisco', 'Oakland', 'San Jose', 'Berkeley', 'Palo Alto'][i % 5],
-        state: 'CA',
-        postalCode: `9410${i % 9}`,
+        address: `${(i + 1) * 10 + 100} Collins Street`,
+        city: ['Melbourne', 'Fitzroy', 'Richmond', 'South Yarra', 'Carlton'][i % 5],
+        state: 'VIC',
+        postalCode: `${3000 + (i % 9)}`,
         emergencyContactName: `${def.first} Contact`,
-        emergencyContactPhone: `+1-555-09${String(i).padStart(2, '0')}`,
+        emergencyContactPhone: `04${String(10 + i).padStart(2, '0')} 900 ${String(i).padStart(3, '0')}`,
         allergies: def.allergies,
         medications: def.meds,
         primaryPhysician: def.physician,
@@ -356,6 +384,12 @@ async function main() {
   console.log('✓ Intake forms');
 
   // ── 9. Appointments (60+) ─────────────────────────────────────────────────
+  const existingApptCount = await prisma.appointment.count({ where: { businessId: business.id } });
+  if (existingApptCount > 0) {
+    console.log(`✓ Appointments: skipped (${existingApptCount} already exist)`);
+    return;
+  }
+
   const serviceTypes = [
     'Deep Tissue Massage',
     'Swedish Massage',
@@ -888,7 +922,7 @@ async function main() {
     { clientIdx: 2,  apptIdx: 2,  status: InvoiceStatus.PAID,         amount: 95,  method: PaymentMethod.STRIPE_CARD, daysBack: 82 },
     { clientIdx: 3,  apptIdx: 3,  status: InvoiceStatus.PAID,         amount: 135, method: PaymentMethod.STRIPE_CARD, daysBack: 79 },
     { clientIdx: 4,  apptIdx: 4,  status: InvoiceStatus.PAID,         amount: 110, method: PaymentMethod.CASH,        daysBack: 76 },
-    { clientIdx: 5,  apptIdx: 5,  status: InvoiceStatus.PAID,         amount: 130, method: PaymentMethod.CHECK,       daysBack: 73 },
+    { clientIdx: 5,  apptIdx: 5,  status: InvoiceStatus.PAID,         amount: 130, method: PaymentMethod.CHEQUE,      daysBack: 73 },
     { clientIdx: 6,  apptIdx: 6,  status: InvoiceStatus.PAID,         amount: 125, method: PaymentMethod.STRIPE_CARD, daysBack: 70 },
     { clientIdx: 7,  apptIdx: 7,  status: InvoiceStatus.PAID,         amount: 140, method: PaymentMethod.STRIPE_CARD, daysBack: 67 },
     { clientIdx: 8,  apptIdx: 8,  status: InvoiceStatus.PAID,         amount: 130, method: PaymentMethod.CASH,        daysBack: 64 },
@@ -932,48 +966,55 @@ async function main() {
     const isPartial = def.status === InvoiceStatus.PARTIALLY_PAID;
     const partialPaid = isPartial ? def.amount * 0.5 : 0;
 
-    const invoice = await prisma.invoice.create({
-      data: {
-        businessId: business.id,
-        clientId: client.id,
-        invoiceNumber: `INV-2025-${String(invoiceCount + 1).padStart(4, '0')}`,
-        status: def.status,
-        lineItems: [
-          { description: appt.serviceType, quantity: 1, unitPrice: def.amount, total: def.amount },
-        ],
-        subtotal: def.amount,
-        taxAmount: 0,
-        discountAmount: 0,
-        total: def.amount,
-        amountPaid: isPaid ? def.amount : isPartial ? partialPaid : 0,
-        amountDue: isPaid ? 0 : isPartial ? def.amount - partialPaid : def.amount,
-        issuedAt: issuedDate,
-        sentAt: (def.status !== InvoiceStatus.DRAFT && def.status !== InvoiceStatus.CANCELLED) ? issuedDate : undefined,
-        paidAt: isPaid ? new Date(issuedDate.getTime() + 2 * 24 * 60 * 60 * 1000) : undefined,
-        dueDate: new Date(issuedDate.getTime() + 30 * 24 * 60 * 60 * 1000),
-      },
+    const invoiceNumber = `INV-2025-${String(invoiceCount + 1).padStart(4, '0')}`;
+    const invoiceData = {
+      businessId: business.id,
+      clientId: client.id,
+      invoiceNumber,
+      status: def.status,
+      lineItems: [
+        { description: appt.serviceType, quantity: 1, unitPrice: def.amount, total: def.amount },
+      ],
+      subtotal: def.amount,
+      taxAmount: 0,
+      discountAmount: 0,
+      total: def.amount,
+      amountPaid: isPaid ? def.amount : isPartial ? partialPaid : 0,
+      amountDue: isPaid ? 0 : isPartial ? def.amount - partialPaid : def.amount,
+      issuedAt: issuedDate,
+      sentAt: (def.status !== InvoiceStatus.DRAFT && def.status !== InvoiceStatus.CANCELLED) ? issuedDate : undefined,
+      paidAt: isPaid ? new Date(issuedDate.getTime() + 2 * 24 * 60 * 60 * 1000) : undefined,
+      dueDate: new Date(issuedDate.getTime() + 30 * 24 * 60 * 60 * 1000),
+    };
+    const invoice = await prisma.invoice.upsert({
+      where: { businessId_invoiceNumber: { businessId: business.id, invoiceNumber } },
+      update: {},
+      create: invoiceData,
     });
     invoiceCount++;
 
     if (def.method && (isPaid || isPartial)) {
-      await prisma.payment.create({
-        data: {
-          businessId: business.id,
-          clientId: client.id,
-          invoiceId: invoice.id,
-          appointmentId: appt.id,
-          amount: isPaid ? def.amount : partialPaid,
-          currency: 'USD',
-          paymentMethod: def.method,
-          status: PaymentStatus.COMPLETED,
-          stripePaymentIntentId: def.method === PaymentMethod.STRIPE_CARD ? `pi_seed_${String(paymentCount + 1).padStart(8, '0')}` : undefined,
-          stripeChargeId: def.method === PaymentMethod.STRIPE_CARD ? `ch_seed_${String(paymentCount + 1).padStart(8, '0')}` : undefined,
-          stripeFee: def.method === PaymentMethod.STRIPE_CARD ? parseFloat((def.amount * 0.029 + 0.30).toFixed(2)) : undefined,
-          description: `Payment for ${appt.serviceType}`,
-          paidAt: isPaid ? new Date(issuedDate.getTime() + 2 * 24 * 60 * 60 * 1000) : issuedDate,
-        },
-      });
-      paymentCount++;
+      const existingPayment = await prisma.payment.findFirst({ where: { invoiceId: invoice.id } });
+      if (!existingPayment) {
+        await prisma.payment.create({
+          data: {
+            businessId: business.id,
+            clientId: client.id,
+            invoiceId: invoice.id,
+            appointmentId: appt.id,
+            amount: isPaid ? def.amount : partialPaid,
+            currency: 'USD',
+            paymentMethod: def.method,
+            status: PaymentStatus.COMPLETED,
+            stripePaymentIntentId: def.method === PaymentMethod.STRIPE_CARD ? `pi_seed_${String(paymentCount + 1).padStart(8, '0')}` : undefined,
+            stripeChargeId: def.method === PaymentMethod.STRIPE_CARD ? `ch_seed_${String(paymentCount + 1).padStart(8, '0')}` : undefined,
+            stripeFee: def.method === PaymentMethod.STRIPE_CARD ? parseFloat((def.amount * 0.029 + 0.30).toFixed(2)) : undefined,
+            description: `Payment for ${appt.serviceType}`,
+            paidAt: isPaid ? new Date(issuedDate.getTime() + 2 * 24 * 60 * 60 * 1000) : issuedDate,
+          },
+        });
+        paymentCount++;
+      }
     }
   }
   console.log(`✓ Invoices: ${invoiceCount}, Payments: ${paymentCount}`);
@@ -991,26 +1032,30 @@ async function main() {
   const memberships: any[] = [];
   for (let i = 0; i < membershipDefs.length; i++) {
     const def = membershipDefs[i];
-    const m = await prisma.membership.create({
-      data: {
-        businessId: business.id,
-        clientId: clients[def.clientIdx].id,
-        name: def.name,
-        description: def.desc,
-        price: def.price,
-        currency: 'USD',
-        sessionsPerMonth: def.sessions,
-        sessionsUsed: def.used,
-        rolledOverSessions: 0,
-        allowRollover: true,
-        status: def.status,
-        stripeSubscriptionId: `sub_seed_${String(i + 1).padStart(6, '0')}`,
-        billingCycleStart: daysAgo(15),
-        billingCycleEnd: daysAhead(15),
-        nextBillingDate: daysAhead(15),
-        startDate: daysAgo(60),
-        cancelledAt: def.status === MembershipStatus.CANCELLED ? daysAgo(5) : undefined,
-      },
+    const subId = `sub_seed_${String(i + 1).padStart(6, '0')}`;
+    const membershipData = {
+      businessId: business.id,
+      clientId: clients[def.clientIdx].id,
+      name: def.name,
+      description: def.desc,
+      price: def.price,
+      currency: 'USD',
+      sessionsPerMonth: def.sessions,
+      sessionsUsed: def.used,
+      rolledOverSessions: 0,
+      allowRollover: true,
+      status: def.status,
+      stripeSubscriptionId: subId,
+      billingCycleStart: daysAgo(15),
+      billingCycleEnd: daysAhead(15),
+      nextBillingDate: daysAhead(15),
+      startDate: daysAgo(60),
+      cancelledAt: def.status === MembershipStatus.CANCELLED ? daysAgo(5) : undefined,
+    };
+    const m = await prisma.membership.upsert({
+      where: { stripeSubscriptionId: subId },
+      update: {},
+      create: membershipData,
     });
     memberships.push(m);
   }
@@ -1028,7 +1073,8 @@ async function main() {
   const packages: any[] = [];
   for (let i = 0; i < packageDefs.length; i++) {
     const def = packageDefs[i];
-    const p = await prisma.packagePurchase.create({
+    const existing = await prisma.packagePurchase.findFirst({ where: { businessId: business.id, clientId: clients[def.clientIdx].id, name: def.name } });
+    const p = existing ?? await prisma.packagePurchase.create({
       data: {
         businessId: business.id,
         clientId: clients[def.clientIdx].id,
@@ -1520,21 +1566,886 @@ async function main() {
   }
   console.log('✓ Global note templates:', globalNoteTemplates.length);
 
+  // ── 26. Locations ─────────────────────────────────────────────────────────
+  const locationDefs = [
+    { name: 'Collins Street (Main)', address: '45 Collins Street, Level 8', city: 'Melbourne', state: 'VIC', postalCode: '3000', phone: '03 9123 4567', email: 'collins@serenitywellness.com', timezone: 'Australia/Melbourne', isPrimary: true },
+    { name: 'Fitzroy Studio', address: '210 Brunswick Street', city: 'Fitzroy', state: 'VIC', postalCode: '3065', phone: '03 9456 7890', email: 'fitzroy@serenitywellness.com', timezone: 'Australia/Melbourne', isPrimary: false },
+  ];
+  const locations: any[] = [];
+  for (const def of locationDefs) {
+    const existing = await prisma.location.findFirst({ where: { businessId: business.id, name: def.name } });
+    const loc = existing ?? await prisma.location.create({
+      data: { businessId: business.id, name: def.name, address: def.address, city: def.city, state: def.state, postalCode: def.postalCode, phoneNumber: def.phone, email: def.email, timezone: def.timezone, isActive: true, isPrimary: def.isPrimary },
+    });
+    locations.push(loc);
+  }
+  console.log('✓ Locations:', locations.length);
+
+  // ── 27. Rooms ──────────────────────────────────────────────────────────────
+  const roomDefs = [
+    { name: 'Room 1 — Serenity', color: '#8B5CF6', locationIdx: 0 },
+    { name: 'Room 2 — Harmony', color: '#EC4899', locationIdx: 0 },
+    { name: 'Room 3 — Tranquility', color: '#3B82F6', locationIdx: 0 },
+    { name: 'Room 1 — Fitzroy', color: '#10B981', locationIdx: 1 },
+  ];
+  const rooms: any[] = [];
+  for (const def of roomDefs) {
+    const existing = await prisma.room.findFirst({ where: { businessId: business.id, name: def.name } });
+    const room = existing ?? await prisma.room.create({
+      data: { businessId: business.id, locationId: locations[def.locationIdx].id, name: def.name, color: def.color, capacity: 1, isActive: true },
+    });
+    rooms.push(room);
+  }
+  console.log('✓ Rooms:', rooms.length);
+
+  // ── 28. Therapist Locations ────────────────────────────────────────────────
+  const therapistLocationDefs = [
+    { therapistIdx: 0, locationIdx: 0 },
+    { therapistIdx: 1, locationIdx: 0 },
+    { therapistIdx: 2, locationIdx: 0 },
+    { therapistIdx: 2, locationIdx: 1 },
+  ];
+  for (const def of therapistLocationDefs) {
+    const existing = await prisma.therapistLocation.findFirst({ where: { therapistId: therapists[def.therapistIdx].id, locationId: locations[def.locationIdx].id } });
+    if (!existing) {
+      await prisma.therapistLocation.create({ data: { therapistId: therapists[def.therapistIdx].id, locationId: locations[def.locationIdx].id } });
+    }
+  }
+  console.log('✓ Therapist locations');
+
+  // ── 29. Therapist Time Off ─────────────────────────────────────────────────
+  const timeOffDefs: { therapistIdx: number; start: Date; end: Date; reason: string }[] = [
+    { therapistIdx: 0, start: daysAhead(30), end: daysAhead(36), reason: 'Annual leave' },
+    { therapistIdx: 1, start: daysAhead(45), end: daysAhead(47), reason: 'Personal appointment' },
+    { therapistIdx: 2, start: daysAhead(14), end: daysAhead(14), reason: 'Conference — Remedial Massage Summit' },
+    { therapistIdx: 0, start: daysAgo(60), end: daysAgo(55), reason: 'Sick leave' },
+    { therapistIdx: 1, start: daysAgo(20), end: daysAgo(20), reason: 'Medical appointment' },
+  ];
+  for (const def of timeOffDefs) {
+    const existing = await prisma.therapistTimeOff.findFirst({ where: { therapistId: therapists[def.therapistIdx].id, startDate: def.start } });
+    if (!existing) {
+      await prisma.therapistTimeOff.create({
+        data: { businessId: business.id, therapistId: therapists[def.therapistIdx].id, startDate: def.start, endDate: def.end, reason: def.reason, isAllDay: true },
+      });
+    }
+  }
+  console.log('✓ Therapist time off');
+
+  // ── 30. Appointment Cancellations ─────────────────────────────────────────
+  const cancelledAppts = await prisma.appointment.findMany({ where: { businessId: business.id, status: AppointmentStatus.CANCELLED }, take: 3 });
+  const cancellationDefs = [
+    { reason: 'Work conflict — meeting rescheduled last minute', type: 'CLIENT_REQUESTED', clientIdx: 3 },
+    { reason: 'Client called in sick', type: 'CLIENT_REQUESTED', clientIdx: 7 },
+    { reason: 'Therapist unavailable — family emergency', type: 'BUSINESS_INITIATED', clientIdx: 11 },
+  ];
+  for (let i = 0; i < cancelledAppts.length; i++) {
+    const appt = cancelledAppts[i];
+    const existing = await prisma.appointmentCancellation.findUnique({ where: { appointmentId: appt.id } });
+    if (!existing) {
+      const def = cancellationDefs[i % cancellationDefs.length];
+      await prisma.appointmentCancellation.create({
+        data: { appointmentId: appt.id, businessId: business.id, cancelledBy: def.type === 'CLIENT_REQUESTED' ? clients[def.clientIdx].id : ownerUser.id, reason: def.reason, cancellationType: def.type },
+      });
+    }
+  }
+  console.log('✓ Appointment cancellations');
+
+  // ── 31. Appointment Reminders ─────────────────────────────────────────────
+  const upcomingForReminders = await prisma.appointment.findMany({
+    where: { businessId: business.id, status: { in: [AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED] }, startTime: { gte: new Date() } },
+    orderBy: { startTime: 'asc' }, take: 8,
+  });
+  for (const appt of upcomingForReminders) {
+    for (const [type, hoursOffset] of [['SMS_24H', 24], ['EMAIL_48H', 48]] as [string, number][]) {
+      const existing = await prisma.appointmentReminder.findFirst({ where: { appointmentId: appt.id, reminderType: type } });
+      if (!existing) {
+        await prisma.appointmentReminder.create({
+          data: { appointmentId: appt.id, businessId: business.id, reminderType: type, scheduledFor: new Date(appt.startTime.getTime() - hoursOffset * 3600000), status: 'PENDING' },
+        });
+      }
+    }
+  }
+  const recentCompleted = await prisma.appointment.findMany({
+    where: { businessId: business.id, status: AppointmentStatus.COMPLETED }, orderBy: { startTime: 'desc' }, take: 6,
+  });
+  for (const appt of recentCompleted) {
+    const existing = await prisma.appointmentReminder.findFirst({ where: { appointmentId: appt.id } });
+    if (!existing) {
+      const scheduledAt = new Date(appt.startTime.getTime() - 24 * 3600000);
+      await prisma.appointmentReminder.create({
+        data: { appointmentId: appt.id, businessId: business.id, reminderType: 'SMS_24H', scheduledFor: scheduledAt, status: 'SENT', sentAt: scheduledAt },
+      });
+    }
+  }
+  console.log('✓ Appointment reminders');
+
+  // ── 32. Saved Payment Methods ──────────────────────────────────────────────
+  const savedPaymentDefs = [
+    { clientIdx: 0, brand: 'Visa', last4: '4242', expMonth: 12, expYear: 2027 },
+    { clientIdx: 1, brand: 'Mastercard', last4: '5555', expMonth: 8, expYear: 2026 },
+    { clientIdx: 2, brand: 'Visa', last4: '1234', expMonth: 3, expYear: 2028 },
+    { clientIdx: 3, brand: 'Amex', last4: '0005', expMonth: 11, expYear: 2026 },
+    { clientIdx: 4, brand: 'Visa', last4: '9876', expMonth: 6, expYear: 2027 },
+    { clientIdx: 6, brand: 'Mastercard', last4: '3456', expMonth: 9, expYear: 2026 },
+  ];
+  for (let i = 0; i < savedPaymentDefs.length; i++) {
+    const def = savedPaymentDefs[i];
+    const existing = await prisma.savedPaymentMethod.findFirst({ where: { clientId: clients[def.clientIdx].id } });
+    if (!existing) {
+      await prisma.savedPaymentMethod.create({
+        data: {
+          businessId: business.id, clientId: clients[def.clientIdx].id,
+          stripePaymentMethodId: `pm_seed_${String(i + 1).padStart(8, '0')}`,
+          stripeCustomerId: `cus_seed_${String(def.clientIdx + 1).padStart(6, '0')}`,
+          brand: def.brand, last4: def.last4, expMonth: def.expMonth, expYear: def.expYear, isDefault: true,
+        },
+      });
+    }
+  }
+  console.log('✓ Saved payment methods');
+
+  // ── 33. Membership Sessions ────────────────────────────────────────────────
+  const completedByClient: Record<string, any[]> = {};
+  for (const appt of appointments) {
+    if (appt.status === AppointmentStatus.COMPLETED) {
+      if (!completedByClient[appt.clientId]) completedByClient[appt.clientId] = [];
+      completedByClient[appt.clientId].push(appt);
+    }
+  }
+  const membershipClientPairs: [number, number][] = [[0, 0], [1, 1], [6, 2], [7, 3]];
+  let membershipSessionCount = 0;
+  for (const [clientIdx, membershipIdx] of membershipClientPairs) {
+    const clientAppts = completedByClient[clients[clientIdx].id] || [];
+    for (let i = 0; i < Math.min(2, clientAppts.length); i++) {
+      const appt = clientAppts[i];
+      const existing = await prisma.membershipSession.findUnique({ where: { appointmentId: appt.id } });
+      if (!existing) {
+        await prisma.membershipSession.create({ data: { membershipId: memberships[membershipIdx].id, appointmentId: appt.id, businessId: business.id, redeemedAt: appt.startTime } });
+        membershipSessionCount++;
+      }
+    }
+  }
+  console.log('✓ Membership sessions:', membershipSessionCount);
+
+  // ── 34. Package Sessions ───────────────────────────────────────────────────
+  const packageClientPairs: [number, number][] = [[2, 0], [5, 1]];
+  let packageSessionCount = 0;
+  for (const [clientIdx, pkgIdx] of packageClientPairs) {
+    const clientAppts = completedByClient[clients[clientIdx].id] || [];
+    for (let i = 0; i < Math.min(2, clientAppts.length); i++) {
+      const appt = clientAppts[i];
+      const existing = await prisma.packageSession.findUnique({ where: { appointmentId: appt.id } });
+      if (!existing) {
+        await prisma.packageSession.create({ data: { packagePurchaseId: packages[pkgIdx].id, appointmentId: appt.id, businessId: business.id, redeemedAt: appt.startTime } });
+        packageSessionCount++;
+      }
+    }
+  }
+  console.log('✓ Package sessions:', packageSessionCount);
+
+  // ── 35. Video Session ─────────────────────────────────────────────────────
+  const virtualAppt = await prisma.appointment.findFirst({ where: { businessId: business.id, isVirtual: true }, orderBy: { startTime: 'asc' } });
+  if (virtualAppt) {
+    const existing = await prisma.videoSession.findUnique({ where: { appointmentId: virtualAppt.id } });
+    if (!existing) {
+      await prisma.videoSession.create({
+        data: {
+          businessId: business.id, appointmentId: virtualAppt.id, therapistId: virtualAppt.therapistId, clientId: virtualAppt.clientId,
+          dailyRoomName: `serenity-${virtualAppt.id.substring(0, 8)}`, dailyRoomUrl: `https://serenitywellness.daily.co/serenity-${virtualAppt.id.substring(0, 8)}`,
+          status: VideoSessionStatus.SCHEDULED, scheduledFor: virtualAppt.startTime, screenShareEnabled: true, chatEnabled: true,
+        },
+      });
+    }
+  }
+  console.log('✓ Video session');
+
+  // ── 36. Promotions ────────────────────────────────────────────────────────
+  const promotionDefs = [
+    {
+      name: 'Summer Wellness Sale', description: '20% off all 90-minute massages throughout January',
+      channel: PromotionChannel.EMAIL, status: PromotionStatus.SENT,
+      subject: 'Refresh Your Body This Summer — 20% Off 90-Minute Massages',
+      body: 'Hi {{clientName}},\n\nThis January, enjoy 20% off all 90-minute massage sessions with code SUMMER20.\n\nOffer valid until January 31. Book now at serenitywellness.com.\n\nWarm regards,\nThe Serenity Wellness Team',
+      recipientFilter: { lastVisitDays: 90, isActive: true }, sentAt: daysAgo(20), totalSent: 12, totalOpened: 8, totalClicked: 5, totalConverted: 3,
+    },
+    {
+      name: 'Re-engagement Campaign', description: 'Bring back clients who haven\'t visited in 60+ days',
+      channel: PromotionChannel.SMS, status: PromotionStatus.SENT, subject: null,
+      body: 'Hi {{clientName}}, we miss you at Serenity Wellness! Come back and feel amazing. Book this week and save 15% with code COMEBACK15. Reply STOP to unsubscribe.',
+      recipientFilter: { lastVisitDays: 60, isActive: true }, sentAt: daysAgo(10), totalSent: 5, totalOpened: 5, totalClicked: 3, totalConverted: 2,
+    },
+    {
+      name: 'New Client Welcome Offer', description: 'First-time client introductory discount',
+      channel: PromotionChannel.EMAIL, status: PromotionStatus.SCHEDULED,
+      subject: 'Welcome to Serenity Wellness — Your First Session is Special',
+      body: 'Hi {{clientName}},\n\nWe\'re thrilled to welcome you! As a new client, enjoy $20 off your first session. No code needed — mention this email when you book.\n\nBest,\nSerenity Wellness Team',
+      recipientFilter: { newClientsOnly: true }, scheduledFor: daysAhead(7), totalSent: 0, totalOpened: 0, totalClicked: 0, totalConverted: 0,
+    },
+    {
+      name: 'Member Appreciation — Complimentary Add-On', description: 'Loyalty reward for active members',
+      channel: PromotionChannel.EMAIL, status: PromotionStatus.DRAFT,
+      subject: 'A Special Gift from Serenity Wellness',
+      body: 'Dear {{clientName}},\n\nAs a valued member, we\'re giving you a complimentary 15-minute add-on with your next session — free!\n\nMention this email on arrival.\n\nWith gratitude,\nSerenity Wellness Team',
+      recipientFilter: { membershipStatus: 'ACTIVE' }, totalSent: 0, totalOpened: 0, totalClicked: 0, totalConverted: 0,
+    },
+    {
+      name: 'Birthday Month Treat', description: 'Happy birthday discount for clients in their birthday month',
+      channel: PromotionChannel.SMS, status: PromotionStatus.SENT, subject: null,
+      body: 'Happy Birthday {{clientName}}! 🎂 Treat yourself — use BDAY15 for 15% off any session this month. Book: serenitywellness.com',
+      recipientFilter: { birthdayMonth: true }, sentAt: daysAgo(5), totalSent: 3, totalOpened: 3, totalClicked: 2, totalConverted: 1,
+    },
+  ];
+  const promotions: any[] = [];
+  for (const def of promotionDefs) {
+    const existing = await prisma.promotion.findFirst({ where: { businessId: business.id, name: def.name } });
+    const p = existing ?? await prisma.promotion.create({
+      data: {
+        businessId: business.id, name: def.name, description: def.description, channel: def.channel, status: def.status,
+        subject: def.subject ?? undefined, body: def.body, recipientFilter: def.recipientFilter,
+        scheduledFor: (def as any).scheduledFor ?? undefined, sentAt: (def as any).sentAt ?? undefined,
+        totalSent: def.totalSent, totalOpened: def.totalOpened, totalClicked: def.totalClicked, totalConverted: def.totalConverted,
+      },
+    });
+    promotions.push(p);
+  }
+  console.log('✓ Promotions:', promotions.length);
+
+  // ── 37. Promotion Recipients ───────────────────────────────────────────────
+  if (promotions[0]) {
+    for (let i = 0; i < Math.min(10, clients.length); i++) {
+      const existing = await prisma.promotionRecipient.findUnique({ where: { promotionId_clientId: { promotionId: promotions[0].id, clientId: clients[i].id } } });
+      if (!existing) {
+        await prisma.promotionRecipient.create({
+          data: {
+            promotionId: promotions[0].id, clientId: clients[i].id,
+            status: i < 3 ? 'CONVERTED' : i < 5 ? 'CLICKED' : i < 8 ? 'OPENED' : 'SENT',
+            sentAt: daysAgo(20), openedAt: i < 8 ? daysAgo(19) : undefined,
+            clickedAt: i < 5 ? daysAgo(18) : undefined, convertedAt: i < 3 ? daysAgo(17) : undefined,
+          },
+        });
+      }
+    }
+  }
+  if (promotions[1]) {
+    for (let i = 3; i < Math.min(8, clients.length); i++) {
+      const existing = await prisma.promotionRecipient.findUnique({ where: { promotionId_clientId: { promotionId: promotions[1].id, clientId: clients[i].id } } });
+      if (!existing) {
+        await prisma.promotionRecipient.create({
+          data: {
+            promotionId: promotions[1].id, clientId: clients[i].id,
+            status: i < 5 ? 'CONVERTED' : i < 7 ? 'CLICKED' : 'SENT',
+            sentAt: daysAgo(10), openedAt: i < 7 ? daysAgo(9) : undefined,
+            clickedAt: i < 5 ? daysAgo(8) : undefined, convertedAt: i < 5 ? daysAgo(7) : undefined,
+          },
+        });
+      }
+    }
+  }
+  if (promotions[4]) {
+    for (let i = 0; i < 3; i++) {
+      const existing = await prisma.promotionRecipient.findUnique({ where: { promotionId_clientId: { promotionId: promotions[4].id, clientId: clients[i].id } } });
+      if (!existing) {
+        await prisma.promotionRecipient.create({
+          data: {
+            promotionId: promotions[4].id, clientId: clients[i].id,
+            status: i < 1 ? 'CONVERTED' : i < 2 ? 'CLICKED' : 'SENT',
+            sentAt: daysAgo(5), openedAt: daysAgo(4),
+            clickedAt: i < 2 ? daysAgo(4) : undefined, convertedAt: i < 1 ? daysAgo(3) : undefined,
+          },
+        });
+      }
+    }
+  }
+  console.log('✓ Promotion recipients');
+
+  // ── 38. Gift Cards ─────────────────────────────────────────────────────────
+  const giftCardDefs = [
+    { purchaserIdx: 3, recipientEmail: 'sarah.giftee@example.com', recipientName: 'Sarah Williams', amount: 100, balance: 100, expiresAhead: 365, note: 'Happy Birthday! Treat yourself.' },
+    { purchaserIdx: 5, recipientEmail: 'tom.giftee@example.com', recipientName: 'Tom Anderson', amount: 150, balance: 50, expiresAhead: 365, note: 'Get well soon — enjoy some relaxation.' },
+    { purchaserIdx: 7, recipientEmail: 'jenny.giftee@example.com', recipientName: 'Jenny Thompson', amount: 200, balance: 200, expiresAhead: 365, note: 'Anniversary gift — you deserve it!' },
+    { purchaserIdx: 9, recipientEmail: 'mike.giftee@example.com', recipientName: 'Mike Davies', amount: 75, balance: 75, expiresAhead: 180, note: 'Thank you for everything you do.' },
+    { purchaserIdx: 11, recipientEmail: 'lisa.giftee@example.com', recipientName: 'Lisa Chen', amount: 120, balance: 0, expiresAhead: -10, note: 'Wedding present — congratulations!' },
+    { purchaserIdx: 0, recipientEmail: 'dan.giftee@example.com', recipientName: 'Dan Roberts', amount: 80, balance: 80, expiresAhead: 270, note: 'Just because!' },
+  ];
+  const giftCards: any[] = [];
+  for (let i = 0; i < giftCardDefs.length; i++) {
+    const def = giftCardDefs[i];
+    const code = `GC-${String(20250000 + i + 1).padStart(8, '0')}`;
+    const existing = await prisma.giftCard.findUnique({ where: { code } });
+    const gc = existing ?? await prisma.giftCard.create({
+      data: {
+        businessId: business.id, code, originalAmount: def.amount, balance: def.balance, currency: 'USD',
+        purchasedById: clients[def.purchaserIdx].id, recipientEmail: def.recipientEmail, recipientName: def.recipientName,
+        note: def.note, expiresAt: def.expiresAhead > 0 ? daysAhead(def.expiresAhead) : daysAgo(Math.abs(def.expiresAhead)),
+        isActive: def.balance > 0, sentAt: daysAgo(30 - i * 4), purchasedAt: daysAgo(32 - i * 4),
+      },
+    });
+    giftCards.push(gc);
+  }
+  console.log('✓ Gift cards:', giftCards.length);
+
+  // ── 39. Gift Card Redemptions ──────────────────────────────────────────────
+  if (giftCards[1]) {
+    const ex1 = await prisma.giftCardRedemption.findFirst({ where: { giftCardId: giftCards[1].id } });
+    if (!ex1) await prisma.giftCardRedemption.create({ data: { giftCardId: giftCards[1].id, businessId: business.id, amount: 100, redeemedAt: daysAgo(15) } });
+  }
+  if (giftCards[4]) {
+    const ex4 = await prisma.giftCardRedemption.findFirst({ where: { giftCardId: giftCards[4].id } });
+    if (!ex4) await prisma.giftCardRedemption.create({ data: { giftCardId: giftCards[4].id, businessId: business.id, amount: 120, redeemedAt: daysAgo(5) } });
+  }
+  console.log('✓ Gift card redemptions');
+
+  // ── 40. Loyalty Settings ──────────────────────────────────────────────────
+  const existingLoyaltySettings = await prisma.loyaltySettings.findUnique({ where: { businessId: business.id } });
+  if (!existingLoyaltySettings) {
+    await prisma.loyaltySettings.create({
+      data: { businessId: business.id, pointsPerDollar: 1.0, dollarPerPoint: 0.01, bronzeMinPoints: 0, silverMinPoints: 500, goldMinPoints: 1500, isActive: true, expiryDays: 365 },
+    });
+  }
+  console.log('✓ Loyalty settings');
+
+  // ── 41. Loyalty Accounts & Transactions ───────────────────────────────────
+  const loyaltyAccountDefs = [
+    { clientIdx: 0, points: 1720, lifetimePoints: 1720, tier: 'GOLD' },
+    { clientIdx: 1, points: 850, lifetimePoints: 950, tier: 'SILVER' },
+    { clientIdx: 2, points: 380, lifetimePoints: 380, tier: 'BRONZE' },
+    { clientIdx: 3, points: 540, lifetimePoints: 690, tier: 'SILVER' },
+    { clientIdx: 4, points: 220, lifetimePoints: 220, tier: 'BRONZE' },
+    { clientIdx: 5, points: 1100, lifetimePoints: 1100, tier: 'SILVER' },
+    { clientIdx: 6, points: 430, lifetimePoints: 430, tier: 'BRONZE' },
+    { clientIdx: 7, points: 780, lifetimePoints: 780, tier: 'SILVER' },
+    { clientIdx: 8, points: 260, lifetimePoints: 260, tier: 'BRONZE' },
+    { clientIdx: 9, points: 115, lifetimePoints: 115, tier: 'BRONZE' },
+    { clientIdx: 10, points: 310, lifetimePoints: 310, tier: 'BRONZE' },
+    { clientIdx: 12, points: 950, lifetimePoints: 1050, tier: 'SILVER' },
+    { clientIdx: 14, points: 170, lifetimePoints: 170, tier: 'BRONZE' },
+  ];
+  const loyaltyAccounts: any[] = [];
+  for (const def of loyaltyAccountDefs) {
+    const existing = await prisma.loyaltyAccount.findUnique({ where: { businessId_clientId: { businessId: business.id, clientId: clients[def.clientIdx].id } } });
+    const acc = existing ?? await prisma.loyaltyAccount.create({ data: { businessId: business.id, clientId: clients[def.clientIdx].id, points: def.points, lifetimePoints: def.lifetimePoints, tier: def.tier } });
+    loyaltyAccounts.push(acc);
+  }
+  const loyaltyTxDefs = [
+    { accountIdx: 0, type: 'EARN', points: 120, desc: 'Session — Deep Tissue Massage', daysBack: 7 },
+    { accountIdx: 0, type: 'EARN', points: 120, desc: 'Session — Deep Tissue Massage', daysBack: 21 },
+    { accountIdx: 0, type: 'REDEEM', points: -50, desc: 'Reward redeemed — $5 discount applied', daysBack: 14 },
+    { accountIdx: 1, type: 'EARN', points: 100, desc: 'Session — Swedish Massage', daysBack: 30 },
+    { accountIdx: 1, type: 'EARN', points: 130, desc: 'Session — Sports Massage', daysBack: 60 },
+    { accountIdx: 1, type: 'REDEEM', points: -100, desc: 'Reward redeemed — $10 discount applied', daysBack: 45 },
+    { accountIdx: 2, type: 'EARN', points: 95, desc: 'Session — Reflexology', daysBack: 5 },
+    { accountIdx: 3, type: 'EARN', points: 135, desc: 'Session — Trigger Point Therapy', daysBack: 3 },
+    { accountIdx: 3, type: 'REDEEM', points: -150, desc: 'Reward redeemed — $15 discount applied', daysBack: 20 },
+    { accountIdx: 5, type: 'EARN', points: 130, desc: 'Session — Sports Massage', daysBack: 2 },
+    { accountIdx: 5, type: 'EARN', points: 120, desc: 'Session — Deep Tissue Massage', daysBack: 10 },
+    { accountIdx: 7, type: 'EARN', points: 140, desc: 'Session — Hot Stone Massage', daysBack: 10 },
+    { accountIdx: 7, type: 'EARN', points: 100, desc: 'Session — Swedish Massage', daysBack: 25 },
+    { accountIdx: 9, type: 'EARN', points: 115, desc: 'Session — Lymphatic Drainage', daysBack: 1 },
+  ];
+  for (const def of loyaltyTxDefs) {
+    if (def.accountIdx >= loyaltyAccounts.length) continue;
+    const existing = await prisma.loyaltyTransaction.findFirst({ where: { loyaltyAccountId: loyaltyAccounts[def.accountIdx].id, description: def.desc, points: def.points } });
+    if (!existing) {
+      await prisma.loyaltyTransaction.create({ data: { loyaltyAccountId: loyaltyAccounts[def.accountIdx].id, businessId: business.id, type: def.type, points: def.points, description: def.desc, createdAt: daysAgo(def.daysBack) } });
+    }
+  }
+  console.log('✓ Loyalty accounts & transactions:', loyaltyAccounts.length);
+
+  // ── 42. Products ──────────────────────────────────────────────────────────
+  const productDefs = [
+    { name: 'Deep Tissue Massage Oil — 500ml', sku: 'OIL-DT-500', category: 'Massage Oils', price: 28.95, stock: 24, lowStock: 5, unit: 'bottle', desc: 'Professional-grade deep tissue blend' },
+    { name: 'Lavender Essential Oil — 30ml', sku: 'OIL-LAV-30', category: 'Essential Oils', price: 18.50, stock: 18, lowStock: 5, unit: 'bottle', desc: 'Pure therapeutic-grade lavender' },
+    { name: 'Eucalyptus Essential Oil — 30ml', sku: 'OIL-EUC-30', category: 'Essential Oils', price: 16.00, stock: 22, lowStock: 5, unit: 'bottle', desc: 'Pure eucalyptus for invigoration' },
+    { name: 'Hot Stone Set — 18 pieces', sku: 'STONES-18', category: 'Equipment', price: 89.00, stock: 4, lowStock: 2, unit: 'set', desc: 'Basalt hot stone set for hot stone massage' },
+    { name: 'Massage Table Fleece Cover', sku: 'COVER-FLEECE', category: 'Table Accessories', price: 34.00, stock: 8, lowStock: 3, unit: 'unit', desc: 'Fitted fleece table cover, multiple sizes' },
+    { name: 'Disposable Face Cradle Cover (100pk)', sku: 'COVER-FACE-100', category: 'Consumables', price: 12.00, stock: 15, lowStock: 3, unit: 'pack', desc: 'Single-use hygienic face cradle covers' },
+    { name: 'Organic Coconut Oil — 1L', sku: 'OIL-COCO-1L', category: 'Massage Oils', price: 22.00, stock: 10, lowStock: 4, unit: 'bottle', desc: 'Cold-pressed organic coconut oil' },
+    { name: 'Epsom Salt — 2kg', sku: 'SALT-EPSOM-2KG', category: 'Consumables', price: 8.50, stock: 30, lowStock: 8, unit: 'bag', desc: 'Pharmaceutical-grade magnesium sulphate' },
+    { name: 'Serenity Wellness Gift Bag', sku: 'GIFT-BAG', category: 'Retail', price: 45.00, stock: 12, lowStock: 4, unit: 'unit', desc: 'Curated gift bag with oils, candle & voucher' },
+    { name: 'Reusable Gel Heat Pack', sku: 'HEAT-GEL', category: 'Equipment', price: 14.95, stock: 16, lowStock: 5, unit: 'unit', desc: 'Microwavable gel heat pack for pre-treatment warm-up' },
+    { name: 'Peppermint Essential Oil — 30ml', sku: 'OIL-PEPP-30', category: 'Essential Oils', price: 15.00, stock: 20, lowStock: 5, unit: 'bottle', desc: 'Cooling peppermint oil for headache relief blends' },
+    { name: 'Massage Cream — Unscented 500ml', sku: 'CREAM-UNSC-500', category: 'Massage Oils', price: 24.00, stock: 14, lowStock: 4, unit: 'bottle', desc: 'Hypoallergenic unscented massage cream' },
+  ];
+  const products: any[] = [];
+  for (const def of productDefs) {
+    const existing = await prisma.product.findFirst({ where: { businessId: business.id, sku: def.sku } });
+    const prod = existing ?? await prisma.product.create({
+      data: { businessId: business.id, name: def.name, description: def.desc, sku: def.sku, category: def.category, unitPrice: def.price, currentStock: def.stock, lowStockThreshold: def.lowStock, unit: def.unit, isActive: true },
+    });
+    products.push(prod);
+  }
+  console.log('✓ Products:', products.length);
+
+  // ── 43. Inventory Adjustments ─────────────────────────────────────────────
+  const inventoryAdjDefs = [
+    { productIdx: 0, type: 'PURCHASE', qty: 12, prevStock: 12, newStock: 24, notes: 'Monthly restock from AromaSupply' },
+    { productIdx: 1, type: 'USAGE', qty: -3, prevStock: 21, newStock: 18, notes: 'Used in sessions this week' },
+    { productIdx: 5, type: 'PURCHASE', qty: 5, prevStock: 10, newStock: 15, notes: 'Restocked — running low' },
+    { productIdx: 6, type: 'USAGE', qty: -2, prevStock: 12, newStock: 10, notes: 'Used in hot stone and general sessions' },
+    { productIdx: 4, type: 'DAMAGE', qty: -1, prevStock: 9, newStock: 8, notes: 'One cover damaged during laundry — disposed of' },
+    { productIdx: 7, type: 'PURCHASE', qty: 10, prevStock: 20, newStock: 30, notes: 'Restocked for foot soak treatments' },
+    { productIdx: 8, type: 'PURCHASE', qty: 6, prevStock: 6, newStock: 12, notes: 'Pre-Christmas stock-up for gift sales' },
+    { productIdx: 3, type: 'USAGE', qty: -1, prevStock: 5, newStock: 4, notes: 'One stone set cracked — removed from service' },
+    { productIdx: 2, type: 'PURCHASE', qty: 8, prevStock: 14, newStock: 22, notes: 'Restock — used frequently in relaxation blends' },
+  ];
+  for (const def of inventoryAdjDefs) {
+    const existing = await prisma.inventoryAdjustment.findFirst({ where: { productId: products[def.productIdx].id, notes: def.notes } });
+    if (!existing) {
+      await prisma.inventoryAdjustment.create({
+        data: { productId: products[def.productIdx].id, businessId: business.id, type: def.type, quantity: def.qty, previousStock: def.prevStock, newStock: def.newStock, notes: def.notes, adjustedById: ownerUser.id },
+      });
+    }
+  }
+  console.log('✓ Inventory adjustments');
+
+  // ── 44. Payroll Periods & Records ─────────────────────────────────────────
+  const payrollPeriodDefs = [
+    { startDaysBack: 90, endDaysBack: 61, status: PayrollStatus.PAID, total: 8640, paidAt: daysAgo(58), notes: 'March 2026 payroll — processed on time' },
+    { startDaysBack: 60, endDaysBack: 31, status: PayrollStatus.PAID, total: 9120, paidAt: daysAgo(28), notes: 'April 2026 payroll — Easter public holiday adjustment included' },
+    { startDaysBack: 30, endDaysBack: 1, status: PayrollStatus.PROCESSING, total: 8880, paidAt: undefined, notes: 'May 2026 payroll — pending therapist timesheet sign-off' },
+  ];
+  const payrollPeriods: any[] = [];
+  for (const def of payrollPeriodDefs) {
+    const start = daysAgo(def.startDaysBack); start.setHours(0, 0, 0, 0);
+    const end = daysAgo(def.endDaysBack); end.setHours(23, 59, 59, 0);
+    const existing = await prisma.payrollPeriod.findFirst({ where: { businessId: business.id, startDate: start } });
+    const pp = existing ?? await prisma.payrollPeriod.create({
+      data: { businessId: business.id, startDate: start, endDate: end, status: def.status, totalAmount: def.total, paidAt: def.paidAt, notes: def.notes },
+    });
+    payrollPeriods.push(pp);
+  }
+  const payrollRecordDefs = [
+    { periodIdx: 0, therapistIdx: 0, hours: 40, sessions: 28, baseRate: 120, commissionRate: 0.60, commissionAmount: 2016, bonus: 200, deductions: 0, total: 2216, notes: 'Top performer — exceeded KPIs' },
+    { periodIdx: 0, therapistIdx: 1, hours: 35, sessions: 22, baseRate: 110, commissionRate: 0.55, commissionAmount: 1540, bonus: 0, deductions: 0, total: 1540, notes: 'Standard period' },
+    { periodIdx: 0, therapistIdx: 2, hours: 38, sessions: 25, baseRate: 115, commissionRate: 0.58, commissionAmount: 1725, bonus: 100, deductions: 0, total: 1825, notes: 'Good progress with new clients' },
+    { periodIdx: 1, therapistIdx: 0, hours: 42, sessions: 30, baseRate: 120, commissionRate: 0.60, commissionAmount: 2160, bonus: 300, deductions: 0, total: 2460, notes: 'Performance bonus — 5-star review week' },
+    { periodIdx: 1, therapistIdx: 1, hours: 38, sessions: 26, baseRate: 110, commissionRate: 0.55, commissionAmount: 1716, bonus: 100, deductions: 0, total: 1816, notes: 'Improved prenatal referrals' },
+    { periodIdx: 1, therapistIdx: 2, hours: 40, sessions: 28, baseRate: 115, commissionRate: 0.58, commissionAmount: 1972, bonus: 200, deductions: 0, total: 2172, notes: 'Excellent client retention score' },
+    { periodIdx: 2, therapistIdx: 0, hours: 40, sessions: 27, baseRate: 120, commissionRate: 0.60, commissionAmount: 1944, bonus: 0, deductions: 0, total: 1944, notes: 'Pending approval' },
+    { periodIdx: 2, therapistIdx: 1, hours: 36, sessions: 23, baseRate: 110, commissionRate: 0.55, commissionAmount: 1529, bonus: 0, deductions: 0, total: 1529, notes: 'Pending approval' },
+    { periodIdx: 2, therapistIdx: 2, hours: 38, sessions: 26, baseRate: 115, commissionRate: 0.58, commissionAmount: 1783, bonus: 0, deductions: 0, total: 1783, notes: 'Pending approval' },
+  ];
+  for (const def of payrollRecordDefs) {
+    if (def.periodIdx >= payrollPeriods.length) continue;
+    const existing = await prisma.payrollRecord.findUnique({ where: { payrollPeriodId_therapistId: { payrollPeriodId: payrollPeriods[def.periodIdx].id, therapistId: therapists[def.therapistIdx].id } } });
+    if (!existing) {
+      await prisma.payrollRecord.create({
+        data: { payrollPeriodId: payrollPeriods[def.periodIdx].id, businessId: business.id, therapistId: therapists[def.therapistIdx].id, hoursWorked: def.hours, sessionsCompleted: def.sessions, baseRate: def.baseRate, commissionRate: def.commissionRate, commissionAmount: def.commissionAmount, bonusAmount: def.bonus, deductions: def.deductions, totalAmount: def.total, notes: def.notes },
+      });
+    }
+  }
+  console.log('✓ Payroll periods & records:', payrollPeriods.length, 'periods');
+
+  // ── 45. Automation Rules & Logs ───────────────────────────────────────────
+  const automationRuleDefs = [
+    { name: 'Send 24h SMS Appointment Reminder', desc: 'Automatically send SMS reminder 24 hours before any scheduled appointment', trigger: 'APPOINTMENT_UPCOMING', conditions: { hoursBefore: 24 }, actions: [{ type: 'SEND_SMS', templateId: 'sms_reminder', delay: 0 }], isActive: true, runCount: 124, lastRunAt: daysAgo(1) },
+    { name: 'Post-Session Follow-up Email', desc: 'Send follow-up email 4 hours after session completion', trigger: 'APPOINTMENT_COMPLETED', conditions: {}, actions: [{ type: 'SEND_EMAIL', templateId: 'email_followup', delay: 240 }], isActive: true, runCount: 89, lastRunAt: daysAgo(1) },
+    { name: 'Re-engagement After 45 Days Inactive', desc: 'Send SMS to clients who haven\'t booked in 45 days', trigger: 'CLIENT_INACTIVE', conditions: { inactiveDays: 45 }, actions: [{ type: 'SEND_SMS', content: 'We miss you! Use code COMEBACK15 for 15% off your next visit.', delay: 0 }], isActive: true, runCount: 12, lastRunAt: daysAgo(3) },
+    { name: 'Birthday Greeting SMS', desc: 'Send birthday wish SMS on the client\'s birthday', trigger: 'CLIENT_BIRTHDAY', conditions: {}, actions: [{ type: 'SEND_SMS', content: 'Happy Birthday from Serenity Wellness! Use BDAY15 for 15% off any session this month.', delay: 0 }], isActive: true, runCount: 7, lastRunAt: daysAgo(5) },
+    { name: 'Invoice Overdue Payment Reminder', desc: 'Send email reminder when invoice is 7 days overdue', trigger: 'INVOICE_OVERDUE', conditions: { daysOverdue: 7 }, actions: [{ type: 'SEND_EMAIL', templateId: 'email_overdue_invoice', delay: 0 }], isActive: true, runCount: 6, lastRunAt: daysAgo(2) },
+    { name: 'New Client Welcome & Intake Form', desc: 'Welcome email + intake form sent on first booking', trigger: 'CLIENT_FIRST_BOOKING', conditions: {}, actions: [{ type: 'SEND_EMAIL', templateId: 'email_welcome', delay: 0 }, { type: 'SEND_INTAKE_FORM', delay: 30 }], isActive: false, runCount: 22, lastRunAt: daysAgo(14) },
+    { name: 'Membership Renewal Reminder', desc: 'Remind member 7 days before billing cycle renews', trigger: 'MEMBERSHIP_RENEWAL_UPCOMING', conditions: { daysBefore: 7 }, actions: [{ type: 'SEND_EMAIL', templateId: 'email_membership_renewal', delay: 0 }], isActive: true, runCount: 18, lastRunAt: daysAgo(7) },
+    { name: 'Package Expiry Warning', desc: 'Alert when a package has fewer than 2 sessions remaining', trigger: 'PACKAGE_LOW_SESSIONS', conditions: { sessionsRemaining: 2 }, actions: [{ type: 'SEND_SMS', content: 'Heads up! Your session package has only 2 sessions remaining. Book to use them before they expire.', delay: 0 }], isActive: true, runCount: 4, lastRunAt: daysAgo(8) },
+  ];
+  const automationRules: any[] = [];
+  for (const def of automationRuleDefs) {
+    const existing = await prisma.automationRule.findFirst({ where: { businessId: business.id, name: def.name } });
+    const rule = existing ?? await prisma.automationRule.create({
+      data: { businessId: business.id, name: def.name, description: def.desc, isActive: def.isActive, trigger: def.trigger, conditions: def.conditions, actions: def.actions, lastRunAt: def.lastRunAt, runCount: def.runCount },
+    });
+    automationRules.push(rule);
+  }
+  for (let i = 0; i < Math.min(4, automationRules.length); i++) {
+    for (let j = 0; j < 3; j++) {
+      await prisma.automationLog.create({
+        data: {
+          automationRuleId: automationRules[i].id, businessId: business.id,
+          status: j < 2 ? 'SUCCESS' : 'FAILED',
+          triggerData: { clientId: clients[(i + j) % clients.length].id },
+          result: j < 2 ? { messagesSent: 1 } : null,
+          errorMessage: j === 2 ? 'Client phone number not found' : undefined,
+          executedAt: daysAgo(j * 2 + 1),
+        },
+      });
+    }
+  }
+  const upcomingForActions = await prisma.appointment.findMany({ where: { businessId: business.id, status: { in: [AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED] }, startTime: { gte: new Date() } }, orderBy: { startTime: 'asc' }, take: 5 });
+  for (const appt of upcomingForActions) {
+    await prisma.scheduledAction.create({
+      data: { automationRuleId: automationRules[0].id, businessId: business.id, actionIndex: 0, executeAt: new Date(appt.startTime.getTime() - 24 * 3600000), triggerData: { appointmentId: appt.id, clientId: appt.clientId }, status: 'PENDING', cancelIfEvent: 'APPOINTMENT_CANCELLED' },
+    });
+  }
+  console.log('✓ Automation rules, logs & scheduled actions:', automationRules.length, 'rules');
+
+  // ── 46. Insurance Providers & Claims ─────────────────────────────────────
+  const insuranceProviderDefs = [
+    { name: 'Medibank Private', payerId: 'MEDIBANK-001', address: '101 Bourke Street', city: 'Melbourne', state: 'VIC', postalCode: '3000', phone: '1300 722 568', claimsEmail: 'claims@medibank.com.au', notes: 'Rebates available for remedial massage — confirm item number with therapist' },
+    { name: 'BUPA Australia', payerId: 'BUPA-001', address: '233 Collins Street', city: 'Melbourne', state: 'VIC', postalCode: '3000', phone: '134 135', claimsEmail: 'claims@bupa.com.au', notes: 'Requires HCF provider number for online claiming' },
+    { name: 'HCF Health Insurance', payerId: 'HCF-001', address: '403 George Street', city: 'Sydney', state: 'NSW', postalCode: '2000', phone: '13 13 34', claimsEmail: 'claims@hcf.com.au', notes: 'Online claiming portal: my.hcf.com.au. Fast reimbursement usually 2-3 days' },
+    { name: 'NIB Health Funds', payerId: 'NIB-001', address: '22 Honeysuckle Drive', city: 'Newcastle', state: 'NSW', postalCode: '2300', phone: '13 14 63', claimsEmail: 'claims@nib.com.au', notes: 'Extras cover varies by plan — clients should confirm prior to appointment' },
+  ];
+  const insuranceProviders: any[] = [];
+  for (const def of insuranceProviderDefs) {
+    const existing = await prisma.insuranceProvider.findFirst({ where: { businessId: business.id, name: def.name } });
+    const prov = existing ?? await prisma.insuranceProvider.create({
+      data: { businessId: business.id, name: def.name, payerId: def.payerId, address: def.address, city: def.city, state: def.state, postalCode: def.postalCode, phone: def.phone, claimsEmail: def.claimsEmail, notes: def.notes, isActive: true },
+    });
+    insuranceProviders.push(prov);
+  }
+  const insuranceClaimDefs = [
+    { clientIdx: 0, apptIdx: 0, providerIdx: 0, claimNum: 'CLM-2026-0001', status: InsuranceClaimStatus.PAID, totalCharge: 120, claimedAmount: 80, submittedAt: daysAgo(85), diagnosisCodes: ['M54.5'], procedureCodes: ['97124'] },
+    { clientIdx: 1, apptIdx: 1, providerIdx: 1, claimNum: 'CLM-2026-0002', status: InsuranceClaimStatus.APPROVED, totalCharge: 100, claimedAmount: 65, submittedAt: daysAgo(75), diagnosisCodes: ['M75.1'], procedureCodes: ['97140'] },
+    { clientIdx: 5, apptIdx: 5, providerIdx: 0, claimNum: 'CLM-2026-0003', status: InsuranceClaimStatus.SUBMITTED, totalCharge: 130, claimedAmount: 85, submittedAt: daysAgo(60), diagnosisCodes: ['M79.3'], procedureCodes: ['97124'] },
+    { clientIdx: 7, apptIdx: 7, providerIdx: 2, claimNum: 'CLM-2026-0004', status: InsuranceClaimStatus.PENDING, totalCharge: 140, claimedAmount: 90, submittedAt: daysAgo(50), diagnosisCodes: ['M19.90'], procedureCodes: ['97110'] },
+    { clientIdx: 11, apptIdx: 11, providerIdx: 1, claimNum: 'CLM-2026-0005', status: InsuranceClaimStatus.DRAFT, totalCharge: 120, claimedAmount: 80, submittedAt: undefined, diagnosisCodes: ['M54.4'], procedureCodes: ['97124'] },
+    { clientIdx: 14, apptIdx: 14, providerIdx: 3, claimNum: 'CLM-2026-0006', status: InsuranceClaimStatus.DENIED, totalCharge: 115, claimedAmount: 70, submittedAt: daysAgo(30), diagnosisCodes: ['M54.2'], procedureCodes: ['97124'] },
+  ];
+  const insuranceClaims: any[] = [];
+  for (const def of insuranceClaimDefs) {
+    if (def.apptIdx >= appointments.length) continue;
+    const existing = await prisma.insuranceClaim.findUnique({ where: { businessId_claimNumber: { businessId: business.id, claimNumber: def.claimNum } } });
+    const claim = existing ?? await prisma.insuranceClaim.create({
+      data: {
+        businessId: business.id, clientId: clients[def.clientIdx].id, appointmentId: appointments[def.apptIdx].id,
+        insuranceProviderId: insuranceProviders[def.providerIdx].id, claimNumber: def.claimNum, status: def.status,
+        submittedAt: def.submittedAt, subscriberName: `${clients[def.clientIdx].firstName} ${clients[def.clientIdx].lastName}`,
+        subscriberPolicyNumber: `POL${String(100000 + def.clientIdx)}`, diagnosisCodes: def.diagnosisCodes, procedureCodes: def.procedureCodes,
+        renderingProviderName: 'Sarah Johnson', renderingProviderNPI: '1234567890',
+        billingProviderName: 'Serenity Wellness Clinic', billingProviderNPI: '0987654321', billingProviderTaxId: '123-456-789',
+        totalCharge: def.totalCharge, claimedAmount: def.claimedAmount, submissionMethod: 'ELECTRONIC', relationshipToSubscriber: 'SELF',
+      },
+    });
+    insuranceClaims.push(claim);
+  }
+  if (insuranceClaims[0]) {
+    const ex = await prisma.claimReimbursement.findFirst({ where: { claimId: insuranceClaims[0].id } });
+    if (!ex) await prisma.claimReimbursement.create({ data: { businessId: business.id, claimId: insuranceClaims[0].id, checkNumber: 'CHK-2026-001234', eobNumber: 'EOB-2026-001234', paymentDate: daysAgo(70), amountBilled: 120, amountAllowed: 85, amountPaid: 80, patientResponsibility: 40, adjustmentReasons: [{ code: 'CO-45', desc: 'Charge exceeds fee schedule' }], status: ReimbursementStatus.RECONCILED, notes: 'Applied to client account' } });
+  }
+  if (insuranceClaims[1]) {
+    const ex = await prisma.claimReimbursement.findFirst({ where: { claimId: insuranceClaims[1].id } });
+    if (!ex) await prisma.claimReimbursement.create({ data: { businessId: business.id, claimId: insuranceClaims[1].id, eobNumber: 'EOB-2026-001298', paymentDate: daysAgo(60), amountBilled: 100, amountAllowed: 70, amountPaid: 65, patientResponsibility: 35, adjustmentReasons: [], status: ReimbursementStatus.RECEIVED, notes: 'Awaiting reconciliation' } });
+  }
+  console.log('✓ Insurance providers:', insuranceProviders.length, '| Claims:', insuranceClaims.length);
+
+  // ── 47. Group Appointment & Bookings ──────────────────────────────────────
+  const groupStart = setHour(daysAhead(10), 10);
+  const groupAppt = await prisma.appointment.create({
+    data: { businessId: business.id, clientId: clients[0].id, therapistId: therapists[2].id, startTime: groupStart, endTime: addHours(groupStart, 1), status: AppointmentStatus.SCHEDULED, serviceType: 'Group Stretch & Recovery', duration: 60, price: 60, isGroup: true, capacity: 6, notes: 'Group session — max 6 participants. Bring your own mat.' },
+  });
+  for (const clientIdx of [0, 3, 6, 9, 12]) {
+    const existing = await prisma.groupBooking.findUnique({ where: { appointmentId_clientId: { appointmentId: groupAppt.id, clientId: clients[clientIdx].id } } });
+    if (!existing) {
+      await prisma.groupBooking.create({ data: { appointmentId: groupAppt.id, clientId: clients[clientIdx].id, status: GroupBookingStatus.REGISTERED, paidAt: clientIdx === 0 ? daysAgo(2) : undefined } });
+    }
+  }
+  console.log('✓ Group appointment & bookings');
+
+  // ── 48. Waitlist ──────────────────────────────────────────────────────────
+  const waitlistDefs = [
+    { clientIdx: 2, therapistIdx: 0, serviceType: 'Deep Tissue Massage', preferredDates: ['2026-06-08', '2026-06-09'], preferredTimes: ['09:00-11:00', '14:00-16:00'], notes: 'Client in pain — prioritise when possible', status: WaitlistStatus.WAITING },
+    { clientIdx: 8, therapistIdx: 1, serviceType: 'Prenatal Massage', preferredDates: ['2026-06-10', '2026-06-11', '2026-06-12'], preferredTimes: ['11:00-14:00'], notes: '', status: WaitlistStatus.WAITING },
+    { clientIdx: 13, therapistIdx: null, serviceType: 'Swedish Massage', preferredDates: ['2026-06-07'], preferredTimes: ['15:00-18:00'], notes: 'Any therapist, prefers late afternoon', status: WaitlistStatus.WAITING },
+    { clientIdx: 10, therapistIdx: 0, serviceType: 'Trigger Point Therapy', preferredDates: ['2026-06-09'], preferredTimes: ['09:00-12:00'], notes: '', status: WaitlistStatus.OFFERED },
+    { clientIdx: 4, therapistIdx: 1, serviceType: 'Prenatal Massage', preferredDates: ['2026-06-06'], preferredTimes: ['10:00-13:00'], notes: 'Offered slot — waiting for confirmation', status: WaitlistStatus.BOOKED },
+  ];
+  for (const def of waitlistDefs) {
+    const existing = await prisma.waitlist.findFirst({ where: { businessId: business.id, clientId: clients[def.clientIdx].id, status: def.status } });
+    if (!existing) {
+      await prisma.waitlist.create({
+        data: { businessId: business.id, clientId: clients[def.clientIdx].id, therapistId: def.therapistIdx !== null ? therapists[def.therapistIdx].id : undefined, serviceType: def.serviceType, preferredDates: def.preferredDates, preferredTimes: def.preferredTimes, status: def.status, notes: def.notes || undefined, offerExpiresAt: def.status === WaitlistStatus.OFFERED ? daysAhead(2) : undefined },
+      });
+    }
+  }
+  console.log('✓ Waitlist entries:', waitlistDefs.length);
+
+  // ── 49. Booking Invites ───────────────────────────────────────────────────
+  for (let i = 0; i < 4; i++) {
+    const existing = await prisma.bookingInvite.findFirst({ where: { businessId: business.id, clientId: clients[i + 10].id } });
+    if (!existing) {
+      await prisma.bookingInvite.create({ data: { businessId: business.id, clientId: clients[i + 10].id, expiresAt: daysAhead(30) } });
+    }
+  }
+  console.log('✓ Booking invites');
+
+  // ── 50. Availability Rules ────────────────────────────────────────────────
+  const availabilityRuleDefs = [
+    { therapistIdx: 0, roomIdx: 0, serviceType: null, daysOfWeek: [1, 2, 3, 4, 5], startTime: '09:00', endTime: '17:00', priority: 1 },
+    { therapistIdx: 0, roomIdx: null, serviceType: null, daysOfWeek: [6], startTime: '09:00', endTime: '13:00', priority: 1 },
+    { therapistIdx: 1, roomIdx: 1, serviceType: null, daysOfWeek: [1, 2, 3, 4, 5], startTime: '10:00', endTime: '18:00', priority: 1 },
+    { therapistIdx: 2, roomIdx: 2, serviceType: null, daysOfWeek: [1, 2, 3, 4, 5], startTime: '09:00', endTime: '17:00', priority: 1 },
+    { therapistIdx: 2, roomIdx: 3, serviceType: null, daysOfWeek: [6], startTime: '10:00', endTime: '15:00', priority: 1 },
+    { therapistIdx: null, roomIdx: 0, serviceType: 'Hot Stone Massage', daysOfWeek: [1, 2, 3, 4, 5, 6], startTime: '10:00', endTime: '16:00', priority: 2 },
+    { therapistIdx: null, roomIdx: 1, serviceType: 'Prenatal Massage', daysOfWeek: [1, 2, 3, 4, 5], startTime: '09:00', endTime: '17:00', priority: 2 },
+  ];
+  for (const def of availabilityRuleDefs) {
+    const existing = await prisma.availabilityRule.findFirst({ where: { businessId: business.id, therapistId: def.therapistIdx !== null ? therapists[def.therapistIdx].id : null, roomId: def.roomIdx !== null ? rooms[def.roomIdx].id : null, startTime: def.startTime, endTime: def.endTime } });
+    if (!existing) {
+      await prisma.availabilityRule.create({
+        data: { businessId: business.id, therapistId: def.therapistIdx !== null ? therapists[def.therapistIdx].id : undefined, roomId: def.roomIdx !== null ? rooms[def.roomIdx].id : undefined, serviceType: def.serviceType ?? undefined, daysOfWeek: def.daysOfWeek, startTime: def.startTime, endTime: def.endTime, priority: def.priority },
+      });
+    }
+  }
+  console.log('✓ Availability rules:', availabilityRuleDefs.length);
+
+  // ── 51. Accounting Integration & Sync Logs ────────────────────────────────
+  const existingAccIntegration = await prisma.accountingIntegration.findUnique({ where: { businessId_provider: { businessId: business.id, provider: AccountingProvider.XERO } } });
+  const accountingIntegration = existingAccIntegration ?? await prisma.accountingIntegration.create({
+    data: { businessId: business.id, provider: AccountingProvider.XERO, status: AccountingStatus.CONNECTED, tenantId: 'xero_tenant_seed_001', tenantName: 'Serenity Wellness Clinic', tokenExpiresAt: daysAhead(30), webhookKey: 'whk_seed_xero_001', lastSyncAt: daysAgo(1), syncEnabled: true },
+  });
+  const syncLogDefs = [
+    { entityType: 'Invoice', entityId: 'inv_sync_001', externalId: 'xero_inv_001', direction: SyncDirection.OUTBOUND, status: SyncLogStatus.SUCCESS },
+    { entityType: 'Invoice', entityId: 'inv_sync_002', externalId: 'xero_inv_002', direction: SyncDirection.OUTBOUND, status: SyncLogStatus.SUCCESS },
+    { entityType: 'Payment', entityId: 'pay_sync_001', externalId: 'xero_pay_001', direction: SyncDirection.OUTBOUND, status: SyncLogStatus.SUCCESS },
+    { entityType: 'Invoice', entityId: 'inv_sync_003', externalId: null, direction: SyncDirection.OUTBOUND, status: SyncLogStatus.FAILED, errorMessage: 'Xero API rate limit exceeded — retrying in 60s' },
+    { entityType: 'Contact', entityId: clients[0].id, externalId: 'xero_contact_001', direction: SyncDirection.OUTBOUND, status: SyncLogStatus.SUCCESS },
+    { entityType: 'Contact', entityId: clients[1].id, externalId: 'xero_contact_002', direction: SyncDirection.OUTBOUND, status: SyncLogStatus.CONFLICT, errorMessage: 'Duplicate contact name detected in Xero' },
+  ];
+  for (let i = 0; i < syncLogDefs.length; i++) {
+    const def = syncLogDefs[i];
+    await prisma.accountingSyncLog.create({
+      data: { integrationId: accountingIntegration.id, businessId: business.id, entityType: def.entityType, entityId: def.entityId, externalId: def.externalId ?? undefined, direction: def.direction, status: def.status, errorMessage: (def as any).errorMessage ?? undefined, createdAt: daysAgo(i + 1) },
+    });
+  }
+  console.log('✓ Accounting integration & sync logs');
+
+  // ── 52. Message Logs ──────────────────────────────────────────────────────
+  const messageLogDefs = [
+    { clientIdx: 0, channel: MessageChannel.SMS, type: 'APPOINTMENT_REMINDER', recipient: '0412111201', status: MessageLogStatus.DELIVERED, daysBack: 2, smsCost: 0.04 },
+    { clientIdx: 1, channel: MessageChannel.SMS, type: 'APPOINTMENT_CONFIRMATION', recipient: '0423222202', status: MessageLogStatus.DELIVERED, daysBack: 3, smsCost: 0.04 },
+    { clientIdx: 2, channel: MessageChannel.EMAIL, type: 'WELCOME', recipient: 'olivia.davis@example.com', subject: 'Welcome to Serenity Wellness!', status: MessageLogStatus.DELIVERED, daysBack: 5, smsCost: null },
+    { clientIdx: 3, channel: MessageChannel.SMS, type: 'APPOINTMENT_REMINDER', recipient: '0445444204', status: MessageLogStatus.DELIVERED, daysBack: 4, smsCost: 0.04 },
+    { clientIdx: 4, channel: MessageChannel.EMAIL, type: 'APPOINTMENT_CONFIRMATION', recipient: 'sophia.garcia@example.com', subject: 'Your appointment is confirmed', status: MessageLogStatus.DELIVERED, daysBack: 3, smsCost: null },
+    { clientIdx: 5, channel: MessageChannel.SMS, type: 'APPOINTMENT_REMINDER', recipient: '0467666206', status: MessageLogStatus.FAILED, daysBack: 1, smsCost: null, errorCode: 'INVALID_DESTINATION' },
+    { clientIdx: 6, channel: MessageChannel.EMAIL, type: 'SESSION_FOLLOWUP', recipient: 'ava.taylor@example.com', subject: 'How are you feeling after your session?', status: MessageLogStatus.DELIVERED, daysBack: 1, smsCost: null },
+    { clientIdx: 7, channel: MessageChannel.SMS, type: 'INVOICE_REMINDER', recipient: '0390080208', status: MessageLogStatus.SENT, daysBack: 0, smsCost: 0.04 },
+    { clientIdx: 9, channel: MessageChannel.SMS, type: 'APPOINTMENT_REMINDER', recipient: '0411100210', status: MessageLogStatus.DELIVERED, daysBack: 7, smsCost: 0.04 },
+    { clientIdx: 10, channel: MessageChannel.EMAIL, type: 'BIRTHDAY_GREETING', recipient: 'mia.white@example.com', subject: 'Happy Birthday from Serenity Wellness!', status: MessageLogStatus.DELIVERED, daysBack: 10, smsCost: null },
+    { clientIdx: 11, channel: MessageChannel.SMS, type: 'REENGAGEMENT', recipient: '0422200211', status: MessageLogStatus.DELIVERED, daysBack: 10, smsCost: 0.04 },
+    { clientIdx: 13, channel: MessageChannel.EMAIL, type: 'CANCELLATION_NOTICE', recipient: 'henry.thompson@example.com', subject: 'Your appointment has been cancelled', status: MessageLogStatus.DELIVERED, daysBack: 12, smsCost: null },
+  ];
+  for (let i = 0; i < messageLogDefs.length; i++) {
+    const def = messageLogDefs[i];
+    await prisma.messageLog.create({
+      data: {
+        businessId: business.id, clientId: clients[def.clientIdx].id, channel: def.channel, messageType: def.type, recipient: def.recipient,
+        subject: (def as any).subject ?? undefined, status: def.status,
+        providerMessageId: def.status !== MessageLogStatus.FAILED ? `msg_${String(i + 1).padStart(8, '0')}` : undefined,
+        errorCode: (def as any).errorCode ?? undefined,
+        sentAt: def.status !== MessageLogStatus.QUEUED ? daysAgo(def.daysBack) : undefined,
+        deliveredAt: def.status === MessageLogStatus.DELIVERED ? new Date(daysAgo(def.daysBack).getTime() + 30000) : undefined,
+        smsCost: def.smsCost ?? undefined, createdAt: daysAgo(def.daysBack),
+      },
+    });
+  }
+  console.log('✓ Message logs:', messageLogDefs.length);
+
+  // ── 53. Tasks ─────────────────────────────────────────────────────────────
+  const taskDefs = [
+    { title: 'Review and approve Emma Williams treatment plan', desc: 'SOAP notes from last 3 sessions need owner review before advancing deep tissue protocol.', priority: TaskPriority.HIGH, status: TaskStatus.TODO, clientIdx: 0, dueInDays: 2 },
+    { title: 'Restock massage oil supply — lavender & coconut', desc: 'Running low. Lavender: 18 bottles remaining. Coconut: 10 bottles. Order from AromaSupply — next delivery Tuesday.', priority: TaskPriority.MEDIUM, status: TaskStatus.IN_PROGRESS, clientIdx: null, dueInDays: 3 },
+    { title: 'Update prenatal client intake form', desc: 'Add gestational week, previous pregnancy complications, and OB-GYN contact. Run past Lisa before publishing.', priority: TaskPriority.MEDIUM, status: TaskStatus.TODO, clientIdx: null, dueInDays: 7 },
+    { title: 'Follow up James Brown — shoulder exercise compliance', desc: 'James has not been doing pendulum exercises. Send a friendly reminder with the video link from his last session notes.', priority: TaskPriority.LOW, status: TaskStatus.TODO, clientIdx: 1, dueInDays: 1 },
+    { title: 'Team meeting — recurring appointments feature walkthrough', desc: 'Book a 1-hour session with all 3 therapists to walk through the new recurring appointment booking system.', priority: TaskPriority.MEDIUM, status: TaskStatus.IN_PROGRESS, clientIdx: null, dueInDays: 5 },
+    { title: 'Renew Sarah Johnson professional indemnity insurance', desc: 'Certificate expires in 14 days. Contact Marsh Insurance for renewal quote. Upload new cert to staff file.', priority: TaskPriority.HIGH, status: TaskStatus.TODO, clientIdx: null, dueInDays: 14 },
+    { title: 'Xero bank reconciliation — May invoices', desc: '23 invoices from May still unreconciled in Xero. Download bank statement and match. Flag any discrepancies for accountant.', priority: TaskPriority.HIGH, status: TaskStatus.DONE, clientIdx: null, dueInDays: -2 },
+    { title: 'Call Olivia Davis re: recurring headache concerns', desc: 'Olivia mentioned headaches are returning between sessions. Check in by phone — may need to refer to GP for cervicogenic investigation.', priority: TaskPriority.URGENT, status: TaskStatus.TODO, clientIdx: 2, dueInDays: 0 },
+    { title: 'Set up staff roster for July', desc: 'All therapist availability submitted. Create July schedule, account for Sarah\'s annual leave (30th June – 6th July) and Mike\'s conference on 14th.', priority: TaskPriority.MEDIUM, status: TaskStatus.TODO, clientIdx: null, dueInDays: 10 },
+    { title: 'Review overdue invoices — collections follow-up', desc: '3 invoices are 30+ days overdue. Review client history and send polite payment reminder. Escalate to collections if no response within 7 days.', priority: TaskPriority.HIGH, status: TaskStatus.TODO, clientIdx: null, dueInDays: 3 },
+    { title: 'Update website service pricing — new rates', desc: 'Rate increase effective 1st July. Update website service page, booking form, and print menu. Inform existing clients by email.', priority: TaskPriority.MEDIUM, status: TaskStatus.TODO, clientIdx: null, dueInDays: 14 },
+    { title: 'Prepare Q2 financial summary for accountant', desc: 'Export all invoices, payments, and payroll data for April–June. Create summary spreadsheet. Due by end of month.', priority: TaskPriority.HIGH, status: TaskStatus.IN_PROGRESS, clientIdx: null, dueInDays: 7 },
+  ];
+  for (const def of taskDefs) {
+    const existing = await prisma.task.findFirst({ where: { businessId: business.id, title: def.title } });
+    if (!existing) {
+      await prisma.task.create({
+        data: { businessId: business.id, createdById: ownerUser.id, title: def.title, description: def.desc, priority: def.priority, status: def.status, relatedClientId: def.clientIdx !== null ? clients[def.clientIdx].id : undefined, dueDate: def.dueInDays >= 0 ? daysAhead(def.dueInDays) : daysAgo(Math.abs(def.dueInDays)), completedAt: def.status === TaskStatus.DONE ? daysAgo(1) : undefined },
+      });
+    }
+  }
+  console.log('✓ Tasks:', taskDefs.length);
+
+  // ── 54. API Keys ──────────────────────────────────────────────────────────
+  const existingApiKey = await prisma.apiKey.findFirst({ where: { businessId: business.id } });
+  if (!existingApiKey) {
+    await prisma.apiKey.create({
+      data: { businessId: business.id, name: 'Production Integration Key', keyHash: 'sk_live_' + Buffer.from('serenity_api_prod_001').toString('hex').substring(0, 32), permissions: ['read:appointments', 'read:clients', 'write:appointments', 'read:invoices'], lastUsedAt: daysAgo(2), isActive: true },
+    });
+    await prisma.apiKey.create({
+      data: { businessId: business.id, name: 'Reporting Dashboard Key', keyHash: 'sk_live_' + Buffer.from('serenity_reporting_002').toString('hex').substring(0, 32), permissions: ['read:analytics', 'read:reports'], lastUsedAt: daysAgo(1), isActive: true },
+    });
+    await prisma.apiKey.create({
+      data: { businessId: business.id, name: 'Website Booking Widget Key', keyHash: 'sk_live_' + Buffer.from('serenity_booking_003').toString('hex').substring(0, 32), permissions: ['write:bookings', 'read:availability'], lastUsedAt: daysAgo(0), isActive: true },
+    });
+  }
+  console.log('✓ API keys');
+
+  // ── 55. Webhooks & Deliveries ─────────────────────────────────────────────
+  const existingWebhook = await prisma.webhook.findFirst({ where: { businessId: business.id } });
+  let webhook: any = existingWebhook;
+  if (!existingWebhook) {
+    webhook = await prisma.webhook.create({
+      data: { businessId: business.id, url: 'https://hooks.serenitywellness.com/incoming', events: ['appointment.created', 'appointment.completed', 'payment.received', 'client.created', 'invoice.paid'], secret: 'whsec_seed_serenity_001', isActive: true, lastTriggeredAt: daysAgo(1), failureCount: 0 },
+    });
+  }
+  if (webhook) {
+    const deliveryDefs = [
+      { event: 'appointment.completed', payload: { appointmentId: appointments[0]?.id, status: 'COMPLETED', amount: 120 }, statusCode: 200, succeeded: true, daysBack: 7 },
+      { event: 'payment.received', payload: { amount: 120, method: 'STRIPE_CARD', clientId: clients[0].id }, statusCode: 200, succeeded: true, daysBack: 5 },
+      { event: 'client.created', payload: { clientId: clients[14].id, name: 'Amelia Moore' }, statusCode: 200, succeeded: true, daysBack: 3 },
+      { event: 'appointment.created', payload: { appointmentId: 'appt_new_001', clientId: clients[2].id }, statusCode: 500, succeeded: false, daysBack: 2 },
+      { event: 'invoice.paid', payload: { invoiceId: 'inv_001', amount: 100, clientId: clients[1].id }, statusCode: 200, succeeded: true, daysBack: 1 },
+      { event: 'appointment.completed', payload: { appointmentId: appointments[2]?.id, status: 'COMPLETED' }, statusCode: 200, succeeded: true, daysBack: 1 },
+    ];
+    for (const def of deliveryDefs) {
+      await prisma.webhookDelivery.create({
+        data: { webhookId: webhook.id, event: def.event, payload: def.payload, statusCode: def.statusCode, responseBody: def.succeeded ? '{"received":true}' : '{"error":"Internal Server Error"}', succeeded: def.succeeded, attemptedAt: daysAgo(def.daysBack) },
+      });
+    }
+  }
+  console.log('✓ Webhooks & deliveries');
+
+  // ── 56. Community Templates ───────────────────────────────────────────────
+  const communityTemplateDefs = [
+    {
+      name: 'Myofascial Release Protocol', category: 'Massage', description: 'Comprehensive MFR assessment and treatment note with tissue quality ratings',
+      fields: [
+        { label: 'Fascial Restrictions Identified', type: 'body-map', required: true, placeholder: '' },
+        { label: 'Tissue Quality (1-10)', type: 'scale', required: true, placeholder: '' },
+        { label: 'Techniques Used', type: 'checkbox', required: false, placeholder: '', options: ['J-Stroke', 'Cross-hand release', 'Longitudinal plane release', 'Transverse plane release', 'Compression', 'Rebounding'] },
+        { label: 'Client Response to Treatment', type: 'text', required: true, placeholder: 'Immediate tissue response, pain changes, ROM improvements...' },
+        { label: 'Home Stretching Protocol', type: 'text', required: false, placeholder: 'Recommended stretches and frequency...' },
+        { label: 'Next Session Focus', type: 'text', required: false, placeholder: 'Priority areas for follow-up...' },
+        { label: 'Therapist Signature', type: 'signature', required: true, placeholder: '' },
+      ],
+      status: CommunityTemplateStatus.APPROVED, usageCount: 47,
+    },
+    {
+      name: 'Post-Surgical Rehabilitation', category: 'Rehabilitation', description: 'Specialized note for post-surgical massage therapy clients with contraindication tracking',
+      fields: [
+        { label: 'Surgery Type & Date', type: 'text', required: true, placeholder: 'e.g., ACL reconstruction — March 2025' },
+        { label: 'Medical Clearance', type: 'checkbox', required: true, placeholder: '', options: ['Written clearance on file', 'Verbal clearance confirmed', 'Not yet cleared — informational only'] },
+        { label: 'Contraindicated Areas', type: 'body-map', required: true, placeholder: '' },
+        { label: 'Scar Tissue Assessment', type: 'text', required: false, placeholder: 'Colour, texture, mobility, adhesions...' },
+        { label: 'ROM Before Treatment', type: 'text', required: false, placeholder: 'Joint angles prior to treatment...' },
+        { label: 'ROM After Treatment', type: 'text', required: false, placeholder: 'Joint angles post-treatment...' },
+        { label: 'Treatment Applied', type: 'text', required: true, placeholder: 'Techniques, areas, duration...' },
+        { label: 'Pain Response (0-10)', type: 'scale', required: true, placeholder: '' },
+        { label: 'Therapist Signature', type: 'signature', required: true, placeholder: '' },
+      ],
+      status: CommunityTemplateStatus.APPROVED, usageCount: 31,
+    },
+    {
+      name: 'Corporate Chair Massage — Event Note', category: 'Corporate', description: 'Quick-format note for corporate on-site chair massage sessions',
+      fields: [
+        { label: 'Company / Event Name', type: 'text', required: true, placeholder: 'e.g., Acme Corp wellness day' },
+        { label: 'Session Duration', type: 'text', required: true, placeholder: 'e.g., 15 minutes' },
+        { label: 'Areas Addressed', type: 'checkbox', required: false, placeholder: '', options: ['Neck', 'Shoulders', 'Upper back', 'Lower back', 'Arms', 'Hands'] },
+        { label: 'Pressure Preference', type: 'checkbox', required: false, placeholder: '', options: ['Light', 'Medium', 'Firm'] },
+        { label: 'Client Feedback', type: 'text', required: false, placeholder: 'Brief notes on client experience...' },
+      ],
+      status: CommunityTemplateStatus.PENDING, usageCount: 0,
+    },
+    {
+      name: 'TMJ & Jaw Tension Protocol', category: 'Specialised', description: 'Structured note for intraoral and external TMJ massage therapy',
+      fields: [
+        { label: 'Presenting Jaw Symptoms', type: 'text', required: true, placeholder: 'Clicking, pain, limited opening, bruxism...' },
+        { label: 'Maximum Mouth Opening (mm)', type: 'text', required: false, placeholder: 'e.g., 38mm' },
+        { label: 'Pain Location', type: 'body-map', required: true, placeholder: '' },
+        { label: 'Intraoral Consent Confirmed', type: 'checkbox', required: true, placeholder: '', options: ['Yes — signed consent on file', 'External work only — no intraoral'] },
+        { label: 'Muscles Treated', type: 'checkbox', required: false, placeholder: '', options: ['Masseter (external)', 'Masseter (internal)', 'Temporalis', 'Medial pterygoid', 'Lateral pterygoid', 'Digastric'] },
+        { label: 'Post-Treatment Opening (mm)', type: 'text', required: false, placeholder: 'e.g., 44mm' },
+        { label: 'Home Care Advice', type: 'text', required: false, placeholder: 'Self-massage, heat, jaw exercises...' },
+        { label: 'Therapist Signature', type: 'signature', required: true, placeholder: '' },
+      ],
+      status: CommunityTemplateStatus.APPROVED, usageCount: 22,
+    },
+  ];
+  for (const def of communityTemplateDefs) {
+    const existing = await prisma.communityTemplate.findFirst({ where: { name: def.name, submittedByUserId: ownerUser.id } });
+    if (!existing) {
+      await prisma.communityTemplate.create({
+        data: { name: def.name, category: def.category, description: def.description, fields: def.fields, status: def.status, usageCount: def.usageCount, submittedByUserId: ownerUser.id, submittedByBusinessId: business.id, moderatedBy: def.status === CommunityTemplateStatus.APPROVED ? ownerUser.id : undefined, moderatedAt: def.status === CommunityTemplateStatus.APPROVED ? daysAgo(30) : undefined },
+      });
+    }
+  }
+  console.log('✓ Community templates:', communityTemplateDefs.length);
+
+  // ── 57. Export History & Scheduled Exports ────────────────────────────────
+  const exportHistoryDefs = [
+    { exportType: 'clients', format: ExportFormat.CSV, status: ExportStatus.COMPLETED, rows: 15, fileName: 'clients_export_2026-05-01.csv', daysBack: 30 },
+    { exportType: 'appointments', format: ExportFormat.CSV, status: ExportStatus.COMPLETED, rows: 52, fileName: 'appointments_may_2026.csv', daysBack: 15 },
+    { exportType: 'invoices', format: ExportFormat.PDF, status: ExportStatus.COMPLETED, rows: 28, fileName: 'invoices_q1_2026.pdf', daysBack: 10 },
+    { exportType: 'analytics', format: ExportFormat.EXCEL, status: ExportStatus.COMPLETED, rows: 90, fileName: 'analytics_90day_report.xlsx', daysBack: 5 },
+    { exportType: 'payroll', format: ExportFormat.CSV, status: ExportStatus.COMPLETED, rows: 9, fileName: 'payroll_may_2026.csv', daysBack: 3 },
+    { exportType: 'clients', format: ExportFormat.CSV, status: ExportStatus.FAILED, rows: null, fileName: null, daysBack: 2, error: 'Timeout — dataset exceeds limit' },
+  ];
+  for (const def of exportHistoryDefs) {
+    await prisma.exportHistory.create({
+      data: {
+        businessId: business.id, userId: ownerUser.id, exportType: def.exportType, format: def.format, status: def.status,
+        fileName: def.fileName ?? undefined, fileUrl: def.status === ExportStatus.COMPLETED ? `https://storage.serenitywellness.com/exports/${def.fileName}` : undefined,
+        fileSize: def.status === ExportStatus.COMPLETED && def.rows ? def.rows * 512 : undefined, rowCount: def.rows ?? undefined,
+        requestedAt: daysAgo(def.daysBack), completedAt: def.status === ExportStatus.COMPLETED ? new Date(daysAgo(def.daysBack).getTime() + 5000) : undefined,
+        expiresAt: def.status === ExportStatus.COMPLETED ? daysAhead(30) : undefined, downloadCount: def.status === ExportStatus.COMPLETED ? Math.floor(Math.random() * 3) + 1 : 0,
+        errorMessage: (def as any).error ?? undefined, triggeredBy: 'MANUAL',
+      },
+    });
+  }
+  const existingScheduledExport = await prisma.scheduledExport.findFirst({ where: { businessId: business.id } });
+  if (!existingScheduledExport) {
+    await prisma.scheduledExport.create({ data: { businessId: business.id, userId: ownerUser.id, name: 'Weekly Revenue Report', exportType: 'analytics', format: ExportFormat.EXCEL, frequency: ScheduleFrequency.WEEKLY, filters: { reportType: 'revenue', period: 'last_7_days' }, emailTo: OWNER_EMAIL, isActive: true, lastRunAt: daysAgo(7), nextRunAt: daysAhead(0) } });
+    await prisma.scheduledExport.create({ data: { businessId: business.id, userId: ownerUser.id, name: 'Monthly Client List', exportType: 'clients', format: ExportFormat.CSV, frequency: ScheduleFrequency.MONTHLY, filters: { isActive: true }, emailTo: OWNER_EMAIL, isActive: true, lastRunAt: daysAgo(30), nextRunAt: daysAhead(1) } });
+  }
+  console.log('✓ Export history & scheduled exports');
+
+  // ── 58. AI Usage Logs ─────────────────────────────────────────────────────
+  const aiUsageDefs = [
+    { feature: AIFeature.NOTE_SUMMARY, model: 'claude-3-haiku-20240307', provider: AIProvider.CLAUDE, promptTokens: 450, completionTokens: 120, cost: 0.0006, daysBack: 7 },
+    { feature: AIFeature.TREATMENT_SUGGESTION, model: 'claude-3-5-sonnet-20241022', provider: AIProvider.CLAUDE, promptTokens: 820, completionTokens: 380, cost: 0.0042, daysBack: 6 },
+    { feature: AIFeature.SOAP_ASSIST, model: 'claude-3-haiku-20240307', provider: AIProvider.CLAUDE, promptTokens: 620, completionTokens: 290, cost: 0.0026, daysBack: 5 },
+    { feature: AIFeature.VOICE_TRANSCRIPTION, model: 'whisper-1', provider: AIProvider.OPENAI, promptTokens: 0, completionTokens: 0, cost: 0.006, daysBack: 4 },
+    { feature: AIFeature.SMART_REMINDER, model: 'gpt-4o-mini', provider: AIProvider.OPENAI, promptTokens: 150, completionTokens: 60, cost: 0.0002, daysBack: 3 },
+    { feature: AIFeature.ANALYTICS_INSIGHT, model: 'claude-3-5-sonnet-20241022', provider: AIProvider.CLAUDE, promptTokens: 1200, completionTokens: 450, cost: 0.0068, daysBack: 2 },
+    { feature: AIFeature.NOTE_SUMMARY, model: 'claude-3-haiku-20240307', provider: AIProvider.CLAUDE, promptTokens: 390, completionTokens: 100, cost: 0.0005, daysBack: 2 },
+    { feature: AIFeature.VOICE_TO_SOAP, model: 'claude-3-5-sonnet-20241022', provider: AIProvider.CLAUDE, promptTokens: 950, completionTokens: 680, cost: 0.0095, daysBack: 1 },
+    { feature: AIFeature.TREATMENT_SUGGESTION, model: 'claude-3-haiku-20240307', provider: AIProvider.CLAUDE, promptTokens: 540, completionTokens: 220, cost: 0.0018, daysBack: 1 },
+    { feature: AIFeature.NOTE_SUMMARY, model: 'claude-3-haiku-20240307', provider: AIProvider.CLAUDE, promptTokens: 410, completionTokens: 95, cost: 0.0005, daysBack: 0 },
+  ];
+  for (const def of aiUsageDefs) {
+    await prisma.aIUsage.create({
+      data: { businessId: business.id, userId: ownerUser.id, provider: def.provider, model: def.model, feature: def.feature, promptTokens: def.promptTokens, completionTokens: def.completionTokens, totalTokens: def.promptTokens + def.completionTokens, cost: def.cost, requestDuration: 800 + Math.floor(Math.random() * 1200), createdAt: daysAgo(def.daysBack) },
+    });
+  }
+  console.log('✓ AI usage logs:', aiUsageDefs.length);
+
   // ── Summary ───────────────────────────────────────────────────────────────
   console.log('\n🎉 Database seed completed successfully!');
   console.log('\n📊 Summary:');
-  console.log(`   Business:       ${business.name}`);
-  console.log(`   Owner:          ${ownerUser.email}`);
-  console.log(`   Therapists:     ${therapists.length}`);
-  console.log(`   Clients:        ${clients.length}`);
-  console.log(`   Appointments:   ${appointments.length}+`);
-  console.log(`   Invoices:       ${invoiceCount}`);
-  console.log(`   Payments:       ${paymentCount}`);
-  console.log(`   Memberships:    ${memberships.length}`);
-  console.log(`   Packages:       ${packages.length}`);
-  console.log(`   Conversations:  ${conversationDefs.length} (${msgIdx} messages)`);
-  console.log(`   Analytics:      ${snapshotCount} snapshots`);
-  console.log('\n✅ Ready for testing!');
+  console.log(`   Business:              ${business.name}`);
+  console.log(`   Owner:                 ${ownerUser.email}`);
+  console.log(`   Locations:             ${locations.length} (main + branch)`);
+  console.log(`   Rooms:                 ${rooms.length}`);
+  console.log(`   Therapists:            ${therapists.length}`);
+  console.log(`   Clients:               ${clients.length}`);
+  console.log(`   Appointments:          ${appointments.length}+ (incl. group & virtual)`);
+  console.log(`   Treatment notes:       seeded for completed appointments`);
+  console.log(`   Invoices:              ${invoiceCount}`);
+  console.log(`   Payments:              ${paymentCount}`);
+  console.log(`   Memberships:           ${memberships.length}`);
+  console.log(`   Packages:              ${packages.length}`);
+  console.log(`   Gift cards:            ${giftCards.length}`);
+  console.log(`   Loyalty accounts:      ${loyaltyAccounts.length}`);
+  console.log(`   Products:              ${products.length}`);
+  console.log(`   Promotions:            ${promotions.length}`);
+  console.log(`   Payroll periods:       ${payrollPeriods.length}`);
+  console.log(`   Automation rules:      ${automationRules.length}`);
+  console.log(`   Insurance providers:   ${insuranceProviders.length}`);
+  console.log(`   Insurance claims:      ${insuranceClaims.length}`);
+  console.log(`   Conversations:         ${conversationDefs.length} (${msgIdx} messages)`);
+  console.log(`   Tasks:                 ${taskDefs.length}`);
+  console.log(`   Analytics snapshots:   ${snapshotCount}`);
+  console.log(`   Community templates:   ${communityTemplateDefs.length}`);
+  console.log('\n✅ All features seeded — ready for full testing!');
 }
 
 main()

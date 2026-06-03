@@ -10,6 +10,7 @@ interface StaffViewProps {
   therapists: Therapist[];
   onAppointmentClick: (appointment: AppointmentWithRelations) => void;
   onSlotClick: (date: Date, therapistId: string) => void;
+  therapistColorMap?: Map<string, string>;
 }
 
 const HOURS = Array.from({ length: 14 }, (_, i) => i + 7);
@@ -22,6 +23,7 @@ export function StaffView({
   therapists,
   onAppointmentClick,
   onSlotClick,
+  therapistColorMap,
 }: StaffViewProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -78,7 +80,7 @@ export function StaffView({
               const name = tAny.user
                 ? `${tAny.user.firstName || ''} ${tAny.user.lastName || ''}`.trim()
                 : 'Unknown';
-              const color = APT_COLORS[idx % APT_COLORS.length];
+              const color = therapistColorMap?.get(therapist.id) ?? APT_COLORS[idx % APT_COLORS.length];
               const initial = name ? name[0].toUpperCase() : '?';
               return (
                 <div
@@ -193,7 +195,10 @@ export function StaffView({
                                 onAppointmentClick(appt);
                               }}
                             >
-                              <AppointmentCard appointment={appt} />
+                              <AppointmentCard
+                            appointment={appt}
+                            therapistColor={therapistColorMap?.get(appt.therapistId ?? '')}
+                          />
                             </div>
                           ))}
                         </div>

@@ -5,6 +5,8 @@ import { KPICard } from '../../../components/analytics/KPICard';
 import { useDashboardOverview } from '../../../lib/hooks/useAnalytics';
 import { useLocations } from '../../../lib/hooks/use-locations';
 import { useBusinessId } from '../../../lib/hooks/use-business-id';
+import { useBusiness } from '../../../lib/hooks/use-business';
+import { formatCurrency } from '../../../lib/format';
 
 export default function AnalyticsPage() {
   const businessId = useBusinessId();
@@ -15,6 +17,8 @@ export default function AnalyticsPage() {
   });
   const [locationId, setLocationId] = useState<string>('');
 
+  const { data: business } = useBusiness(businessId);
+  const currency = (business as any)?.currency || 'AUD';
   const { data: locations = [] } = useLocations(businessId);
   const { data: overview, isLoading, error } = useDashboardOverview({
     ...dateRange,
@@ -125,6 +129,7 @@ export default function AnalyticsPage() {
             title="Total Revenue"
             value={overview?.revenue.totalRevenue ?? 0}
             format="currency"
+            currency={currency}
             trend={{
               value: overview?.revenue.revenueGrowth ?? 0,
               label: 'vs previous period',
@@ -135,6 +140,7 @@ export default function AnalyticsPage() {
             title="Average Transaction"
             value={overview?.revenue.averageTransactionValue ?? 0}
             format="currency"
+            currency={currency}
             isLoading={isLoading}
           />
           <KPICard
@@ -147,6 +153,7 @@ export default function AnalyticsPage() {
             title="Outstanding"
             value={overview?.revenue.outstandingAmount ?? 0}
             format="currency"
+            currency={currency}
             subtitle="Unpaid invoices"
             isLoading={isLoading}
           />
@@ -184,6 +191,7 @@ export default function AnalyticsPage() {
             title="Lifetime Value"
             value={overview?.clients.clientLifetimeValue ?? 0}
             format="currency"
+            currency={currency}
             subtitle="Average per client"
             isLoading={isLoading}
           />
@@ -247,10 +255,7 @@ export default function AnalyticsPage() {
             value={overview?.therapists.topPerformer ?? 'N/A'}
             subtitle={
               overview?.therapists.topPerformerRevenue
-                ? new Intl.NumberFormat('en-US', {
-                    style: 'currency',
-                    currency: 'USD',
-                  }).format(overview.therapists.topPerformerRevenue)
+                ? formatCurrency(overview.therapists.topPerformerRevenue, currency)
                 : undefined
             }
             isLoading={isLoading}

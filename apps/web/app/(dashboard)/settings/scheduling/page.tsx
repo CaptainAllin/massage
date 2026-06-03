@@ -309,14 +309,15 @@ export default function SchedulingPage() {
   const deleteRule = useDeleteAvailabilityRule(businessId);
 
   return (
-    <div className="space-y-6 max-w-3xl">
-      <div className="flex items-center gap-3">
-        <Link href="/settings" className="text-gray-400 hover:text-gray-600">
-          <ArrowLeft className="h-5 w-5" />
+    <div className="max-w-4xl space-y-5">
+      <div className="flex items-start gap-3">
+        <Link href="/settings" className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground mt-0.5">
+          <ArrowLeft className="h-4 w-4" />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-foreground font-display">Availability Rules</h1>
-          <p className="text-muted-foreground text-sm mt-0.5">
+          <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: '#5D4AA8', letterSpacing: '1.4px' }}>Tools</p>
+          <h1 className="text-2xl font-semibold font-display" style={{ color: '#1E1830', letterSpacing: '-0.4px' }}>Availability Rules</h1>
+          <p className="text-sm mt-0.5" style={{ color: '#7A7090' }}>
             Fine-tune when therapists, rooms, or service types are bookable
           </p>
         </div>
@@ -345,7 +346,7 @@ export default function SchedulingPage() {
         <div className="text-center py-12 text-gray-400 text-sm">Loading rules…</div>
       ) : (rules as any[]).length === 0 ? (
         <Card>
-          <CardContent className="p-12 text-center">
+          <CardContent className="py-12 text-center">
             <Clock className="h-12 w-12 text-gray-300 mx-auto mb-3" />
             <p className="text-gray-500 font-medium">No availability rules yet</p>
             <p className="text-gray-400 text-sm mt-1">

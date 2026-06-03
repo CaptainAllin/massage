@@ -5,6 +5,7 @@ import { Users } from 'lucide-react';
 interface AppointmentCardProps {
   appointment: AppointmentWithRelations;
   onClick?: () => void;
+  therapistColor?: string;
 }
 
 // Iris 4-color appointment palette
@@ -17,7 +18,7 @@ const statusConfig: Record<AppointmentStatus, { border: string; bg: string; text
   [AppointmentStatus.NO_SHOW]:     { border: '#C94040', bg: '#F5E5E5', text: '#922020' },
 };
 
-export function AppointmentCard({ appointment, onClick }: AppointmentCardProps) {
+export function AppointmentCard({ appointment, onClick, therapistColor }: AppointmentCardProps) {
   const startTime = new Date(appointment.startTime);
   const endTime = new Date(appointment.endTime);
   const isGroup = (appointment as any).isGroup ?? false;
@@ -44,7 +45,7 @@ export function AppointmentCard({ appointment, onClick }: AppointmentCardProps) 
     <div
       className="rounded-lg p-2 cursor-pointer transition-all hover:brightness-95"
       style={{
-        borderLeft: `2.5px solid ${cfg.border}`,
+        borderLeft: `2.5px solid ${therapistColor ?? cfg.border}`,
         background: cfg.bg,
         opacity: isCancelled ? 0.55 : 1,
       }}

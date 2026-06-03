@@ -493,7 +493,7 @@ export default function NoteTemplatesPage() {
         </div>
       ) : displayed.length === 0 ? (
         <Card>
-          <CardContent className="p-10 text-center">
+          <CardContent className="py-12 text-center">
             <p className="text-gray-500 mb-4">
               {activeTab === 'global'
                 ? 'No global templates match the filter.'

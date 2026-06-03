@@ -6,6 +6,7 @@ import { MessageSquare, Search, Send, Plus } from 'lucide-react';
 import { useConversations, useConversationMessages, useSendMessage, useMarkConversationRead } from '@/lib/hooks';
 import { useBusinessId } from '@/lib/hooks/use-business-id';
 import { CommunicationsTour } from '@/components/communications/CommunicationsTour';
+import { NewMessageModal } from '@/components/communications/NewMessageModal';
 import { format } from 'date-fns';
 
 const CHANNEL_ICONS: Record<string, string> = {
@@ -20,6 +21,7 @@ export default function MessagesPage() {
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [messageContent, setMessageContent] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [isNewMessageOpen, setIsNewMessageOpen] = useState(false);
 
   const { data: conversationsData, isLoading: conversationsLoading } = useConversations(businessId, {
     search: searchTerm,
@@ -82,11 +84,17 @@ export default function MessagesPage() {
           <h1 className="text-2xl font-semibold font-display" style={{ color: '#1E1830', letterSpacing: '-0.4px' }}>Messages</h1>
           <p className="text-sm mt-0.5" style={{ color: '#7A7090' }}>Communicate with your clients via SMS, Email, and WhatsApp</p>
         </div>
-        <Button size="sm" variant="primary" onClick={() => {}}>
+        <Button size="sm" variant="primary" onClick={() => setIsNewMessageOpen(true)}>
           <Plus className="h-4 w-4 mr-1" />
           New Message
         </Button>
       </div>
+
+      <NewMessageModal
+        isOpen={isNewMessageOpen}
+        onClose={() => setIsNewMessageOpen(false)}
+        businessId={businessId}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5" style={{ height: 'calc(100vh - 280px)', minHeight: '500px' }}>
         {/* Conversations List */}
@@ -105,7 +113,10 @@ export default function MessagesPage() {
           </CardHeader>
           <CardContent className="flex-1 overflow-y-auto p-3 pt-0">
             {conversationsLoading ? (
-              <div className="text-center text-muted-foreground py-8 text-sm">Loading...</div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: '32px 0' }}>
+                <div style={{ width: 20, height: 20, border: '2px solid #5D4AA8', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                <span style={{ fontSize: 13, color: '#7A7090' }}>Loading conversations…</span>
+              </div>
             ) : conversations.length === 0 ? (
               <div className="text-center text-muted-foreground py-10">
                 <MessageSquare className="h-10 w-10 mx-auto mb-3 opacity-30" />
@@ -175,7 +186,10 @@ export default function MessagesPage() {
               </CardHeader>
               <CardContent className="flex-1 overflow-y-auto p-4">
                 {messagesLoading ? (
-                  <div className="text-center text-muted-foreground py-8 text-sm">Loading messages...</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: '32px 0' }}>
+                    <div style={{ width: 20, height: 20, border: '2px solid #5D4AA8', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                    <span style={{ fontSize: 13, color: '#7A7090' }}>Loading messages…</span>
+                  </div>
                 ) : messages.length === 0 ? (
                   <div className="text-center text-muted-foreground py-10">
                     <MessageSquare className="h-10 w-10 mx-auto mb-3 opacity-30" />

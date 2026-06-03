@@ -13,6 +13,7 @@ import {
   Cell,
 } from 'recharts';
 import { Card } from '@massage/ui';
+import { formatCurrency as fmtCurrency } from '@/lib/format';
 
 export interface TherapistPerformanceData {
   id: string;
@@ -26,6 +27,7 @@ interface TherapistComparisonChartProps {
   data: TherapistPerformanceData[];
   title?: string;
   metric?: 'revenue' | 'sessions';
+  currency?: string;
 }
 
 const COLORS = [
@@ -43,6 +45,7 @@ export function TherapistComparisonChart({
   data,
   title = 'Therapist Performance',
   metric = 'revenue',
+  currency = 'AUD',
 }: TherapistComparisonChartProps) {
   const formattedData = useMemo(() => {
     return data.map((item) => ({
@@ -53,14 +56,8 @@ export function TherapistComparisonChart({
     }));
   }, [data]);
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
+  const formatCurrency = (value: number) =>
+    fmtCurrency(value, currency, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {

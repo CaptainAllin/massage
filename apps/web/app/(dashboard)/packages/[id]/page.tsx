@@ -9,11 +9,15 @@ import { PackageSessionHistory } from '@/components/packages/PackageSessionHisto
 import { PackageStatus } from '@massage/types';
 
 import { useBusinessId } from '@/lib/hooks/use-business-id';
+import { useBusiness } from '@/lib/hooks/use-business';
+import { formatCurrency } from '@/lib/format';
 export default function PackageDetailPage() {
   const params = useParams();
   const router = useRouter();
   const packageId = params.id as string;
   const businessId = useBusinessId();
+  const { data: business } = useBusiness(businessId);
+  const currency = (business as any)?.currency || 'AUD';
 
   const { data: packagePurchase, isLoading } = usePackage(packageId, businessId);
   const updateMutation = useUpdatePackage(businessId);
@@ -191,7 +195,7 @@ export default function PackageDetailPage() {
               <CardContent className="p-6">
                 <h3 className="text-lg font-semibold mb-4">Package Information</h3>
                 <div className="grid grid-cols-2 gap-4">
-                  <InfoRow label="Total Price" value={`$${packagePurchase.totalPrice?.toFixed(2) || '0.00'}`} />
+                  <InfoRow label="Total Price" value={formatCurrency(packagePurchase.totalPrice || 0, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} />
                   <InfoRow label="Status" value={<StatusBadge status={packagePurchase.status as PackageStatus} />} />
                   <InfoRow label="Total Sessions" value={String(packagePurchase.totalSessions)} />
                   <InfoRow label="Sessions Used" value={String(packagePurchase.sessionsUsed)} />

@@ -7,7 +7,7 @@ import {
   CreatePaymentDto,
   ProcessStripePaymentDto,
   ProcessCashPaymentDto,
-  ProcessCheckPaymentDto,
+  ProcessChequePaymentDto,
   RefundPaymentDto,
   PaymentStats,
 } from '@massage/types';
@@ -119,16 +119,33 @@ export function useProcessCashPayment(businessId: string | undefined) {
   });
 }
 
-/**
- * Process check payment
- */
-export function useProcessCheckPayment(businessId: string | undefined) {
+export function useProcessEftposPayment(businessId: string | undefined) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (payload: ProcessCheckPaymentDto) => {
+    mutationFn: async (payload: ProcessCashPaymentDto) => {
       const response = await apiClient.post<ApiResponse<Payment>>(
-        '/payments/process-check',
+        '/payments/process-eftpos',
+        payload
+      );
+      return response.data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['payments', businessId] });
+    },
+  });
+}
+
+/**
+ * Process cheque payment
+ */
+export function useProcessChequePayment(businessId: string | undefined) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: ProcessChequePaymentDto) => {
+      const response = await apiClient.post<ApiResponse<Payment>>(
+        '/payments/process-cheque',
         payload
       );
       return response.data.data;

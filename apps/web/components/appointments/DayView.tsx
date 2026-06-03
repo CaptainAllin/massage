@@ -9,6 +9,7 @@ interface DayViewProps {
   onAppointmentClick: (appointment: AppointmentWithRelations) => void;
   onSlotClick: (date: Date, hour: number) => void;
   onAppointmentDrop?: (appointmentId: string, newStartTime: Date) => void;
+  therapistColorMap?: Map<string, string>;
 }
 
 const DRAGGABLE_STATUSES = new Set([AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED]);
@@ -26,6 +27,7 @@ export function DayView({
   onAppointmentClick,
   onSlotClick,
   onAppointmentDrop,
+  therapistColorMap,
 }: DayViewProps) {
   const [dragOverHour, setDragOverHour] = useState<number | null>(null);
   const draggingRef = useRef<{ id: string; originalStart: Date } | null>(null);
@@ -179,7 +181,10 @@ export function DayView({
                             onDragEnd={() => { draggingRef.current = null; setDragOverHour(null); }}
                             onClick={(e) => { e.stopPropagation(); onAppointmentClick(appointment); }}
                           >
-                            <AppointmentCard appointment={appointment} />
+                            <AppointmentCard
+                              appointment={appointment}
+                              therapistColor={therapistColorMap?.get(appointment.therapistId ?? '')}
+                            />
                           </div>
                         );
                       })}

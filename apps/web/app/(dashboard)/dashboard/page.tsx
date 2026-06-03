@@ -4,9 +4,10 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@massage/auth';
-import { useAppointments } from '@/lib/hooks/use-appointments';
-import { useClients } from '@/lib/hooks/use-clients';
 import { useBusinessId } from '@/lib/hooks/use-business-id';
+import { useBusiness } from '@/lib/hooks/use-business';
+import { useDashboard, type DashboardData } from '@/lib/hooks/use-dashboard';
+import { formatCurrency } from '@/lib/format';
 import { apiClient } from '@/lib/api-client';
 import { useOnboardingContext } from '@/components/onboarding/OnboardingProvider';
 import { CHECKLIST_ITEMS, ChecklistItemId } from '@/lib/hooks/use-onboarding';
@@ -240,7 +241,7 @@ function ApptRow({
 
 // ── Revenue chart ─────────────────────────────────────────────────────────────
 
-function RevenueChart({ businessId }: { businessId: string }) {
+function RevenueChart({ businessId, currency = 'AUD', initialRevenue }: { businessId: string; currency?: string; initialRevenue?: DashboardData['revenue'] }) {
   const [period, setPeriod] = useState<'30d' | '90d' | '1y'>('30d');
   const days = period === '30d' ? 30 : period === '90d' ? 90 : 365;
   const endDate = new Date().toISOString();
@@ -253,6 +254,7 @@ function RevenueChart({ businessId }: { businessId: string }) {
       return r.data.data as { totalRevenue: number; revenueGrowth: number };
     },
     enabled: !!businessId,
+    initialData: period === '30d' ? initialRevenue : undefined,
   });
 
   const total = data?.totalRevenue ?? 0;
@@ -274,7 +276,9 @@ function RevenueChart({ businessId }: { businessId: string }) {
   const linePath = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ');
   const fillPath = `${linePath} L ${W} ${H} L 0 ${H} Z`;
 
-  const fmtRevenue = (n: number) => n >= 1000 ? `$${(n / 1000).toFixed(1)}k` : `$${n.toFixed(0)}`;
+  const fmtRevenue = (n: number) => n >= 1000
+    ? formatCurrency(n / 1000, currency, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + 'k'
+    : formatCurrency(n, currency, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
   const xLabels: Record<string, [string, string, string]> = {
     '30d': ['Apr 26', 'May 10', 'Today'],
     '90d': ['Feb 24', 'Apr 10', 'Today'],
@@ -350,27 +354,13 @@ const DEFAULT_SERVICES = [
   { serviceType: 'Prenatal',    count: 16 },
 ];
 
-function ServiceMixDonut({ businessId }: { businessId: string }) {
-  const endDate = new Date().toISOString();
-  const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-
-  const { data, isLoading } = useQuery({
-    queryKey: ['dashboard-service-mix', businessId],
-    queryFn: async () => {
-      const r = await apiClient.get('/reports/revenue', {
-        params: { businessId, startDate, endDate },
-      });
-      return r.data.data?.byServiceType as Array<{ serviceType: string; revenue: number; count: number }> | undefined;
-    },
-    enabled: !!businessId,
-  });
-
+function ServiceMixDonut({ initialMix }: { initialMix?: DashboardData['serviceMix'] }) {
   const services: Array<{ label: string; count: number; color: string }> =
-    data && data.length > 0
-      ? data.sort((a, b) => b.count - a.count).slice(0, 5).map((d, i) => ({
-          label: d.serviceType, count: d.count, color: SERVICE_PALETTE[i],
-        }))
+    initialMix && initialMix.length > 0
+      ? initialMix.map((d, i) => ({ label: d.serviceType, count: d.count, color: SERVICE_PALETTE[i] }))
       : DEFAULT_SERVICES.map((s, i) => ({ label: s.serviceType, count: s.count, color: SERVICE_PALETTE[i] }));
+
+  const isLoading = false;
 
   const total = services.reduce((a, s) => a + s.count, 0) || 1;
   const size = 112, thick = 16;
@@ -449,20 +439,10 @@ function ServiceMixDonut({ businessId }: { businessId: string }) {
 
 // ── SMS Credits Widget ────────────────────────────────────────────────────────
 
-function SmsCreditWidget({ businessId }: { businessId: string }) {
-  const { data, isLoading } = useQuery({
-    queryKey: ['sms-credits', businessId],
-    queryFn: async () => {
-      const r = await apiClient.get('/sms-credits', { params: { businessId } });
-      return r.data.data as {
-        creditsIncluded: number; creditsUsed: number; creditsRemaining: number;
-        percentUsed: number; isUnlimited: boolean; isExhausted: boolean; isNearLimit: boolean;
-      };
-    },
-    enabled: !!businessId,
-  });
+function SmsCreditWidget({ smsCredits }: { smsCredits: DashboardData['smsCredits'] | undefined }) {
+  const data = smsCredits;
 
-  if (isLoading || !data || data.isUnlimited) return null;
+  if (!data || data.isUnlimited) return null;
 
   const barColor = data.isExhausted ? '#C94040' : data.isNearLimit ? '#C97E68' : '#5D4AA8';
   const pct = Math.min(100, Math.round(data.percentUsed));
@@ -552,7 +532,7 @@ function WeeklySessionsBar() {
                   maxWidth: 28,
                   background: isToday ? 'linear-gradient(180deg, #7665C2, #5D4AA8)' : '#EDE5F4',
                   border: isToday ? 'none' : '1px solid #E5DEEC',
-                  boxShadow: isToday ? '0 2px 8px rgba(93,74,168,0.2)' : 'none',
+                  boxShadow: isToday ? '0 1px 4px rgba(28,20,54,0.14)' : 'none',
                 }}
               />
               <span style={{ fontSize: '9.5px', color: isToday ? '#5D4AA8' : '#B0A8C0', fontWeight: isToday ? 600 : 400, textTransform: 'uppercase', letterSpacing: '0.4px' }}>
@@ -571,6 +551,8 @@ function WeeklySessionsBar() {
 export default function DashboardPage() {
   const { user } = useAuth();
   const businessId = useBusinessId();
+  const { data: business } = useBusiness(businessId);
+  const currency = (business as any)?.currency || 'AUD';
   const firstName = user?.user_metadata?.first_name || '';
   const {
     loaded,
@@ -583,25 +565,14 @@ export default function DashboardPage() {
     dismissedAdoptionCards,
     dismissAdoptionCard,
   } = useOnboardingContext();
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
 
-  const { data: appointmentsData, isLoading: apptLoading } = useAppointments(
-    businessId || '',
-    { startDate: today, endDate: tomorrow }
-  );
-  const { data: clientsData, isLoading: clientsLoading } = useClients(
-    businessId || '',
-    { isActive: true }
-  );
-
-  const todayAppts = appointmentsData?.data ?? [];
-  const totalClients = clientsData?.length ?? 0;
-  const isLoading = apptLoading || clientsLoading;
+  const { data: dashboardData, isLoading } = useDashboard(businessId);
+  const todayAppts = dashboardData?.todayAppointments ?? [];
+  const totalClients = dashboardData?.clientCount ?? 0;
 
   const now = new Date();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
   const dayName = today.toLocaleDateString('en-US', { weekday: 'long' });
   const dateStr = today.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
 
@@ -613,34 +584,34 @@ export default function DashboardPage() {
   return (
     <div className="space-y-5">
 
-      {/* ── Greeting banner ── */}
-      <div
-        className="relative rounded-2xl px-6 py-5 overflow-hidden flex items-start justify-between gap-4"
-        style={{ background: 'linear-gradient(135deg, #5D4AA8, #3F2F87)', boxShadow: '0 8px 32px rgba(93,74,168,0.28)' }}
-      >
-        <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full pointer-events-none"
-          style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.08), transparent 70%)' }} />
-        <div className="relative">
-          <p className="text-xs font-semibold uppercase mb-1" style={{ color: 'rgba(255,255,255,0.6)', letterSpacing: '1.4px' }}>
-            {dayName}, {dateStr}
+      {/* ── Greeting ── */}
+      <div className="flex items-end justify-between">
+        <div>
+          <p className="uppercase mb-1.5" style={{ fontSize: '11px', fontWeight: 500, letterSpacing: '1.6px', color: '#5D4AA8' }}>
+            Practice overview
           </p>
-          <h1 className="font-semibold" style={{ fontSize: '22px', color: '#fff', letterSpacing: '-0.4px', lineHeight: 1.2 }}>
-            Good {getGreeting()}, {firstName || 'there'} 👋
+          <h1 style={{ margin: 0, fontSize: '30px', fontWeight: 500, color: '#1E1830', letterSpacing: '-0.8px', lineHeight: 1.1 }}>
+            Good {getGreeting()},{' '}
+            <span style={{ background: 'linear-gradient(120deg, #5D4AA8, #E8A893)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+              {firstName || 'there'}
+            </span>.
           </h1>
-          <p className="mt-1 text-sm" style={{ color: 'rgba(255,255,255,0.7)' }}>
+          <p className="mt-1.5" style={{ fontSize: '13.5px', color: '#7A7090' }}>
             {isLoading
               ? 'Loading your day…'
               : todayAppts.length === 0
-                ? 'No appointments scheduled for today.'
-                : `You have ${todayAppts.length} appointment${todayAppts.length !== 1 ? 's' : ''} today.`}
+                ? 'No sessions scheduled today.'
+                : `${todayAppts.length} session${todayAppts.length !== 1 ? 's' : ''} today · ${dayName}, ${dateStr}`}
           </p>
         </div>
-        <div
-          className="relative flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full self-start mt-0.5"
-          style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.2)' }}
-        >
-          <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: '#4ADE80' }} />
-          <span className="text-xs font-medium whitespace-nowrap" style={{ color: '#fff' }}>Open · 8a — 7p</span>
+        <div className="flex items-center gap-2 flex-shrink-0"
+          style={{ padding: '6px 6px 6px 14px', background: '#FFFFFF', borderRadius: 999, border: '1px solid #E5DEEC' }}>
+          <span style={{ fontSize: '12px', color: '#7A7090' }}>Studio</span>
+          <span className="flex items-center gap-1.5 font-semibold"
+            style={{ padding: '4px 12px', borderRadius: 999, background: '#EDE5F4', color: '#5D4AA8', fontSize: '11.5px' }}>
+            <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#5D4AA8' }} />
+            Open · 8a — 7p
+          </span>
         </div>
       </div>
 
@@ -708,14 +679,14 @@ export default function DashboardPage() {
       </div>
 
       {/* ── SMS Credits widget ── */}
-      {businessId && <SmsCreditWidget businessId={businessId} />}
+      {businessId && <SmsCreditWidget smsCredits={dashboardData?.smsCredits} />}
 
       {/* ── Charts row: Revenue (1.7fr) | Service mix donut (1fr) ── */}
       <div className="grid gap-4" style={{ gridTemplateColumns: 'minmax(0, 1.7fr) minmax(0, 1fr)' }}>
         {businessId ? (
           <>
-            <RevenueChart businessId={businessId} />
-            <ServiceMixDonut businessId={businessId} />
+            <RevenueChart businessId={businessId} currency={currency} initialRevenue={dashboardData?.revenue} />
+            <ServiceMixDonut initialMix={dashboardData?.serviceMix} />
           </>
         ) : (
           <>

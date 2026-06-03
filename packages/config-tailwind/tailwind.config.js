@@ -6,7 +6,7 @@ module.exports = {
       colors: {
         // Iris design system palette
         iris: {
-          bg: '#F1ECF5',
+          bg: '#F3F4F7',
           surface: '#FFFFFF',
           panel: '#FBF8FD',
           ink: '#1E1830',
@@ -35,7 +35,7 @@ module.exports = {
           DEFAULT: '#E8A893',
           foreground: '#1E1830',
         },
-        background: '#F1ECF5',
+        background: '#F3F4F7',
         foreground: '#1E1830',
         muted: {
           DEFAULT: '#EFE9F2',
@@ -62,11 +62,13 @@ module.exports = {
         '3xl': '2rem',
       },
       boxShadow: {
-        soft: '0 2px 8px rgba(93, 74, 168, 0.08)',
-        'soft-lg': '0 4px 16px rgba(93, 74, 168, 0.12)',
-        'soft-xl': '0 8px 24px rgba(93, 74, 168, 0.16)',
-        'iris-primary': '0 4px 16px rgba(93, 74, 168, 0.27)',
-        'iris-card': '0 2px 12px rgba(93, 74, 168, 0.06)',
+        /* Neutral ink-tinted shadows — no colored glows */
+        soft:         '0 1px 2px rgba(28,20,54,0.08)',
+        'soft-lg':    '0 2px 8px rgba(28,20,54,0.10)',
+        'soft-xl':    '0 8px 28px rgba(28,20,54,0.12), 0 2px 6px rgba(28,20,54,0.06)',
+        'iris-cta':   'inset 0 1px 0 rgba(255,255,255,0.16), 0 1px 2px rgba(28,20,54,0.16)',
+        'iris-float': '0 8px 28px rgba(28,20,54,0.12), 0 2px 6px rgba(28,20,54,0.06)',
+        'iris-card':  '0 2px 12px rgba(28,20,54,0.06)',
       },
       animation: {
         'fade-in': 'fadeIn 0.3s ease-in-out',

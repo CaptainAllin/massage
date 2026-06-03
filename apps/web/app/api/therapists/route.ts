@@ -9,7 +9,9 @@ const therapistInclude = {
       email: true,
       firstName: true,
       lastName: true,
+      phoneNumber: true,
       profileImageUrl: true,
+      role: true,
     },
   },
 };

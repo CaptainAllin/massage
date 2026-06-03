@@ -33,6 +33,7 @@ export interface Business {
   state: string | null;
   postalCode: string | null;
   country: string | null;
+  currency: string | null;
   website: string | null;
   logo: string | null;
   primaryColor: string | null;
@@ -86,6 +87,7 @@ export interface Client {
   postalCode: string | null;
   emergencyContactName: string | null;
   emergencyContactPhone: string | null;
+  emergencyContactRelationship: string | null;
   medicalHistory: any;
   allergies: string[];
   medications: string[];
@@ -1085,7 +1087,8 @@ export enum PaymentStatus {
 export enum PaymentMethod {
   STRIPE_CARD = 'STRIPE_CARD',
   CASH = 'CASH',
-  CHECK = 'CHECK',
+  EFTPOS = 'EFTPOS',
+  CHEQUE = 'CHEQUE',
   BANK_TRANSFER = 'BANK_TRANSFER',
   OTHER = 'OTHER',
 }
@@ -1276,9 +1279,9 @@ export interface ProcessCashPaymentDto {
   notes?: string;
 }
 
-export interface ProcessCheckPaymentDto {
+export interface ProcessChequePaymentDto {
   paymentId: string;
-  checkNumber?: string;
+  chequeNumber?: string;
   notes?: string;
 }
 

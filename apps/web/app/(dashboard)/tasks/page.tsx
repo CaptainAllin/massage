@@ -168,6 +168,16 @@ function TaskModal({
   const [priority, setPriority] = useState(task?.priority ?? 'MEDIUM');
   const [status, setStatus] = useState(task?.status ?? 'TODO');
   const [relatedClientId, setRelatedClientId] = useState(task?.relatedClient?.id ?? '');
+  const [clientSearch, setClientSearch] = useState(
+    task?.relatedClient ? `${task.relatedClient.firstName} ${task.relatedClient.lastName}` : ''
+  );
+  const [showClientDropdown, setShowClientDropdown] = useState(false);
+
+  const filteredClients = clientSearch.trim()
+    ? clients.filter((c) =>
+        `${c.firstName} ${c.lastName}`.toLowerCase().includes(clientSearch.toLowerCase())
+      )
+    : clients;
 
   const isEditing = !!task;
   const isPending = createTask.isPending || updateTask.isPending;
@@ -284,20 +294,70 @@ function TaskModal({
             </div>
           </div>
 
-          <div>
+          <div className="relative">
             <label className="block text-[12px] font-medium text-iris-muted mb-1">Linked Client</label>
-            <select
-              value={relatedClientId}
-              onChange={(e) => setRelatedClientId(e.target.value)}
-              className="w-full border border-iris-line2 rounded-[10px] px-3 py-2 text-[13px] focus:outline-none focus:border-iris-purple"
-            >
-              <option value="">None</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.firstName} {c.lastName}
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <input
+                type="text"
+                value={clientSearch}
+                onChange={(e) => {
+                  setClientSearch(e.target.value);
+                  setRelatedClientId('');
+                  setShowClientDropdown(true);
+                }}
+                onFocus={() => setShowClientDropdown(true)}
+                onBlur={() => setTimeout(() => setShowClientDropdown(false), 150)}
+                placeholder="Search clients…"
+                className="w-full border border-iris-line2 rounded-[10px] px-3 py-2 text-[13px] focus:outline-none focus:border-iris-purple pr-7"
+              />
+              {clientSearch && (
+                <button
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    setClientSearch('');
+                    setRelatedClientId('');
+                    setShowClientDropdown(false);
+                  }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-iris-muted hover:text-iris-ink"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+            {showClientDropdown && (
+              <div className="absolute z-20 mt-1 w-full bg-white border border-iris-line2 rounded-[10px] shadow-lg max-h-[180px] overflow-y-auto">
+                <div
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    setRelatedClientId('');
+                    setClientSearch('');
+                    setShowClientDropdown(false);
+                  }}
+                  className="px-3 py-2 text-[12px] text-iris-muted cursor-pointer hover:bg-iris-surface"
+                >
+                  None
+                </div>
+                {filteredClients.length > 0 ? (
+                  filteredClients.map((c) => (
+                    <div
+                      key={c.id}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        setRelatedClientId(c.id);
+                        setClientSearch(`${c.firstName} ${c.lastName}`);
+                        setShowClientDropdown(false);
+                      }}
+                      className="px-3 py-2 text-[13px] cursor-pointer hover:bg-iris-surface text-iris-ink"
+                    >
+                      {c.firstName} {c.lastName}
+                    </div>
+                  ))
+                ) : (
+                  <div className="px-3 py-2 text-[12px] text-iris-muted">No clients found</div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="flex gap-2 pt-1">

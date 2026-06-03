@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Modal, Button, Input, Select } from '@massage/ui';
 import { CreatePackagePurchaseDto } from '@massage/types';
 import { useClients } from '@/lib/hooks/use-clients';
+import { useBusiness } from '@/lib/hooks/use-business';
 
 interface CreatePackageModalProps {
   isOpen: boolean;
@@ -18,6 +19,8 @@ export function CreatePackageModal({
   onCreate,
   businessId,
 }: CreatePackageModalProps) {
+  const { data: business } = useBusiness(businessId);
+  const bizCurrency = (business as any)?.currency || 'AUD';
   const { data: clientsData } = useClients(businessId);
   const clients = (clientsData as any)?.clients ?? clientsData ?? [];
 
@@ -29,7 +32,6 @@ export function CreatePackageModal({
     description: '',
     totalSessions: '5',
     totalPrice: '',
-    currency: 'USD',
     expirationDate: '',
   });
 
@@ -50,7 +52,7 @@ export function CreatePackageModal({
         description: form.description || undefined,
         totalSessions: parseInt(form.totalSessions),
         totalPrice: parseFloat(form.totalPrice),
-        currency: form.currency,
+        currency: bizCurrency,
         expirationDate: form.expirationDate || undefined,
       });
       setForm({
@@ -59,7 +61,6 @@ export function CreatePackageModal({
         description: '',
         totalSessions: '5',
         totalPrice: '',
-        currency: 'USD',
         expirationDate: '',
       });
     } catch (err: any) {
@@ -128,7 +129,7 @@ export function CreatePackageModal({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Total Price ($) *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Total Price ({bizCurrency}) *</label>
             <Input
               type="number"
               value={form.totalPrice}

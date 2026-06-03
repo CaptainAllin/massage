@@ -274,6 +274,10 @@ export default function ClientsPage() {
       {/* Table */}
       {isLoading ? (
         <div style={{ background: '#fff', borderRadius: 18, border: '1px solid #EFE9F2', overflow: 'hidden', padding: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+            <div style={{ width: 18, height: 18, border: '2px solid #5D4AA8', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />
+            <span style={{ fontSize: 13.5, color: '#7A7090' }}>Loading clients…</span>
+          </div>
           <div className="space-y-3">
             {Array.from({ length: 8 }).map((_, i) => (
               <div key={i} style={{ height: 52, background: '#F7F4FB', borderRadius: 10, opacity: 1 - i * 0.08 }} />

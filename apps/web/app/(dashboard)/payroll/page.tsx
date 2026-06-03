@@ -16,6 +16,8 @@ import {
   Trash2,
 } from 'lucide-react';
 import { useBusinessId } from '@/lib/hooks/use-business-id';
+import { useBusiness } from '@/lib/hooks/use-business';
+import { formatCurrency } from '@/lib/format';
 import { PayrollTour } from '@/components/payroll/PayrollTour';
 import {
   usePayrollPeriods,
@@ -193,11 +195,12 @@ function EditRecordModal({
   );
 }
 
-function PayrollPeriodCard({ period, businessId }: { period: any; businessId: string }) {
+function PayrollPeriodCard({ period, businessId, currency = 'AUD' }: { period: any; businessId: string; currency?: string }) {
   const [expanded, setExpanded] = useState(false);
   const [editRecord, setEditRecord] = useState<any | null>(null);
   const updatePeriod = useUpdatePayrollPeriod(businessId);
   const deletePeriod = useDeletePayrollPeriod(businessId);
+  const fmt = (amount: number) => formatCurrency(amount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const startLabel = new Date(period.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   const endLabel = new Date(period.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -235,7 +238,7 @@ function PayrollPeriodCard({ period, businessId }: { period: any; businessId: st
               <div>
                 <p className="font-medium">{startLabel} – {endLabel}</p>
                 <p className="text-sm text-muted-foreground">
-                  {period.records.length} therapist{period.records.length !== 1 ? 's' : ''} · Total: ${period.totalAmount.toFixed(2)}
+                  {period.records.length} therapist{period.records.length !== 1 ? 's' : ''} · Total: {fmt(period.totalAmount)}
                 </p>
               </div>
             </div>
@@ -294,10 +297,10 @@ function PayrollPeriodCard({ period, businessId }: { period: any; businessId: st
                       </td>
                       <td className="py-2 text-right">{record.hoursWorked.toFixed(1)}</td>
                       <td className="py-2 text-right">{record.sessionsCompleted}</td>
-                      <td className="py-2 text-right">${(record.baseRate * record.hoursWorked).toFixed(2)}</td>
-                      <td className="py-2 text-right">${record.commissionAmount.toFixed(2)} <span className="text-muted-foreground text-xs">({(record.commissionRate * 100).toFixed(0)}%)</span></td>
-                      <td className="py-2 text-right">${record.bonusAmount.toFixed(2)}</td>
-                      <td className="py-2 text-right font-semibold">${record.totalAmount.toFixed(2)}</td>
+                      <td className="py-2 text-right">{fmt(record.baseRate * record.hoursWorked)}</td>
+                      <td className="py-2 text-right">{fmt(record.commissionAmount)} <span className="text-muted-foreground text-xs">({(record.commissionRate * 100).toFixed(0)}%)</span></td>
+                      <td className="py-2 text-right">{fmt(record.bonusAmount)}</td>
+                      <td className="py-2 text-right font-semibold">{fmt(record.totalAmount)}</td>
                       <td className="py-2 pl-2">
                         {period.status !== 'PAID' && (
                           <button onClick={() => setEditRecord(record)} className="text-muted-foreground hover:text-primary">
@@ -311,7 +314,7 @@ function PayrollPeriodCard({ period, businessId }: { period: any; businessId: st
                 <tfoot>
                   <tr className="font-semibold text-sm">
                     <td className="pt-3 border-t border-border" colSpan={6}>Total</td>
-                    <td className="pt-3 border-t border-border text-right">${period.totalAmount.toFixed(2)}</td>
+                    <td className="pt-3 border-t border-border text-right">{fmt(period.totalAmount)}</td>
                     <td />
                   </tr>
                 </tfoot>
@@ -329,6 +332,9 @@ function PayrollPeriodCard({ period, businessId }: { period: any; businessId: st
 
 export default function PayrollPage() {
   const businessId = useBusinessId();
+  const { data: business } = useBusiness(businessId);
+  const currency = (business as any)?.currency || 'AUD';
+  const fmt = (amount: number) => formatCurrency(amount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const { data, isLoading } = usePayrollPeriods(businessId);
   const [showModal, setShowModal] = useState(false);
 
@@ -359,7 +365,7 @@ export default function PayrollPage() {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
-          { label: 'Total Paid (All Time)', value: `$${totalPaid.toFixed(2)}`, icon: DollarSign, color: 'text-green-600 bg-green-50' },
+          { label: 'Total Paid (All Time)', value: fmt(totalPaid), icon: DollarSign, color: 'text-green-600 bg-green-50' },
           { label: 'Pending Periods', value: String(pendingPeriods), icon: Clock, color: 'text-yellow-600 bg-yellow-50' },
           { label: 'Total Periods', value: String(periods.length), icon: Calendar, color: 'text-blue-600 bg-blue-50' },
         ].map(({ label, value, icon: Icon, color }) => (
@@ -388,7 +394,7 @@ export default function PayrollPage() {
           </div>
         )}
         {periods.map((period: any) => (
-          <PayrollPeriodCard key={period.id} period={period} businessId={businessId!} />
+          <PayrollPeriodCard key={period.id} period={period} businessId={businessId!} currency={currency} />
         ))}
       </div>
 

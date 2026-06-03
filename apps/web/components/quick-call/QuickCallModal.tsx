@@ -7,6 +7,8 @@ import { useClients, useCreateClient } from '@/lib/hooks/use-clients';
 import { useTherapists } from '@/lib/hooks/use-therapists';
 import { useCreateAppointment, useCheckAvailability } from '@/lib/hooks/use-appointments';
 import { useBusinessId } from '@/lib/hooks/use-business-id';
+import { useBusiness } from '@/lib/hooks/use-business';
+import { PhoneInput } from '@/components/ui/PhoneInput';
 import { format } from 'date-fns';
 import { useQuickCall } from './QuickCallContext';
 
@@ -45,6 +47,8 @@ function UserIcon() {
 export function QuickCallModal() {
   const { isOpen, initialClientId, closeQuickCall } = useQuickCall();
   const businessId = useBusinessId();
+  const { data: business } = useBusiness(businessId);
+  const countryCode = business?.country || 'AU';
 
   const [step, setStep] = useState<Step>('search');
   const [search, setSearch] = useState('');
@@ -287,11 +291,10 @@ export function QuickCallModal() {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Phone Number
             </label>
-            <Input
-              type="tel"
+            <PhoneInput
               value={newPhone}
-              onChange={(e) => setNewPhone(e.target.value)}
-              placeholder="(555) 123-4567"
+              onChange={setNewPhone}
+              countryCode={countryCode}
             />
           </div>
 

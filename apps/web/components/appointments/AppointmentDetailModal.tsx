@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Modal, Button, Badge } from '@massage/ui';
+import { Modal, Button, Badge, Select } from '@massage/ui';
 import { AppointmentWithRelations, AppointmentStatus, GroupBookingStatus } from '@massage/types';
 import { StatusBadge } from './StatusBadge';
 import { format } from 'date-fns';
@@ -411,18 +411,20 @@ export function AppointmentDetailModal({
               Log Products Used
             </h3>
             <div className="flex items-center gap-2">
-              <select
-                value={selectedProductId}
-                onChange={(e) => setSelectedProductId(e.target.value)}
-                className="flex-1 text-sm border border-gray-300 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-purple-500"
-              >
-                <option value="">Select product...</option>
-                {inventoryProducts.map((p: any) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} (stock: {p.currentStock})
-                  </option>
-                ))}
-              </select>
+              <div className="flex-1">
+                <Select
+                  value={selectedProductId}
+                  onChange={(e) => setSelectedProductId(e.target.value)}
+                  placeholder="Select product..."
+                  options={[
+                    { value: '', label: 'Select product...', disabled: true },
+                    ...inventoryProducts.map((p: any) => ({
+                      value: p.id,
+                      label: `${p.name} (stock: ${p.currentStock})`,
+                    })),
+                  ]}
+                />
+              </div>
               <div className="flex items-center gap-1">
                 <button
                   type="button"

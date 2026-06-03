@@ -14,6 +14,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { Card } from '@massage/ui';
+import { formatCurrency as fmtCurrency } from '@/lib/format';
 
 export interface RevenueTrendData {
   date: string;
@@ -26,6 +27,7 @@ interface RevenueChartProps {
   title?: string;
   variant?: 'line' | 'area';
   showCount?: boolean;
+  currency?: string;
 }
 
 export function RevenueChart({
@@ -33,28 +35,23 @@ export function RevenueChart({
   title = 'Revenue Trends',
   variant = 'area',
   showCount = false,
+  currency = 'AUD',
 }: RevenueChartProps) {
   const formattedData = useMemo(() => {
     return data.map((item) => ({
       ...item,
-      date: new Date(item.date).toLocaleDateString('en-US', {
+      date: new Date(item.date).toLocaleDateString(undefined, {
         month: 'short',
         day: 'numeric',
       }),
-      displayAmount: item.amount / 100, // Convert cents to dollars
+      displayAmount: item.amount / 100,
     }));
   }, [data]);
 
   const ChartComponent = variant === 'line' ? LineChart : AreaChart;
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
+  const formatCurrency = (value: number) =>
+    fmtCurrency(value, currency, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {

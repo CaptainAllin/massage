@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Card, CardContent, Badge, Button, EmptyState } from '@massage/ui';
-import { ClipboardList, Eye, Trash2, Link2 } from 'lucide-react';
+import { ClipboardList, Pencil, Trash2, Link2 } from 'lucide-react';
 
 interface IntakeFormItem {
   id: string;
@@ -18,6 +18,7 @@ interface IntakeFormsListProps {
   forms: IntakeFormItem[];
   isLoading?: boolean;
   onView?: (form: IntakeFormItem) => void;
+  onEdit?: (form: IntakeFormItem) => void;
   onDelete?: (form: IntakeFormItem) => void;
   onCopyLink?: (form: IntakeFormItem) => void;
   showClient?: boolean;
@@ -33,6 +34,7 @@ export const IntakeFormsList: React.FC<IntakeFormsListProps> = ({
   forms,
   isLoading,
   onView,
+  onEdit,
   onDelete,
   onCopyLink,
   showClient = true,
@@ -62,7 +64,11 @@ export const IntakeFormsList: React.FC<IntakeFormsListProps> = ({
       {forms.map((form) => {
         const completed = isCompleted(form.formData);
         return (
-          <Card key={form.id}>
+          <Card
+            key={form.id}
+            className={completed && onView ? 'cursor-pointer hover:shadow-md transition-shadow' : ''}
+            onClick={completed && onView ? () => onView(form) : undefined}
+          >
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div className="flex-1 min-w-0">
@@ -97,22 +103,22 @@ export const IntakeFormsList: React.FC<IntakeFormsListProps> = ({
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => onCopyLink(form)}
+                      onClick={(e) => { e.stopPropagation(); onCopyLink(form); }}
                       title="Copy form link"
                     >
                       <Link2 className="h-4 w-4" />
                     </Button>
                   )}
-                  {completed && onView && (
-                    <Button variant="ghost" size="sm" onClick={() => onView(form)} title="View form">
-                      <Eye className="h-4 w-4" />
+                  {completed && (onEdit ?? onView) && (
+                    <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); (onEdit ?? onView)!(form); }} title="Edit form">
+                      <Pencil className="h-4 w-4" />
                     </Button>
                   )}
                   {onDelete && (
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => onDelete(form)}
+                      onClick={(e) => { e.stopPropagation(); onDelete(form); }}
                       title="Delete form"
                     >
                       <Trash2 className="h-4 w-4 text-red-500" />

@@ -13,11 +13,9 @@ import {
 } from 'lucide-react';
 import { useGiftCards, useCreateGiftCard, useRedeemGiftCard } from '@/lib/hooks/use-gift-cards';
 import { useBusinessId } from '@/lib/hooks/use-business-id';
+import { useBusiness } from '@/lib/hooks/use-business';
 import { useClients } from '@/lib/hooks/use-clients';
-
-function formatCurrency(amount: number) {
-  return `$${amount.toFixed(2)}`;
-}
+import { formatCurrency as fmtCurrency } from '@/lib/format';
 
 function GiftCardBadge({ isActive, balance }: { isActive: boolean; balance: number }) {
   if (!isActive || balance === 0) {
@@ -179,7 +177,7 @@ function RedeemModal({
         <div className="p-6">
           <div className="mb-4 p-3 bg-[#EDE5F4] rounded-lg text-sm">
             <p className="font-mono text-lg font-bold text-[#5D4AA8]">{giftCard.code}</p>
-            <p className="text-[#7665C2] mt-1">Available balance: {formatCurrency(giftCard.balance)}</p>
+            <p className="text-[#7665C2] mt-1">Available balance: {fmtCurrency(giftCard.balance, 'AUD')}</p>
           </div>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -210,6 +208,9 @@ function RedeemModal({
 
 export default function GiftCardsPage() {
   const businessId = useBusinessId();
+  const { data: business } = useBusiness(businessId);
+  const currency = (business as any)?.currency || 'AUD';
+  const formatCurrency = (amount: number) => fmtCurrency(amount, currency);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [redeemCard, setRedeemCard] = useState<any>(null);
   const [search, setSearch] = useState('');

@@ -14,6 +14,7 @@ export default function IntakeFormsPage() {
   const { data, isLoading } = useIntakeForms(businessId);
   const deleteForm = useDeleteIntakeForm(businessId);
   const [viewingForm, setViewingForm] = useState<any | null>(null);
+  const [editMode, setEditMode] = useState(false);
   const [search, setSearch] = useState('');
 
   const allForms = data?.data ?? [];
@@ -66,8 +67,9 @@ export default function IntakeFormsPage() {
 
       <IntakeFormsList
         forms={forms}
-        isLoading={isLoading}
-        onView={setViewingForm}
+        isLoading={isLoading || !businessId}
+        onView={(form) => { setEditMode(false); setViewingForm(form); }}
+        onEdit={(form) => { setEditMode(true); setViewingForm(form); }}
         onDelete={handleDelete}
         onCopyLink={handleCopyLink}
         showClient
@@ -75,8 +77,10 @@ export default function IntakeFormsPage() {
 
       <ViewFormModal
         isOpen={!!viewingForm}
-        onClose={() => setViewingForm(null)}
+        onClose={() => { setViewingForm(null); setEditMode(false); }}
         form={viewingForm}
+        businessId={businessId}
+        startInEditMode={editMode}
       />
     </div>
   );

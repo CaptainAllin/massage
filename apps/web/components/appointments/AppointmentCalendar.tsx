@@ -10,10 +10,11 @@ import { StaffView } from './StaffView';
 import { useAppointments } from '@/lib/hooks/use-appointments';
 import { useLocations } from '@/lib/hooks/use-locations';
 import { startOfWeek, endOfWeek, startOfDay, endOfDay, startOfMonth, endOfMonth, getWeek, format } from 'date-fns';
-import { EmptyState } from '@massage/ui';
+import { EmptyState, Select } from '@massage/ui';
 import { useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { MapPin } from 'lucide-react';
+import { APT_COLORS } from '@/lib/appointment-colors';
 
 interface AppointmentCalendarProps {
   businessId: string | undefined;
@@ -69,7 +70,40 @@ export function AppointmentCalendar({
     ...(selectedLocationId ? { locationId: selectedLocationId } : {}),
   } as any);
 
-  const appointments = appointmentsResponse?.data || [];
+  const rawAppointments = appointmentsResponse?.data || [];
+  // Deduplicate: keep first occurrence per (therapistId, clientId, startTime) composite key
+  const appointments = rawAppointments.filter((apt, idx, arr) => {
+    const key = `${apt.therapistId ?? ''}-${apt.clientId}-${new Date(apt.startTime).getTime()}`;
+    return arr.findIndex(
+      (a) => `${a.therapistId ?? ''}-${a.clientId}-${new Date(a.startTime).getTime()}` === key,
+    ) === idx;
+  });
+
+  // Assign a stable color per therapist based on order of first appearance
+  const therapistColorMap = useMemo(() => {
+    const map = new Map<string, string>();
+    appointments.forEach((apt) => {
+      if (apt.therapistId && !map.has(apt.therapistId)) {
+        map.set(apt.therapistId, APT_COLORS[map.size % APT_COLORS.length]);
+      }
+    });
+    return map;
+  }, [appointments]);
+
+  // Build ordered list of therapist entries for the legend
+  const therapistEntries = useMemo(() => {
+    const entries: { id: string; name: string; color: string }[] = [];
+    appointments.forEach((apt) => {
+      if (apt.therapistId && !entries.find((e) => e.id === apt.therapistId)) {
+        const t = (apt as any).therapist;
+        const name = t?.user
+          ? `${t.user.firstName || ''} ${t.user.lastName || ''}`.trim()
+          : 'Unknown';
+        entries.push({ id: apt.therapistId, name, color: therapistColorMap.get(apt.therapistId)! });
+      }
+    });
+    return entries;
+  }, [appointments, therapistColorMap]);
 
   // Summary stats
   const sessionCount = appointments.length;
@@ -113,6 +147,10 @@ export function AppointmentCalendar({
       className="rounded-2xl p-10"
       style={{ background: '#fff', border: '1px solid #EFE9F2' }}
     >
+      <div className="flex items-center gap-3 mb-5">
+        <div className="w-5 h-5 border-2 border-[#5D4AA8] border-t-transparent rounded-full animate-spin flex-shrink-0" />
+        <span style={{ fontSize: 14, color: '#7A7090' }}>Loading appointments…</span>
+      </div>
       <div className="animate-pulse space-y-3">
         <div className="h-4 rounded-full" style={{ background: '#EDE5F4', width: '30%' }} />
         <div className="h-48 rounded-xl" style={{ background: '#EDE5F4' }} />
@@ -125,6 +163,7 @@ export function AppointmentCalendar({
       therapists={therapists}
       onAppointmentClick={onAppointmentClick}
       onSlotClick={handleStaffSlotClick}
+      therapistColorMap={therapistColorMap}
     />
   ) : appointments.length === 0 ? (
     <div
@@ -142,6 +181,7 @@ export function AppointmentCalendar({
       appointments={appointments}
       onAppointmentClick={onAppointmentClick}
       onSlotClick={handleSlotClick}
+      therapistColorMap={therapistColorMap}
     />
   ) : viewMode === 'week' ? (
     <WeekView
@@ -150,6 +190,7 @@ export function AppointmentCalendar({
       onAppointmentClick={onAppointmentClick}
       onSlotClick={handleSlotClick}
       onAppointmentDrop={handleAppointmentDrop}
+      therapistColorMap={therapistColorMap}
     />
   ) : (
     <DayView
@@ -158,6 +199,7 @@ export function AppointmentCalendar({
       onAppointmentClick={onAppointmentClick}
       onSlotClick={handleSlotClick}
       onAppointmentDrop={handleAppointmentDrop}
+      therapistColorMap={therapistColorMap}
     />
   );
 
@@ -211,17 +253,14 @@ export function AppointmentCalendar({
       {(locations as any[]).length > 1 && (
         <div className="flex items-center gap-2">
           <MapPin className="h-4 w-4 flex-shrink-0" style={{ color: '#9E96B0' }} />
-          <select
+          <Select
             value={selectedLocationId ?? ''}
             onChange={(e) => setSelectedLocationId(e.target.value || null)}
-            className="text-sm rounded-lg px-2.5 py-1.5 focus:outline-none"
-            style={{ border: '1px solid #D9D3E8', color: '#3D3450', background: '#fff' }}
-          >
-            <option value="">All locations</option>
-            {(locations as any[]).map((loc: any) => (
-              <option key={loc.id} value={loc.id}>{loc.name}</option>
-            ))}
-          </select>
+            options={[
+              { value: '', label: 'All locations' },
+              ...(locations as any[]).map((loc: any) => ({ value: loc.id, label: loc.name })),
+            ]}
+          />
         </div>
       )}
 
@@ -236,6 +275,48 @@ export function AppointmentCalendar({
         viewMode={viewMode}
         onViewModeChange={setViewMode}
       />
+
+      {/* Legend */}
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+        {/* Therapist legend — border colors */}
+        {therapistEntries.length > 0 && (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+            {therapistEntries.map(({ id, name, color }) => (
+              <span key={id} className="flex items-center gap-1.5">
+                <span
+                  className="inline-block w-2.5 h-2.5 rounded-sm flex-shrink-0"
+                  style={{ background: color + '22', borderLeft: `3px solid ${color}` }}
+                />
+                <span className="text-xs" style={{ color: '#7A7090' }}>{name}</span>
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Divider between therapists and statuses */}
+        {therapistEntries.length > 0 && (
+          <span className="hidden sm:block w-px h-3 self-center flex-shrink-0" style={{ background: '#D9D3E8' }} />
+        )}
+
+        {/* Status legend — background colors */}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+          {([
+            { label: 'Scheduled',   bg: '#EEF1F9' },
+            { label: 'Confirmed',   bg: '#EDE5F4' },
+            { label: 'In Progress', bg: '#F7E5DD' },
+            { label: 'Completed',   bg: '#EAF0E9' },
+            { label: 'Cancelled',   bg: '#F5E5E5' },
+          ] as const).map(({ label, bg }) => (
+            <span key={label} className="flex items-center gap-1.5">
+              <span
+                className="inline-block w-2.5 h-2.5 rounded-sm flex-shrink-0"
+                style={{ background: bg, border: '1px solid #D9D3E8' }}
+              />
+              <span className="text-xs" style={{ color: '#7A7090' }}>{label}</span>
+            </span>
+          ))}
+        </div>
+      </div>
 
       {calendarContent}
     </div>

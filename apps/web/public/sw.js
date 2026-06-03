@@ -1,53 +1,92 @@
-// Service Worker: push notifications + offline caching for appointments
+// Service Worker: app shell caching + push notifications
 
-const CACHE_NAME = 'wellness-crm-v1';
-const APPOINTMENTS_CACHE = 'appointments-cache-v1';
+const CACHE_VERSION = 'v2';
+const SHELL_CACHE = `wellness-shell-${CACHE_VERSION}`;
+const API_CACHE = `wellness-api-${CACHE_VERSION}`;
 
-// Cache these static assets for offline use
-const STATIC_ASSETS = ['/dashboard', '/appointments', '/favicon.ico'];
+// Pages to pre-cache for instant navigation
+const SHELL_PAGES = ['/dashboard', '/appointments', '/clients', '/favicon.ico'];
+
+// API routes to serve stale-while-revalidate
+const CACHED_API_PREFIXES = [
+  '/api/dashboard',
+  '/api/appointments',
+  '/api/clients',
+  '/api/therapists',
+];
 
 // ── Install ────────────────────────────────────────────────────────────────
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(STATIC_ASSETS).then((cache) => cache.addAll(STATIC_ASSETS)).catch(() => {})
+    caches.open(SHELL_CACHE).then((cache) => cache.addAll(SHELL_PAGES)).catch(() => {})
   );
   self.skipWaiting();
 });
 
-// ── Activate ───────────────────────────────────────────────────────────────
+// ── Activate: purge old caches ─────────────────────────────────────────────
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys
-          .filter((key) => key !== CACHE_NAME && key !== APPOINTMENTS_CACHE)
-          .map((key) => caches.delete(key))
+    caches
+      .keys()
+      .then((keys) =>
+        Promise.all(
+          keys
+            .filter((k) => k !== SHELL_CACHE && k !== API_CACHE)
+            .map((k) => caches.delete(k))
+        )
       )
-    )
   );
   self.clients.claim();
 });
 
-// ── Fetch: cache-first for appointments API ────────────────────────────────
+// ── Fetch ──────────────────────────────────────────────────────────────────
 self.addEventListener('fetch', (event) => {
-  const url = new URL(event.request.url);
+  const { request } = event;
+  if (request.method !== 'GET') return;
 
-  // Cache appointments API responses (stale-while-revalidate)
-  if (url.pathname.startsWith('/api/appointments') && event.request.method === 'GET') {
+  const url = new URL(request.url);
+
+  // API routes: stale-while-revalidate
+  const isApiRoute = CACHED_API_PREFIXES.some((p) => url.pathname.startsWith(p));
+  if (isApiRoute) {
     event.respondWith(
-      caches.open(APPOINTMENTS_CACHE).then(async (cache) => {
-        const cached = await cache.match(event.request);
-        const networkPromise = fetch(event.request)
-          .then((response) => {
-            if (response.ok) cache.put(event.request, response.clone());
-            return response;
+      caches.open(API_CACHE).then(async (cache) => {
+        const cached = await cache.match(request);
+        const networkFetch = fetch(request)
+          .then((res) => {
+            if (res.ok) cache.put(request, res.clone()).catch(() => {});
+            return res;
           })
           .catch(() => cached);
-
         // Return cached immediately, update in background
-        return cached || networkPromise;
+        return cached ?? networkFetch;
       })
     );
+    return;
+  }
+
+  // Navigation requests: network-first, fall back to cache
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request).catch(() =>
+        caches.match(request).then((r) => r ?? caches.match('/dashboard'))
+      )
+    );
+    return;
+  }
+
+  // Static JS/CSS/_next assets: cache-first (they have content hashes)
+  if (url.pathname.startsWith('/_next/static/')) {
+    event.respondWith(
+      caches.open(SHELL_CACHE).then(async (cache) => {
+        const cached = await cache.match(request);
+        if (cached) return cached;
+        const res = await fetch(request);
+        if (res.ok) cache.put(request, res.clone()).catch(() => {});
+        return res;
+      })
+    );
+    return;
   }
 });
 
@@ -59,10 +98,10 @@ self.addEventListener('push', (event) => {
   try {
     payload = event.data.json();
   } catch {
-    payload = { title: 'Wellness CRM', body: event.data.text() };
+    payload = { title: 'Iris', body: event.data.text() };
   }
 
-  const { title = 'Wellness CRM', body = '', icon, badge, data = {} } = payload;
+  const { title = 'Iris', body = '', icon, badge, data = {} } = payload;
 
   event.waitUntil(
     self.registration.showNotification(title, {

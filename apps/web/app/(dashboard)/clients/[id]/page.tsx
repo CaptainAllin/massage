@@ -368,6 +368,7 @@ export default function ClientProfilePage() {
 
                 <SectionCard title="Emergency Contact">
                   <InfoRow label="Name" value={client.emergencyContactName || '—'} />
+                  <InfoRow label="Relationship" value={client.emergencyContactRelationship || '—'} />
                   <InfoRow label="Phone" value={client.emergencyContactPhone || '—'} />
                 </SectionCard>
 

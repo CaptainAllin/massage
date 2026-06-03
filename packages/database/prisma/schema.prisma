@@ -44,7 +44,8 @@ model Business {
   city                       String?
   state                      String?
   postalCode                 String?
-  country                    String?                      @default("USA")
+  country                    String?                      @default("AU")
+  currency                   String?                      @default("AUD")
   website                    String?
   logo                       String?
   primaryColor               String?                      @default("#A8C3A0")
@@ -204,8 +205,9 @@ model Client {
   city                       String?
   state                      String?
   postalCode                 String?
-  emergencyContactName       String?
-  emergencyContactPhone      String?
+  emergencyContactName         String?
+  emergencyContactPhone        String?
+  emergencyContactRelationship String?
   medicalHistory             Json?
   allergies                  String[]                     @default([])
   medications                String[]                     @default([])
@@ -1470,7 +1472,8 @@ enum PaymentStatus {
 enum PaymentMethod {
   STRIPE_CARD
   CASH
-  CHECK
+  EFTPOS
+  CHEQUE
   BANK_TRANSFER
   OTHER
 }

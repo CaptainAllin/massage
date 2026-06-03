@@ -3,6 +3,10 @@
 import React, { useState } from 'react';
 import { Modal, Button, Input, DatePicker, Textarea } from '@massage/ui';
 import { useCreateClient } from '@/lib/hooks';
+import { useBusiness } from '@/lib/hooks/use-business';
+import { getCountryFormat } from '@/lib/countryFormats';
+import { PhoneInput } from '@/components/ui/PhoneInput';
+import { PostcodeInput } from '@/components/ui/PostcodeInput';
 
 export interface AddClientModalProps {
   isOpen: boolean;
@@ -10,31 +14,37 @@ export interface AddClientModalProps {
   businessId: string | undefined;
 }
 
+const EMPTY_FORM = {
+  firstName: '',
+  lastName: '',
+  email: '',
+  phoneNumber: '',
+  dateOfBirth: '',
+  address: '',
+  city: '',
+  state: '',
+  postalCode: '',
+  emergencyContactName: '',
+  emergencyContactPhone: '',
+  emergencyContactRelationship: '',
+  occupation: '',
+  primaryPhysician: '',
+  insuranceProvider: '',
+  insurancePolicyNumber: '',
+  goals: '',
+  healthNotes: '',
+};
+
 export const AddClientModal: React.FC<AddClientModalProps> = ({
   isOpen,
   onClose,
   businessId,
 }) => {
   const createClient = useCreateClient(businessId);
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phoneNumber: '',
-    dateOfBirth: '',
-    address: '',
-    city: '',
-    state: '',
-    postalCode: '',
-    emergencyContactName: '',
-    emergencyContactPhone: '',
-    occupation: '',
-    primaryPhysician: '',
-    insuranceProvider: '',
-    insurancePolicyNumber: '',
-    goals: '',
-    healthNotes: '',
-  });
+  const { data: business } = useBusiness(businessId);
+  const countryCode = business?.country || 'AU';
+  const countryFmt = getCountryFormat(countryCode);
+  const [formData, setFormData] = useState({ ...EMPTY_FORM });
 
   const handleChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -49,25 +59,7 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
         ...(healthNotes ? { medicalHistory: { notes: healthNotes } } : {}),
       });
       onClose();
-      setFormData({
-        firstName: '',
-        lastName: '',
-        email: '',
-        phoneNumber: '',
-        dateOfBirth: '',
-        address: '',
-        city: '',
-        state: '',
-        postalCode: '',
-        emergencyContactName: '',
-        emergencyContactPhone: '',
-        occupation: '',
-        primaryPhysician: '',
-        insuranceProvider: '',
-        insurancePolicyNumber: '',
-        goals: '',
-        healthNotes: '',
-      });
+      setFormData({ ...EMPTY_FORM });
     } catch (error) {
       console.error('Failed to create client:', error);
     }
@@ -119,11 +111,10 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Phone Number
             </label>
-            <Input
-              type="tel"
+            <PhoneInput
               value={formData.phoneNumber}
-              onChange={(e) => handleChange('phoneNumber', e.target.value)}
-              placeholder="(555) 123-4567"
+              onChange={(v) => handleChange('phoneNumber', v)}
+              countryCode={countryCode}
             />
           </div>
         </div>
@@ -157,31 +148,39 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
             <Input
               value={formData.city}
               onChange={(e) => handleChange('city', e.target.value)}
-              placeholder="San Francisco"
+              placeholder="e.g. Melbourne"
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              State
+              {countryFmt.stateLabel}
             </label>
-            <Input
-              value={formData.state}
-              onChange={(e) => handleChange('state', e.target.value)}
-              placeholder="CA"
-            />
+            {countryFmt.states.length > 0 ? (
+              <select
+                value={formData.state}
+                onChange={(e) => handleChange('state', e.target.value)}
+                className="w-full rounded-xl border border-[#E5DEEC] bg-white px-3 py-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5D4AA8]"
+              >
+                <option value="">Select…</option>
+                {countryFmt.states.map((s) => (
+                  <option key={s.code} value={s.code}>{s.code} — {s.name}</option>
+                ))}
+              </select>
+            ) : (
+              <Input
+                value={formData.state}
+                onChange={(e) => handleChange('state', e.target.value)}
+                placeholder="e.g. VIC"
+              />
+            )}
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Postal Code
-            </label>
-            <Input
-              value={formData.postalCode}
-              onChange={(e) => handleChange('postalCode', e.target.value)}
-              placeholder="94102"
-            />
-          </div>
+          <PostcodeInput
+            value={formData.postalCode}
+            onChange={(v) => handleChange('postalCode', v)}
+            countryCode={countryCode}
+          />
         </div>
 
         <div className="border-t pt-4">
@@ -202,15 +201,25 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Contact Phone
+                Relationship
               </label>
               <Input
-                type="tel"
-                value={formData.emergencyContactPhone}
-                onChange={(e) => handleChange('emergencyContactPhone', e.target.value)}
-                placeholder="(555) 987-6543"
+                value={formData.emergencyContactRelationship}
+                onChange={(e) => handleChange('emergencyContactRelationship', e.target.value)}
+                placeholder="e.g. Spouse, Parent, Friend"
               />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Contact Phone
+            </label>
+            <PhoneInput
+              value={formData.emergencyContactPhone}
+              onChange={(v) => handleChange('emergencyContactPhone', v)}
+              countryCode={countryCode}
+            />
           </div>
         </div>
 
@@ -250,7 +259,7 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
                 <Input
                   value={formData.insuranceProvider}
                   onChange={(e) => handleChange('insuranceProvider', e.target.value)}
-                  placeholder="Blue Cross"
+                  placeholder="e.g. Medibank"
                 />
               </div>
 

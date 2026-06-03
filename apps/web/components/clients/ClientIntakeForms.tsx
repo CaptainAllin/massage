@@ -76,6 +76,7 @@ export const ClientIntakeForms: React.FC<ClientIntakeFormsProps> = ({
         isOpen={!!viewingForm}
         onClose={() => setViewingForm(null)}
         form={viewingForm}
+        businessId={businessId}
       />
     </div>
   );

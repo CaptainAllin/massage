@@ -54,7 +54,7 @@ export function useClientsWithMeta(
       };
     },
     enabled: !!businessId,
-    staleTime: 30_000,
+    retry: 1,
   });
 }
 
@@ -68,7 +68,6 @@ export function useClientCounts(businessId: string | undefined) {
       return response.data.counts as ClientCounts;
     },
     enabled: !!businessId,
-    staleTime: 60_000,
   });
 }
 

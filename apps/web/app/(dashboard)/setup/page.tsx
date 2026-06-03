@@ -10,6 +10,10 @@ import { useCommunicationSettings, useUpdateCommunicationSettings } from '@/lib/
 import { usePushNotifications } from '@/lib/hooks/use-push-notifications';
 import { uploadFile, getPublicUrl, brandingPath, uniqueFileName, BUCKETS } from '@/lib/storage';
 import { useOnboardingContext } from '@/components/onboarding/OnboardingProvider';
+import { COUNTRIES, getCountryByCode } from '@/lib/format';
+import { getCountryFormat } from '@/lib/countryFormats';
+import { PhoneInput } from '@/components/ui/PhoneInput';
+import { PostcodeInput } from '@/components/ui/PostcodeInput';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -36,7 +40,7 @@ function StepIndicator({ current }: { current: Step }) {
                 className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold transition-all"
                 style={
                   done    ? { background: '#5D4AA8', color: '#fff' }
-                  : active ? { background: 'linear-gradient(135deg, #5D4AA8, #3F2F87)', color: '#fff', boxShadow: '0 4px 16px rgba(93,74,168,0.32)' }
+                  : active ? { background: 'linear-gradient(135deg, #5D4AA8, #3F2F87)', color: '#fff', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.16), 0 1px 3px rgba(28,20,54,0.18)' }
                   :          { background: '#EDE5F4', color: '#9E96B0' }
                 }
               >
@@ -127,7 +131,7 @@ function Step1({
   const updateBusiness = useUpdateBusiness(businessId);
   const [form, setForm] = useState({
     name: '', email: '', phoneNumber: '', address: '',
-    city: '', state: '', postalCode: '', country: 'USA', website: '',
+    city: '', state: '', postalCode: '', country: 'AU', currency: 'AUD', website: '',
   });
 
   useEffect(() => {
@@ -140,7 +144,8 @@ function Step1({
         city:         business.city || '',
         state:        business.state || '',
         postalCode:   business.postalCode || '',
-        country:      business.country || 'USA',
+        country:      business.country || 'AU',
+        currency:     (business as any).currency || 'AUD',
         website:      business.website || '',
       });
     }
@@ -151,6 +156,15 @@ function Step1({
     onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
       setForm(f => ({ ...f, [key]: e.target.value })),
   });
+
+  const handleCountryChange = (countryCode: string) => {
+    const country = getCountryByCode(countryCode);
+    setForm(f => ({
+      ...f,
+      country: countryCode,
+      currency: country?.currency || f.currency,
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -182,7 +196,12 @@ function Step1({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input label="Email" type="email" placeholder="info@yourbusiness.com" {...field('email')} />
-          <Input label="Phone Number" type="tel" placeholder="+1 (555) 000-0000" {...field('phoneNumber')} />
+          <PhoneInput
+            label="Phone Number"
+            value={form.phoneNumber}
+            onChange={(v) => setForm((f) => ({ ...f, phoneNumber: v }))}
+            countryCode={form.country}
+          />
         </div>
 
         <div>
@@ -195,8 +214,24 @@ function Step1({
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <Input label="City" placeholder="Melbourne" {...field('city')} />
           <Input label="State" placeholder="VIC" {...field('state')} />
-          <Input label="Postal Code" placeholder="3000" {...field('postalCode')} />
-          <Input label="Country" placeholder="Australia" {...field('country')} />
+          <PostcodeInput
+            value={form.postalCode}
+            onChange={(v) => setForm((f) => ({ ...f, postalCode: v }))}
+            countryCode={form.country}
+          />
+          <div>
+            <label className="block text-sm font-medium mb-1" style={{ color: '#3D3450' }}>Country</label>
+            <select
+              value={form.country}
+              onChange={(e) => handleCountryChange(e.target.value)}
+              className="w-full rounded-xl border-2 border-input bg-background px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+            >
+              <option value="">Select…</option>
+              {COUNTRIES.map((c) => (
+                <option key={c.code} value={c.code}>{c.name}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <Input label="Website" type="url" placeholder="https://yourbusiness.com" {...field('website')} />
@@ -344,7 +379,7 @@ function Step2({
           value={emailSignature}
           onChange={(e) => setEmailSignature(e.target.value)}
           rows={4}
-          placeholder={`Best regards,\nYour Wellness Team\n\nPhone: +1 (555) 000-0000`}
+          placeholder={`Best regards,\nYour Wellness Team\n\nPhone: ${getCountryFormat(business?.country || 'AU').phonePrefix} …`}
           className="w-full rounded-xl border-2 border-input bg-background px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
         />
         <p className="text-xs mt-1" style={{ color: '#9E96B0' }}>Appended to the bottom of all outbound emails.</p>
@@ -523,7 +558,7 @@ function CompletionScreen({ onGo }: { onGo: () => void }) {
     <div className="py-6 text-center space-y-5">
       <div
         className="mx-auto w-16 h-16 rounded-2xl flex items-center justify-center"
-        style={{ background: 'linear-gradient(135deg, #5D4AA8, #3F2F87)', boxShadow: '0 8px 32px rgba(93,74,168,0.32)' }}
+        style={{ background: 'linear-gradient(135deg, #5D4AA8, #3F2F87)', boxShadow: '0 8px 28px rgba(28,20,54,0.14), 0 2px 6px rgba(28,20,54,0.08)' }}
       >
         <Check className="h-8 w-8 text-white" />
       </div>
@@ -536,8 +571,8 @@ function CompletionScreen({ onGo }: { onGo: () => void }) {
       </div>
       <button
         onClick={onGo}
-        className="inline-block px-6 py-3 rounded-2xl font-semibold text-white text-sm"
-        style={{ background: 'linear-gradient(135deg, #5D4AA8, #3F2F87)', boxShadow: '0 8px 24px rgba(93,74,168,0.32)' }}
+        className="iris-cta inline-block px-6 py-3 rounded-2xl font-semibold text-white text-sm"
+        style={{ background: 'linear-gradient(135deg, #5D4AA8, #3F2F87)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.16), 0 1px 2px rgba(28,20,54,0.16)' }}
       >
         Go to Dashboard →
       </button>

@@ -10,6 +10,7 @@ import {
   Legend,
 } from 'recharts';
 import { Card } from '@massage/ui';
+import { formatCurrency as fmtCurrency } from '@/lib/format';
 
 export interface ServiceData {
   name: string;
@@ -22,6 +23,7 @@ interface ServiceDistributionChartProps {
   services: ServiceData[];
   title?: string;
   metric?: 'revenue' | 'count';
+  currency?: string;
 }
 
 const COLORS = [
@@ -41,6 +43,7 @@ export function ServiceDistributionChart({
   services,
   title = 'Service Distribution',
   metric = 'revenue',
+  currency = 'AUD',
 }: ServiceDistributionChartProps) {
   const chartData = useMemo(() => {
     return services.map((service) => ({
@@ -50,14 +53,8 @@ export function ServiceDistributionChart({
     }));
   }, [services, metric]);
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
+  const formatCurrency = (value: number) =>
+    fmtCurrency(value, currency, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {

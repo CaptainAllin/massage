@@ -64,7 +64,7 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
 
   return (
     <Card>
-      <CardContent className="pt-6">
+      <CardContent className="p-6">
         {error && (
           <div className="p-3 bg-red-50 border border-red-200 rounded-md text-red-800 text-sm mb-4">
             {error}

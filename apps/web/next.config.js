@@ -13,7 +13,9 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  serverExternalPackages: ['@prisma/client', '.prisma/client'],
+  experimental: {
+    serverComponentsExternalPackages: ['@prisma/client', '.prisma/client'],
+  },
 };
 
 module.exports = withSentryConfig(nextConfig, {

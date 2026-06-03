@@ -3,11 +3,13 @@
 import React, { useState } from 'react';
 import { Modal, Button, Input, Select } from '@massage/ui';
 import { useClients } from '@/lib/hooks/use-clients';
+import { useBusiness } from '@/lib/hooks/use-business';
 import {
   useCreatePayment,
   useProcessStripePayment,
   useProcessCashPayment,
-  useProcessCheckPayment,
+  useProcessEftposPayment,
+  useProcessChequePayment,
   useSavedPaymentMethods,
 } from '@/lib/hooks/use-payments';
 import { StripePaymentModal } from './StripePaymentModal';
@@ -32,19 +34,22 @@ export const CreatePaymentModal: React.FC<CreatePaymentModalProps> = ({
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState<string>(PaymentMethod.STRIPE_CARD);
   const [description, setDescription] = useState('');
-  const [checkNumber, setCheckNumber] = useState('');
+  const [chequeNumber, setCheckNumber] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [stripeClientSecret, setStripeClientSecret] = useState<string | null>(null);
   const [stripeAmount, setStripeAmount] = useState(0);
   const [savedMethodId, setSavedMethodId] = useState<string>('new');
 
+  const { data: business } = useBusiness(businessId);
+  const currency = (business as any)?.currency || 'AUD';
   const { data: clients } = useClients(businessId);
   const { data: savedMethods = [] } = useSavedPaymentMethods(businessId, clientId || undefined);
   const createPayment = useCreatePayment(businessId);
   const processStripe = useProcessStripePayment(businessId);
   const processCash = useProcessCashPayment(businessId);
-  const processCheck = useProcessCheckPayment(businessId);
+  const processEftpos = useProcessEftposPayment(businessId);
+  const processCheque = useProcessChequePayment(businessId);
 
   const handleClose = () => {
     setClientId(defaultClientId || '');
@@ -71,7 +76,7 @@ export const CreatePaymentModal: React.FC<CreatePaymentModalProps> = ({
         businessId,
         clientId,
         amount: amountNum,
-        currency: 'USD',
+        currency,
         paymentMethod: method as any,
         description: description || undefined,
       });
@@ -95,8 +100,12 @@ export const CreatePaymentModal: React.FC<CreatePaymentModalProps> = ({
         await processCash.mutateAsync({ paymentId: payment!.id });
         onSuccess?.();
         handleClose();
-      } else if (method === PaymentMethod.CHECK) {
-        await processCheck.mutateAsync({ paymentId: payment!.id, checkNumber: checkNumber || undefined });
+      } else if (method === PaymentMethod.EFTPOS) {
+        await processEftpos.mutateAsync({ paymentId: payment!.id });
+        onSuccess?.();
+        handleClose();
+      } else if (method === PaymentMethod.CHEQUE) {
+        await processCheque.mutateAsync({ paymentId: payment!.id, chequeNumber: chequeNumber || undefined });
         onSuccess?.();
         handleClose();
       }
@@ -140,7 +149,7 @@ export const CreatePaymentModal: React.FC<CreatePaymentModalProps> = ({
 
           <Input
             type="number"
-            label="Amount (USD)"
+            label={`Amount (${currency})`}
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             min="0.01"
@@ -159,15 +168,16 @@ export const CreatePaymentModal: React.FC<CreatePaymentModalProps> = ({
               options={[
                 { value: PaymentMethod.STRIPE_CARD, label: 'Credit / Debit Card (Stripe)' },
                 { value: PaymentMethod.CASH, label: 'Cash' },
-                { value: PaymentMethod.CHECK, label: 'Check' },
+                { value: PaymentMethod.EFTPOS, label: 'EFTPOS' },
+                { value: PaymentMethod.CHEQUE, label: 'Cheque' },
               ]}
             />
           </div>
 
-          {method === PaymentMethod.CHECK && (
+          {method === PaymentMethod.CHEQUE && (
             <Input
-              label="Check Number (optional)"
-              value={checkNumber}
+              label="Cheque Number (optional)"
+              value={chequeNumber}
               onChange={(e) => setCheckNumber(e.target.value)}
               placeholder="e.g. 1042"
             />
@@ -234,7 +244,7 @@ export const CreatePaymentModal: React.FC<CreatePaymentModalProps> = ({
           onClose={() => setStripeClientSecret(null)}
           clientSecret={stripeClientSecret}
           amount={stripeAmount}
-          currency="USD"
+          currency={currency}
           onSuccess={handleStripeSuccess}
         />
       )}

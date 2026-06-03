@@ -75,7 +75,7 @@ export const VoiceNoteList: React.FC<VoiceNoteListProps> = ({
   if (voiceNotes.length === 0) {
     return (
       <Card>
-        <CardContent className="pt-6">
+        <CardContent className="p-6">
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <Mic className="h-12 w-12 text-gray-400 mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">No Voice Notes Yet</h3>

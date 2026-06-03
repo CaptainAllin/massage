@@ -10,7 +10,17 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
     const payment = await prisma.payment.findFirst({
       where: { id: params.id, businessId },
-      include: { client: true, invoice: true },
+      include: {
+        client: true,
+        invoice: true,
+        appointment: {
+          include: {
+            therapist: {
+              include: { user: true },
+            },
+          },
+        },
+      },
     });
     if (!payment) return res.notFound('Payment not found');
     return res.ok(payment);

@@ -845,17 +845,18 @@ export default function IntegrationsPage() {
   const qbIntegration = getIntegration('QUICKBOOKS');
 
   return (
-    <div className="p-6 max-w-3xl mx-auto space-y-6">
-      <div className="flex items-center gap-3">
+    <div className="max-w-4xl space-y-5">
+      <div className="flex items-start gap-3">
         <Link
           href="/settings"
-          className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground"
+          className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground mt-0.5"
         >
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Integrations</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
+          <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: '#5D4AA8', letterSpacing: '1.4px' }}>Tools</p>
+          <h1 className="text-2xl font-semibold font-display" style={{ color: '#1E1830', letterSpacing: '-0.4px' }}>Integrations</h1>
+          <p className="text-sm mt-0.5" style={{ color: '#7A7090' }}>
             Connect your accounting software for two-way invoice and payment sync.
           </p>
         </div>

@@ -1,0 +1,1 @@
+ALTER TYPE "PaymentMethod" RENAME VALUE 'CHECK' TO 'CHEQUE';

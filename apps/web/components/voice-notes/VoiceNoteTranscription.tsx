@@ -32,7 +32,7 @@ export const VoiceNoteTranscription: React.FC<VoiceNoteTranscriptionProps> = ({
   if (voiceNote.status === VoiceNoteStatus.TRANSCRIBING) {
     return (
       <Card>
-        <CardContent className="pt-6">
+        <CardContent className="p-6">
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <Loader2 className="h-8 w-8 animate-spin text-blue-500 mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Transcribing Audio...</h3>
@@ -46,7 +46,7 @@ export const VoiceNoteTranscription: React.FC<VoiceNoteTranscriptionProps> = ({
   if (voiceNote.status === VoiceNoteStatus.FAILED) {
     return (
       <Card>
-        <CardContent className="pt-6">
+        <CardContent className="p-6">
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <div className="rounded-full bg-red-100 p-3 mb-4">
               <X className="h-6 w-6 text-red-600" />
@@ -62,7 +62,7 @@ export const VoiceNoteTranscription: React.FC<VoiceNoteTranscriptionProps> = ({
   if (!voiceNote.transcription) {
     return (
       <Card>
-        <CardContent className="pt-6">
+        <CardContent className="p-6">
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <FileText className="h-8 w-8 text-gray-400 mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">No Transcription Available</h3>

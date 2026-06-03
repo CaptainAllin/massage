@@ -3,6 +3,11 @@ import { createHash } from 'crypto';
 import { createServiceClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 
+// Server-side auth cache — eliminates redundant Supabase network calls and DB user lookups.
+// Keyed by SHA-256(token). TTL is 4 min; Supabase tokens live ~1 hour so this is safe.
+const AUTH_CACHE_TTL_MS = 4 * 60 * 1000;
+const _authCache = new Map<string, { user: AuthUser; expiresAt: number }>();
+
 /** Create an audit log entry, automatically capturing IP and user-agent from the request. */
 export async function logAudit(
   req: NextRequest,
@@ -65,6 +70,17 @@ export async function requireAuth(req: NextRequest): Promise<AuthUser> {
   }
 
   const token = authHeader.substring(7);
+  const cacheKey = createHash('sha256').update(token).digest('hex');
+
+  const cached = _authCache.get(cacheKey);
+  if (cached && Date.now() < cached.expiresAt) return cached.user;
+
+  // Evict stale entries if the cache grows large
+  if (_authCache.size > 500) {
+    const now = Date.now();
+    for (const [k, v] of _authCache) if (now >= v.expiresAt) _authCache.delete(k);
+  }
+
   const supabase = createServiceClient();
   const { data, error } = await supabase.auth.getUser(token);
 
@@ -97,12 +113,14 @@ export async function requireAuth(req: NextRequest): Promise<AuthUser> {
     });
   }
 
-  return {
+  const authUser: AuthUser = {
     id: user.id,
     authUserId: user.authUserId,
     email: user.email,
     role: user.role,
   };
+  _authCache.set(cacheKey, { user: authUser, expiresAt: Date.now() + AUTH_CACHE_TTL_MS });
+  return authUser;
 }
 
 /** Verify the authenticated user belongs to the given business (owner or therapist). */

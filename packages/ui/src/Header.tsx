@@ -72,6 +72,7 @@ export function Header({
       {/* Left: date + subtitle */}
       <div className="flex flex-col justify-center min-w-0 flex-shrink-0">
         <span
+          suppressHydrationWarning
           style={{ fontSize: '13.5px', fontWeight: 500, color: '#1E1830', letterSpacing: '-0.2px', lineHeight: 1.2 }}
         >
           {dateStr}

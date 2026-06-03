@@ -37,8 +37,8 @@ const formatPaymentMethod = (method: string): string => {
       return 'Card';
     case PaymentMethod.CASH:
       return 'Cash';
-    case PaymentMethod.CHECK:
-      return 'Check';
+    case PaymentMethod.CHEQUE:
+      return 'Cheque';
     case PaymentMethod.BANK_TRANSFER:
       return 'Bank Transfer';
     default:
@@ -51,8 +51,25 @@ export const PaymentsList: React.FC<PaymentsListProps> = ({
   totalPages = 0,
   currentPage = 1,
   onPageChange = () => {},
+  isLoading = false,
 }) => {
   const router = useRouter();
+
+  if (isLoading) {
+    return (
+      <div style={{ background: '#fff', borderRadius: 18, border: '1px solid #EFE9F2', overflow: 'hidden', padding: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+          <div style={{ width: 18, height: 18, border: '2px solid #5D4AA8', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />
+          <span style={{ fontSize: 13.5, color: '#7A7090' }}>Loading payments…</span>
+        </div>
+        <div className="space-y-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} style={{ height: 48, background: '#F7F4FB', borderRadius: 10, opacity: 1 - i * 0.1 }} />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   const columns: Column<Payment>[] = [
     {

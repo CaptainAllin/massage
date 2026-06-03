@@ -1,5 +1,6 @@
 import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@massage/ui';
+import { formatCurrency } from '@/lib/format';
 
 interface KPICardProps {
   title: string;
@@ -12,6 +13,7 @@ interface KPICardProps {
   icon?: React.ReactNode;
   isLoading?: boolean;
   format?: 'currency' | 'percentage' | 'number';
+  currency?: string;
 }
 
 export const KPICard: React.FC<KPICardProps> = ({
@@ -22,23 +24,19 @@ export const KPICard: React.FC<KPICardProps> = ({
   icon,
   isLoading = false,
   format = 'number',
+  currency = 'AUD',
 }) => {
   const formatValue = (val: string | number): string => {
     if (typeof val === 'string') return val;
-    
+
     switch (format) {
       case 'currency':
-        return new Intl.NumberFormat('en-US', {
-          style: 'currency',
-          currency: 'USD',
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 0,
-        }).format(val);
+        return formatCurrency(val, currency, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
       case 'percentage':
         return `${val.toFixed(1)}%`;
       case 'number':
       default:
-        return new Intl.NumberFormat('en-US').format(val);
+        return new Intl.NumberFormat().format(val);
     }
   };
 

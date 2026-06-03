@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Modal, Button, Input, Checkbox, Select } from '@massage/ui';
 import { CreateMembershipWithStripeDto } from '@massage/types';
 import { useClients } from '@/lib/hooks/use-clients';
+import { useBusiness } from '@/lib/hooks/use-business';
 
 interface CreateMembershipModalProps {
   isOpen: boolean;
@@ -18,6 +19,8 @@ export function CreateMembershipModal({
   onCreate,
   businessId,
 }: CreateMembershipModalProps) {
+  const { data: business } = useBusiness(businessId);
+  const currency = (business as any)?.currency || 'AUD';
   const { data: clients } = useClients(businessId);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -50,7 +53,7 @@ export function CreateMembershipModal({
         name: formData.name,
         description: formData.description || undefined,
         price: parseFloat(formData.price),
-        currency: 'USD',
+        currency,
         sessionsPerMonth: parseInt(formData.sessionsPerMonth),
         allowRollover: formData.allowRollover,
         startDate: new Date(formData.startDate).toISOString(),
@@ -121,7 +124,7 @@ export function CreateMembershipModal({
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Price (USD) *
+              Price ({currency}) *
             </label>
             <Input
               type="number"

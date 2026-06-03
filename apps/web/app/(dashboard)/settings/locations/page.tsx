@@ -456,7 +456,7 @@ function RoomsSection({ businessId }: { businessId: string }) {
         <div className="text-center py-8 text-gray-400 text-sm">Loading rooms…</div>
       ) : (rooms as any[]).length === 0 ? (
         <Card>
-          <CardContent className="p-10 text-center">
+          <CardContent className="py-12 text-center">
             <DoorOpen className="h-10 w-10 text-gray-300 mx-auto mb-3" />
             <p className="text-gray-500 font-medium text-sm">No rooms yet</p>
             <p className="text-gray-400 text-xs mt-1">Add rooms to assign them to appointments and availability rules.</p>
@@ -596,7 +596,7 @@ export default function LocationsPage() {
             <div className="text-center py-12 text-gray-400">Loading...</div>
           ) : (locations as any[]).length === 0 ? (
             <Card>
-              <CardContent className="p-12 text-center">
+              <CardContent className="py-12 text-center">
                 <MapPin className="h-12 w-12 text-gray-300 mx-auto mb-3" />
                 <p className="text-gray-500 font-medium">No locations yet</p>
                 <p className="text-gray-400 text-sm mt-1">Add your first location to enable multi-location filtering</p>
@@ -610,7 +610,7 @@ export default function LocationsPage() {
                 );
                 return (
                   <Card key={loc.id}>
-                    <CardContent className="p-5 space-y-4">
+                    <CardContent className="p-6 space-y-4">
                       <div className="flex items-start justify-between">
                         <div className="flex items-center gap-2">
                           <div className="h-9 w-9 bg-[#EDE5F4] rounded-lg flex items-center justify-center flex-shrink-0">

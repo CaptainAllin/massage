@@ -6,12 +6,14 @@ import { useState, useEffect, useRef } from 'react';
 const CACHE_KEY = 'wellness-rq-cache';
 const MAX_AGE_MS = 60 * 60 * 1000; // 1 hour
 
+const PERSIST_KEYS = new Set(['dashboard', 'appointments', 'clients', 'clients-meta', 'business']);
+
 function createQueryClient() {
   return new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: 5 * 60 * 1000, // 5 minutes — data stays fresh across page switches
-        gcTime: 10 * 60 * 1000,   // keep unmounted query data in memory for 10 minutes
+        staleTime: 5 * 60 * 1000,
+        gcTime: 10 * 60 * 1000,
         refetchOnWindowFocus: false,
         placeholderData: (prev: unknown) => prev,
       },
@@ -47,9 +49,7 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
         try {
           const dehydrated = dehydrate(queryClient, {
             shouldDehydrateQuery: (q) =>
-              q.state.status === 'success' &&
-              (String(q.queryKey[0]).includes('appointments') ||
-                String(q.queryKey[0]).includes('clients')),
+              q.state.status === 'success' && PERSIST_KEYS.has(String(q.queryKey[0])),
           });
           localStorage.setItem(
             CACHE_KEY,
@@ -66,6 +66,12 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
       if (persistTimer.current) clearTimeout(persistTimer.current);
     };
   }, [queryClient]);
+
+  // Register service worker early so all users benefit from caching, not just push-enabled ones
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  }, []);
 
   return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
 }

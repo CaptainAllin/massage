@@ -5,6 +5,8 @@ import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, Button, Skeleton, Badge, Tabs, Tab } from '@massage/ui';
 import { ArrowLeft, Pause, Play, XCircle } from 'lucide-react';
 import { useBusinessId } from '@/lib/hooks/use-business-id';
+import { useBusiness } from '@/lib/hooks/use-business';
+import { formatCurrency } from '@/lib/format';
 import {
   useMembership,
   usePauseMembership,
@@ -19,6 +21,8 @@ export default function MembershipDetailPage() {
   const router = useRouter();
   const membershipId = params.id as string;
   const businessId = useBusinessId();
+  const { data: business } = useBusiness(businessId);
+  const currency = (business as any)?.currency || 'AUD';
 
   const { data: membership, isLoading } = useMembership(membershipId, businessId);
   const pauseMutation = usePauseMembership(businessId);
@@ -124,7 +128,7 @@ export default function MembershipDetailPage() {
               <CardContent className="p-6">
                 <h3 className="text-lg font-semibold mb-4">Membership Information</h3>
                 <div className="grid grid-cols-2 gap-4">
-                  <InfoRow label="Price" value={`$${membership.price?.toFixed(2) || '0.00'}/month`} />
+                  <InfoRow label="Price" value={`${formatCurrency(membership.price || 0, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/month`} />
                   <InfoRow label="Status" value={<StatusBadge status={membership.status as MembershipStatus} />} />
                   <InfoRow label="Sessions per Month" value={String(membership.sessionsPerMonth)} />
                   <InfoRow label="Sessions Used" value={String(membership.sessionsUsed)} />

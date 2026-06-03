@@ -91,7 +91,7 @@ function RuleCard({
 
   return (
     <Card className="border border-border">
-      <CardContent className="pt-4 pb-4">
+      <CardContent className="p-4">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
@@ -239,17 +239,18 @@ export default function RemindersPage() {
   }, {});
 
   return (
-    <div className="max-w-2xl mx-auto p-6 space-y-6">
-      <div className="flex items-center gap-3">
+    <div className="max-w-4xl space-y-5">
+      <div className="flex items-start gap-3">
         <Link
           href="/settings"
-          className="p-2 rounded-lg hover:bg-muted transition-colors"
+          className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground mt-0.5"
         >
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <div>
-          <h1 className="text-xl font-semibold text-foreground">Reminders &amp; Notifications</h1>
-          <p className="text-sm text-muted-foreground">Toggle and customise automated messages sent to clients and staff.</p>
+          <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: '#5D4AA8', letterSpacing: '1.4px' }}>Tools</p>
+          <h1 className="text-2xl font-semibold font-display" style={{ color: '#1E1830', letterSpacing: '-0.4px' }}>Reminders &amp; Notifications</h1>
+          <p className="text-sm mt-0.5" style={{ color: '#7A7090' }}>Toggle and customise automated messages sent to clients and staff.</p>
         </div>
       </div>
 

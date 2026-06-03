@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button, Card, CardContent, Input } from '@massage/ui';
-import { Key, Plus, Trash2, Copy, AlertTriangle, Check, Code, ExternalLink } from 'lucide-react';
+import { Key, Plus, Trash2, Copy, AlertTriangle, Check, Code, ExternalLink, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 import { useBusinessId } from '@/lib/hooks/use-business-id';
 import { apiClient } from '@/lib/api-client';
 
@@ -94,17 +95,21 @@ export default function ApiKeysPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Key className="h-6 w-6" /> Developer API
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Manage API keys and access the developer documentation.
-          </p>
+    <div className="max-w-4xl space-y-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <Link href="/settings" className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground mt-0.5">
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: '#5D4AA8', letterSpacing: '1.4px' }}>Tools</p>
+            <h1 className="text-2xl font-semibold font-display" style={{ color: '#1E1830', letterSpacing: '-0.4px' }}>Developer API</h1>
+            <p className="text-sm mt-0.5" style={{ color: '#7A7090' }}>
+              Manage API keys and access the developer documentation.
+            </p>
+          </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 mt-1">
           <a
             href="/api/developer/openapi"
             target="_blank"

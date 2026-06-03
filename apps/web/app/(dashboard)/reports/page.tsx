@@ -9,6 +9,7 @@ import type { ReportType, ReportFilters } from '../../../lib/hooks/use-reports';
 import { useReports } from '../../../lib/hooks/use-reports';
 import { useTherapists } from '../../../lib/hooks/use-therapists';
 import { useBusinessId } from '../../../lib/hooks/use-business-id';
+import { useBusiness } from '../../../lib/hooks/use-business';
 import { useAuth } from '@massage/auth';
 
 export default function ReportsPage() {
@@ -26,6 +27,8 @@ export default function ReportsPage() {
   const [exportError, setExportError] = useState('');
 
   const businessId = useBusinessId();
+  const { data: business } = useBusiness(businessId);
+  const currency = (business as any)?.currency || 'AUD';
   const { user } = useAuth();
   const { data: therapists = [] } = useTherapists(businessId, { isActive: true });
   const { exportReport } = useReports();
@@ -124,6 +127,7 @@ export default function ReportsPage() {
               selectedFields={reportSelectedFields}
               onExport={handleExportOpen}
               onClose={handleCloseReport}
+              currency={currency}
             />
           ) : (
             <div className="flex items-center justify-center h-full min-h-[400px] border-2 border-dashed rounded-lg">
