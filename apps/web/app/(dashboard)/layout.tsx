@@ -19,27 +19,52 @@ import { DashboardHeaderActions } from './DashboardHeaderActions';
 import { BusinessSwitcher } from '@/components/BusinessSwitcher';
 import { apiClient } from '@/lib/api-client';
 
-// Prefetch the most-visited pages' API data in the background so navigating
-// to them feels instant. Runs once after the businessId is known.
+// Prefetch all main pages' API data in the background so navigation is instant.
+// Query keys and return shapes must match exactly what each page's hook uses.
+// Runs once after the businessId is known.
 function BackgroundPrefetcher() {
   const businessId = useBusinessId();
   const queryClient = useQueryClient();
 
   useEffect(() => {
     if (!businessId) return;
+    const STALE = 5 * 60 * 1000;
     const prefetch = (key: unknown[], fn: () => Promise<unknown>) =>
-      queryClient.prefetchQuery({ queryKey: key, queryFn: fn, staleTime: 5 * 60 * 1000 });
+      queryClient.prefetchQuery({ queryKey: key, queryFn: fn, staleTime: STALE });
 
-    prefetch(['appointments', businessId, {}], () =>
-      apiClient.get('/appointments', { params: { businessId } }).then((r) => r.data.data)
+    // useDashboard(businessId) → ['dashboard', businessId]
+    prefetch(['dashboard', businessId], () =>
+      apiClient.get('/dashboard', { params: { businessId } }).then((r) => r.data.data)
     );
-    prefetch(['clients', businessId, {}], () =>
-      apiClient.get('/clients', { params: { businessId } }).then((r) => r.data.data)
-    );
+
+    // useClientsWithMeta(businessId, { search:undefined, page:1, limit:20, filter:'all' })
+    // undefined properties are omitted by JSON.stringify so the hash matches { page:1, limit:20, filter:'all' }
+    prefetch(['clients-meta', businessId, { page: 1, limit: 20, filter: 'all' }], async () => {
+      const p = new URLSearchParams({ businessId, page: '1', limit: '20' });
+      const r = await apiClient.get(`/clients?${p}`);
+      return { data: r.data.data, meta: r.data.meta, counts: r.data.counts };
+    });
+
+    // usePayments(businessId, {}) → ['payments', businessId, {}], returns response.data
     prefetch(['payments', businessId, {}], () =>
-      apiClient.get('/payments', { params: { businessId } }).then((r) => r.data.data)
+      apiClient.get('/payments', { params: { businessId } }).then((r) => r.data)
     );
-  // Only prefetch once per businessId
+
+    // useTherapists(businessId) → ['therapists', businessId, undefined], returns response.data.data
+    prefetch(['therapists', businessId, undefined], () =>
+      apiClient.get('/therapists', { params: { businessId } }).then((r) => r.data.data)
+    );
+
+    // useConversations(businessId, {}) → ['conversations', businessId, {}], returns response.data
+    prefetch(['conversations', businessId, {}], () =>
+      apiClient.get('/conversations', { params: { businessId } }).then((r) => r.data)
+    );
+
+    // useInvoices(businessId, {}) → ['invoices', businessId, {}], returns response.data
+    prefetch(['invoices', businessId, {}], () =>
+      apiClient.get('/invoices', { params: { businessId } }).then((r) => r.data)
+    );
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [businessId]);
 

@@ -34,6 +34,7 @@ import {
   ChevronRight,
   Search,
   Pin,
+  Scissors,
 } from 'lucide-react';
 
 const PINNED_GROUPS_KEY = 'iris-sidebar-pinned-groups';
@@ -116,6 +117,13 @@ const COLLAPSIBLE_GROUPS: MenuGroup[] = [
   {
     label: 'Operations',
     items: [
+      {
+        label: 'Services',
+        href: '/services',
+        icon: Scissors,
+        permission: 'services:view',
+        allowedRoles: ['OWNER', 'SENIOR_THERAPIST', 'RECEPTIONIST'],
+      },
       {
         label: 'Intake Forms',
         href: '/intake-forms',

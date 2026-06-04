@@ -101,6 +101,13 @@ model Business {
   smsCreditsUsed             Int                          @default(0)
   smsBillingCycleStart       DateTime?
   bookingMode                BookingMode                  @default(PUBLIC)
+  cancellationWindowHours    Int                          @default(24)
+  depositRequired            Boolean                      @default(false)
+  depositAmount              Float?
+  depositType                String                       @default("PERCENT")
+  minBookingNoticeHours      Int                          @default(1)
+  maxBookingWindowDays       Int                          @default(60)
+  appointmentBufferMinutes   Int                          @default(0)
   draftNoteVisibility        DraftNoteVisibility          @default(ALL_THERAPISTS)
   ownerId                    String                       @unique
   createdAt                  DateTime                     @default(now())
@@ -186,6 +193,7 @@ model Business {
   staffInvites               StaffInvite[]
   businessHours              BusinessHours[]
   businessClosures           BusinessClosure[]
+  services                   Service[]
 
   @@index([ownerId])
   @@map("businesses")
@@ -334,6 +342,7 @@ model Appointment {
   endTime           DateTime
   status            AppointmentStatus           @default(SCHEDULED)
   serviceType       String?
+  serviceId         String?
   duration          Int
   price             Float?
   notes             String?
@@ -347,6 +356,7 @@ model Appointment {
   cancellation      AppointmentCancellation?
   reminders         AppointmentReminder[]
   groupBookings     GroupBooking[]
+  service           Service?                    @relation(fields: [serviceId], references: [id])
   business          Business                    @relation(fields: [businessId], references: [id], onDelete: Cascade)
   client            Client                      @relation(fields: [clientId], references: [id], onDelete: Cascade)
   location          Location?                   @relation(fields: [locationId], references: [id])
@@ -374,7 +384,26 @@ model Appointment {
   @@index([businessId, startTime])
   @@index([businessId, status])
   @@index([businessId, therapistId, startTime])
+  @@index([serviceId])
   @@map("appointments")
+}
+
+model Service {
+  id           String        @id @default(cuid())
+  businessId   String
+  name         String
+  description  String?
+  duration     Int
+  price        Float
+  color        String?
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  business     Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  appointments Appointment[]
+
+  @@index([businessId])
+  @@map("services")
 }
 
 model IntakeForm {

@@ -7,6 +7,7 @@ import { useClients } from '@/lib/hooks/use-clients';
 import { useTherapists } from '@/lib/hooks/use-therapists';
 import { useCreateAppointment, useCheckAvailability } from '@/lib/hooks/use-appointments';
 import { useBusinessId } from '@/lib/hooks/use-business-id';
+import { useServices } from '@/lib/hooks/use-services';
 import { useNewSession } from './NewSessionContext';
 import { format } from 'date-fns';
 
@@ -33,6 +34,7 @@ export function NewSessionModal() {
   const [time, setTime] = useState('09:00');
   const [duration, setDuration] = useState('60');
   const [serviceType, setServiceType] = useState('');
+  const [serviceId, setServiceId] = useState('');
   const [price, setPrice] = useState('');
   const [notes, setNotes] = useState('');
   const [sendReminder, setSendReminder] = useState(true);
@@ -46,6 +48,7 @@ export function NewSessionModal() {
 
   const { data: clients = [] } = useClients(businessId, { search, limit: 8 } as any);
   const { data: therapists = [] } = useTherapists(businessId);
+  const { data: services = [] } = useServices(businessId);
   const createAppointment = useCreateAppointment(businessId);
 
   const startTime = date && time ? new Date(`${date}T${time}`) : null;
@@ -101,6 +104,7 @@ export function NewSessionModal() {
     setTime('09:00');
     setDuration('60');
     setServiceType('');
+    setServiceId('');
     setPrice('');
     setNotes('');
     setSendReminder(true);
@@ -132,6 +136,7 @@ export function NewSessionModal() {
         startTime: `${date}T${time}`,
         duration: parseInt(duration),
         serviceType: serviceType || undefined,
+        serviceId: serviceId || undefined,
         price: price ? parseFloat(price) : undefined,
         notes: notes || undefined,
         isVirtual,
@@ -380,11 +385,33 @@ export function NewSessionModal() {
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Service Type</label>
-            <Input
-              placeholder="e.g., Deep Tissue"
-              value={serviceType}
-              onChange={(e) => setServiceType(e.target.value)}
-            />
+            {(services as any[]).length > 0 ? (
+              <Select
+                value={serviceId}
+                onChange={(e) => {
+                  const svc = (services as any[]).find((s: any) => s.id === e.target.value);
+                  if (svc) {
+                    setServiceId(svc.id);
+                    setServiceType(svc.name);
+                    setDuration(String(svc.duration));
+                    if (!price) setPrice(String(svc.price));
+                  } else {
+                    setServiceId('');
+                    setServiceType('');
+                  }
+                }}
+                options={[
+                  { value: '', label: 'Select a service...' },
+                  ...(services as any[]).map((s: any) => ({ value: s.id, label: `${s.name} (${s.duration}min)` })),
+                ]}
+              />
+            ) : (
+              <Input
+                placeholder="e.g., Deep Tissue"
+                value={serviceType}
+                onChange={(e) => setServiceType(e.target.value)}
+              />
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Price ($)</label>

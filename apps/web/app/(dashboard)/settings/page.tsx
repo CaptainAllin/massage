@@ -1718,14 +1718,40 @@ function BookingTab({ businessId }: { businessId: string }) {
   const updateBusiness = useUpdateBusiness(businessId);
   const [saved, setSaved] = useState(false);
   const [mode, setMode] = useState<'PUBLIC' | 'EXISTING_CLIENTS_ONLY' | 'INVITE_ONLY'>('PUBLIC');
+  const [cancellationWindowHours, setCancellationWindowHours] = useState(24);
+  const [minBookingNoticeHours, setMinBookingNoticeHours] = useState(1);
+  const [maxBookingWindowDays, setMaxBookingWindowDays] = useState(60);
+  const [appointmentBufferMinutes, setAppointmentBufferMinutes] = useState(0);
+  const [depositRequired, setDepositRequired] = useState(false);
+  const [depositAmount, setDepositAmount] = useState('');
+  const [depositType, setDepositType] = useState<'PERCENT' | 'FIXED'>('PERCENT');
 
   useEffect(() => {
-    if (business) setMode((business as any).bookingMode || 'PUBLIC');
+    if (business) {
+      const b = business as any;
+      setMode(b.bookingMode || 'PUBLIC');
+      setCancellationWindowHours(b.cancellationWindowHours ?? 24);
+      setMinBookingNoticeHours(b.minBookingNoticeHours ?? 1);
+      setMaxBookingWindowDays(b.maxBookingWindowDays ?? 60);
+      setAppointmentBufferMinutes(b.appointmentBufferMinutes ?? 0);
+      setDepositRequired(b.depositRequired ?? false);
+      setDepositAmount(b.depositAmount != null ? String(b.depositAmount) : '');
+      setDepositType(b.depositType || 'PERCENT');
+    }
   }, [business]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await updateBusiness.mutateAsync({ bookingMode: mode } as any);
+    await updateBusiness.mutateAsync({
+      bookingMode: mode,
+      cancellationWindowHours,
+      minBookingNoticeHours,
+      maxBookingWindowDays,
+      appointmentBufferMinutes,
+      depositRequired,
+      depositAmount: depositAmount ? parseFloat(depositAmount) : null,
+      depositType,
+    } as any);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
@@ -1733,48 +1759,184 @@ function BookingTab({ businessId }: { businessId: string }) {
   if (isLoading) return <div className="text-sm text-muted-foreground">Loading…</div>;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <SectionHeader
-        title="Online Booking Access"
-        description="Control who can book appointments through your public booking page."
-      />
-      <div className="space-y-3">
-        {BOOKING_MODE_OPTIONS.map((opt) => {
-          const selected = mode === opt.value;
-          return (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => setMode(opt.value)}
-              className="w-full flex items-start gap-4 p-4 rounded-xl border text-left transition-all"
-              style={
-                selected
-                  ? { borderColor: '#5D4AA8', backgroundColor: '#F4F0FB' }
-                  : { borderColor: '#E5E7EB', backgroundColor: 'transparent' }
-              }
-            >
-              <div
-                className="mt-0.5 flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center"
-                style={{ background: selected ? '#EDE5F4' : '#F3F4F6', color: selected ? '#5D4AA8' : '#6B7280' }}
+    <form onSubmit={handleSubmit} className="space-y-8">
+      {/* Booking Access */}
+      <div className="space-y-4">
+        <SectionHeader
+          title="Online Booking Access"
+          description="Control who can book appointments through your public booking page."
+        />
+        <div className="space-y-3">
+          {BOOKING_MODE_OPTIONS.map((opt) => {
+            const selected = mode === opt.value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setMode(opt.value)}
+                className="w-full flex items-start gap-4 p-4 rounded-xl border text-left transition-all"
+                style={
+                  selected
+                    ? { borderColor: '#5D4AA8', backgroundColor: '#F4F0FB' }
+                    : { borderColor: '#E5E7EB', backgroundColor: 'transparent' }
+                }
               >
-                {opt.icon}
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium" style={{ color: selected ? '#5D4AA8' : '#111827' }}>
-                  {opt.label}
-                </p>
-                <p className="text-xs mt-0.5" style={{ color: '#7A7090' }}>{opt.description}</p>
-              </div>
-              <div
-                className="mt-1 flex-shrink-0 w-4 h-4 rounded-full border-2 flex items-center justify-center"
-                style={{ borderColor: selected ? '#5D4AA8' : '#D1D5DB' }}
-              >
-                {selected && <div className="w-2 h-2 rounded-full" style={{ background: '#5D4AA8' }} />}
-              </div>
-            </button>
-          );
-        })}
+                <div
+                  className="mt-0.5 flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center"
+                  style={{ background: selected ? '#EDE5F4' : '#F3F4F6', color: selected ? '#5D4AA8' : '#6B7280' }}
+                >
+                  {opt.icon}
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium" style={{ color: selected ? '#5D4AA8' : '#111827' }}>
+                    {opt.label}
+                  </p>
+                  <p className="text-xs mt-0.5" style={{ color: '#7A7090' }}>{opt.description}</p>
+                </div>
+                <div
+                  className="mt-1 flex-shrink-0 w-4 h-4 rounded-full border-2 flex items-center justify-center"
+                  style={{ borderColor: selected ? '#5D4AA8' : '#D1D5DB' }}
+                >
+                  {selected && <div className="w-2 h-2 rounded-full" style={{ background: '#5D4AA8' }} />}
+                </div>
+              </button>
+            );
+          })}
+        </div>
       </div>
+
+      <hr className="border-border" />
+
+      {/* Scheduling Rules */}
+      <div className="space-y-4">
+        <SectionHeader
+          title="Scheduling Rules"
+          description="Set limits on when clients can book, how far ahead, and gaps between appointments."
+        />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1" style={{ color: '#3D3450' }}>
+              Minimum advance notice
+            </label>
+            <select
+              value={minBookingNoticeHours}
+              onChange={(e) => setMinBookingNoticeHours(Number(e.target.value))}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+            >
+              {[0, 1, 2, 4, 12, 24, 48].map((h) => (
+                <option key={h} value={h}>{h === 0 ? 'No minimum' : `${h} hour${h !== 1 ? 's' : ''}`}</option>
+              ))}
+            </select>
+            <p className="text-xs text-muted-foreground mt-1">How far ahead clients must book</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1" style={{ color: '#3D3450' }}>
+              Maximum booking window
+            </label>
+            <select
+              value={maxBookingWindowDays}
+              onChange={(e) => setMaxBookingWindowDays(Number(e.target.value))}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+            >
+              {[7, 14, 30, 60, 90, 180].map((d) => (
+                <option key={d} value={d}>{d} days</option>
+              ))}
+            </select>
+            <p className="text-xs text-muted-foreground mt-1">How far into the future clients can book</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1" style={{ color: '#3D3450' }}>
+              Appointment buffer
+            </label>
+            <select
+              value={appointmentBufferMinutes}
+              onChange={(e) => setAppointmentBufferMinutes(Number(e.target.value))}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+            >
+              {[0, 5, 10, 15, 30].map((m) => (
+                <option key={m} value={m}>{m === 0 ? 'No buffer' : `${m} minutes`}</option>
+              ))}
+            </select>
+            <p className="text-xs text-muted-foreground mt-1">Gap to leave between appointments</p>
+          </div>
+        </div>
+      </div>
+
+      <hr className="border-border" />
+
+      {/* Cancellation Policy */}
+      <div className="space-y-4">
+        <SectionHeader
+          title="Cancellation Policy"
+          description="Define how much notice clients must give before cancelling."
+        />
+        <div className="max-w-xs">
+          <label className="block text-sm font-medium mb-1" style={{ color: '#3D3450' }}>
+            Cancellation notice required
+          </label>
+          <select
+            value={cancellationWindowHours}
+            onChange={(e) => setCancellationWindowHours(Number(e.target.value))}
+            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+          >
+            {[0, 2, 4, 8, 12, 24, 48, 72].map((h) => (
+              <option key={h} value={h}>{h === 0 ? 'No restriction' : `${h} hours`}</option>
+            ))}
+          </select>
+          <p className="text-xs text-muted-foreground mt-1">
+            Clients cannot cancel within this window. Staff can always cancel.
+          </p>
+        </div>
+      </div>
+
+      <hr className="border-border" />
+
+      {/* Deposit */}
+      <div className="space-y-4">
+        <SectionHeader
+          title="Deposit"
+          description="Require a deposit at the time of booking to reduce no-shows."
+        />
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setDepositRequired(!depositRequired)}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${depositRequired ? 'bg-[#5D4AA8]' : 'bg-gray-200'}`}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${depositRequired ? 'translate-x-6' : 'translate-x-1'}`}
+            />
+          </button>
+          <span className="text-sm font-medium" style={{ color: '#3D3450' }}>Require deposit at booking</span>
+        </div>
+        {depositRequired && (
+          <div className="grid grid-cols-2 gap-4 max-w-sm">
+            <div>
+              <label className="block text-sm font-medium mb-1" style={{ color: '#3D3450' }}>Amount</label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={depositAmount}
+                onChange={(e) => setDepositAmount(e.target.value)}
+                placeholder="e.g. 25"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1" style={{ color: '#3D3450' }}>Type</label>
+              <select
+                value={depositType}
+                onChange={(e) => setDepositType(e.target.value as 'PERCENT' | 'FIXED')}
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+              >
+                <option value="PERCENT">Percentage (%)</option>
+                <option value="FIXED">Fixed amount ($)</option>
+              </select>
+            </div>
+          </div>
+        )}
+      </div>
+
       <div className="flex justify-end pt-2">
         <SaveButton isSaving={updateBusiness.isPending} saved={saved} />
       </div>

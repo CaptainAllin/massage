@@ -27,13 +27,19 @@ export async function GET(
     });
     if (!therapist) return res.notFound('Therapist not found');
 
+    const business = await prisma.business.findUnique({
+      where: { id: businessId },
+      select: { appointmentBufferMinutes: true },
+    });
+    const bufferMinutes = business?.appointmentBufferMinutes ?? 0;
+
     // If nextAvailable is requested, scan up to 60 days ahead to find the first open slot
     if (nextAvailable) {
       const startDate = new Date(date);
       for (let offset = 0; offset < 60; offset++) {
         const checkDate = new Date(startDate);
         checkDate.setDate(checkDate.getDate() + offset);
-        const slots = await getSlotsForDate(businessId, therapistId, checkDate, duration, serviceType);
+        const slots = await getSlotsForDate(businessId, therapistId, checkDate, duration, serviceType, bufferMinutes);
         const first = slots.find((s) => s.available);
         if (first) return res.ok({ nextAvailable: first, date: checkDate.toISOString().substring(0, 10) });
       }
@@ -41,7 +47,7 @@ export async function GET(
     }
 
     const targetDate = new Date(date);
-    const slots = await getSlotsForDate(businessId, therapistId, targetDate, duration, serviceType);
+    const slots = await getSlotsForDate(businessId, therapistId, targetDate, duration, serviceType, bufferMinutes);
     return res.ok(slots);
   } catch (err) {
     console.error('[PUBLIC SLOTS]', err);
@@ -54,7 +60,8 @@ async function getSlotsForDate(
   therapistId: string,
   targetDate: Date,
   duration: number,
-  serviceType?: string
+  serviceType?: string,
+  bufferMinutes = 0
 ): Promise<Array<{ startTime: string; endTime: string; available: boolean }>> {
   const dayOfWeek = targetDate.getDay();
 
@@ -161,12 +168,16 @@ async function getSlotsForDate(
       (w) => slotStartStr >= w.startTime && slotEndStr <= w.endTime
     );
 
-    const hasConflict = appointments.some(
-      (apt) =>
-        (slotStart >= apt.startTime && slotStart < apt.endTime) ||
-        (slotEnd > apt.startTime && slotEnd <= apt.endTime) ||
-        (slotStart <= apt.startTime && slotEnd >= apt.endTime)
-    );
+    const bufferMs = bufferMinutes * 60000;
+    const hasConflict = appointments.some((apt) => {
+      const bufferedEnd = new Date(apt.endTime.getTime() + bufferMs);
+      const bufferedStart = new Date(apt.startTime.getTime() - bufferMs);
+      return (
+        (slotStart >= bufferedStart && slotStart < bufferedEnd) ||
+        (slotEnd > bufferedStart && slotEnd <= bufferedEnd) ||
+        (slotStart <= bufferedStart && slotEnd >= bufferedEnd)
+      );
+    });
 
     slots.push({
       startTime: slotStart.toISOString(),

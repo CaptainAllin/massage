@@ -6,7 +6,10 @@ import { useState, useEffect, useRef } from 'react';
 const CACHE_KEY = 'wellness-rq-cache';
 const MAX_AGE_MS = 60 * 60 * 1000; // 1 hour
 
-const PERSIST_KEYS = new Set(['dashboard', 'appointments', 'clients', 'clients-meta', 'business']);
+const PERSIST_KEYS = new Set([
+  'dashboard', 'appointments', 'clients', 'clients-meta', 'business',
+  'payments', 'therapists', 'conversations', 'invoices',
+]);
 
 function restoreCache(client: QueryClient) {
   if (typeof window === 'undefined') return;

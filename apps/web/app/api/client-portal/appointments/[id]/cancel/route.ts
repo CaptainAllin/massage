@@ -22,7 +22,7 @@ export async function POST(
 
     const appointment = await prisma.appointment.findUnique({
       where: { id: params.id },
-      select: { id: true, clientId: true, startTime: true, status: true },
+      select: { id: true, clientId: true, businessId: true, startTime: true, status: true },
     });
 
     if (!appointment) return res.notFound('Appointment not found');
@@ -32,6 +32,21 @@ export async function POST(
     }
     if (appointment.startTime <= new Date()) {
       return res.badRequest('Cannot cancel an appointment that has already started');
+    }
+
+    // Enforce business cancellation window
+    const business = await prisma.business.findUnique({
+      where: { id: appointment.businessId },
+      select: { cancellationWindowHours: true },
+    });
+    const windowHours = business?.cancellationWindowHours ?? 24;
+    if (windowHours > 0) {
+      const hoursUntilStart = (appointment.startTime.getTime() - Date.now()) / (1000 * 60 * 60);
+      if (hoursUntilStart < windowHours) {
+        return res.badRequest(
+          `Cancellations require at least ${windowHours} hours notice. Please contact the business directly to cancel.`
+        );
+      }
     }
 
     await prisma.appointment.update({

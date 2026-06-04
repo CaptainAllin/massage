@@ -17,6 +17,11 @@ interface Business {
   primaryColor: string | null;
   secondaryColor: string | null;
   bookingMode: BookingAccessMode;
+  minBookingNoticeHours: number | null;
+  maxBookingWindowDays: number | null;
+  depositRequired: boolean;
+  depositAmount: number | null;
+  depositType: string | null;
 }
 
 interface Therapist {
@@ -45,16 +50,14 @@ interface GroupSession {
   therapist: { id: string; name: string } | null;
 }
 
-const SERVICE_TYPES = [
-  'Swedish Massage',
-  'Deep Tissue Massage',
-  'Relaxation Massage',
-  'Sports Massage',
-  'Hot Stone Massage',
-  'Remedial Massage',
-  'Pregnancy Massage',
-  'Aromatherapy Massage',
-];
+interface Service {
+  id: string;
+  name: string;
+  description: string | null;
+  duration: number;
+  price: number;
+  color: string | null;
+}
 
 const DURATIONS = [
   { label: '30 min', value: 30 },
@@ -117,9 +120,14 @@ export default function PublicBookingPage() {
   const [gateEmail, setGateEmail] = useState('');
   const [gatePhone, setGatePhone] = useState('');
 
+  // Services
+  const [services, setServices] = useState<Service[]>([]);
+  const [servicesLoading, setServicesLoading] = useState(false);
+  const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
+
   // Selections
   const [selectedTherapist, setSelectedTherapist] = useState<Therapist | null>(null);
-  const [selectedService, setSelectedService] = useState('Swedish Massage');
+  const [selectedService, setSelectedService] = useState('');
   const [selectedDuration, setSelectedDuration] = useState(60);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
@@ -201,6 +209,24 @@ export default function PublicBookingPage() {
       .catch(() => setError('Failed to load. Please try again.'))
       .finally(() => setLoading(false));
   }, [businessId, inviteToken]);
+
+  // Load services from API
+  useEffect(() => {
+    if (!businessId) return;
+    setServicesLoading(true);
+    fetch(`/api/public/booking/${businessId}/services`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success && d.data?.length) {
+          setServices(d.data);
+          setSelectedService(d.data[0].name);
+          setSelectedServiceId(d.data[0].id);
+          setSelectedDuration(d.data[0].duration);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setServicesLoading(false));
+  }, [businessId]);
 
   // Load group sessions when mode switches to group
   useEffect(() => {
@@ -358,7 +384,8 @@ export default function PublicBookingPage() {
           startDate: selectedDate2,
           startTime: slotTime,
           duration: selectedDuration,
-          serviceType: selectedService,
+          serviceType: selectedService || undefined,
+          serviceId: selectedServiceId || undefined,
           frequency: recurringFrequency,
           clientFirstName: firstName,
           clientLastName: lastName,
@@ -396,7 +423,8 @@ export default function PublicBookingPage() {
             therapistId: selectedTherapist.id,
             startTime: selectedSlot.startTime,
             duration: selectedDuration,
-            serviceType: selectedService,
+            serviceType: selectedService || undefined,
+            serviceId: selectedServiceId || undefined,
             clientFirstName: firstName,
             clientLastName: lastName,
             clientEmail: email || undefined,
@@ -642,10 +670,15 @@ export default function PublicBookingPage() {
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const calendarDays = Array.from({ length: 14 }, (_, i) => addDays(today, i));
+  const maxWindowDays = Math.min(business?.maxBookingWindowDays ?? 60, 60);
+  const calendarDays = Array.from({ length: maxWindowDays }, (_, i) => addDays(today, i));
 
   // Filter calendar days to days the therapist works
   const availableDayOfWeek = new Set(selectedTherapist?.availability.map((a) => a.dayOfWeek) ?? []);
+
+  // Slots filtered by min-notice window
+  const minNoticeMs = (business?.minBookingNoticeHours ?? 1) * 3600000;
+  const visibleSlots = slots.filter((s) => new Date(s.startTime).getTime() - Date.now() >= minNoticeMs);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -976,50 +1009,76 @@ export default function PublicBookingPage() {
             <h2 className="text-xl font-bold text-gray-900 mb-1">Select Service</h2>
             <p className="text-sm text-gray-500 mb-5">Choose your massage type and session length.</p>
 
-            <div className="bg-white rounded-xl border border-gray-100 p-4 mb-4">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Service Type</p>
-              <div className="grid grid-cols-2 gap-2">
-                {SERVICE_TYPES.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => setSelectedService(s)}
-                    className="text-left px-3 py-2.5 rounded-lg border text-sm transition-all"
-                    style={{
-                      borderColor: selectedService === s ? accent : '#e5e7eb',
-                      backgroundColor: selectedService === s ? `${accent}15` : 'white',
-                      color: selectedService === s ? '#1a1a1a' : '#4b5563',
-                      fontWeight: selectedService === s ? 600 : 400,
-                    }}
-                  >
-                    {s}
-                  </button>
-                ))}
+            {servicesLoading ? (
+              <div className="flex justify-center py-10">
+                <Loader2 className="h-6 w-6 animate-spin text-gray-300" />
               </div>
-            </div>
+            ) : services.length > 0 ? (
+              <>
+                <div className="bg-white rounded-xl border border-gray-100 p-4 mb-6">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Service Type</p>
+                  <div className="space-y-2">
+                    {services.map((s) => (
+                      <button
+                        key={s.id}
+                        onClick={() => {
+                          setSelectedServiceId(s.id);
+                          setSelectedService(s.name);
+                          setSelectedDuration(s.duration);
+                        }}
+                        className="w-full text-left px-4 py-3 rounded-lg border text-sm transition-all flex items-center justify-between"
+                        style={{
+                          borderColor: selectedServiceId === s.id ? accent : '#e5e7eb',
+                          backgroundColor: selectedServiceId === s.id ? `${accent}15` : 'white',
+                          color: selectedServiceId === s.id ? '#1a1a1a' : '#4b5563',
+                        }}
+                      >
+                        <div>
+                          <p className="font-medium">{s.name}</p>
+                          {s.description && <p className="text-xs text-gray-400 mt-0.5">{s.description}</p>}
+                        </div>
+                        <div className="text-right flex-shrink-0 ml-3">
+                          <p className="font-semibold">${s.price.toFixed(2)}</p>
+                          <p className="text-xs text-gray-400">{s.duration} min</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="bg-white rounded-xl border border-gray-100 p-4 mb-4">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Service Type</p>
+                  <p className="text-sm text-gray-400 text-center py-4">No services configured yet. Please contact the business directly to book.</p>
+                </div>
 
-            <div className="bg-white rounded-xl border border-gray-100 p-4 mb-6">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Duration</p>
-              <div className="grid grid-cols-4 gap-2">
-                {DURATIONS.map((d) => (
-                  <button
-                    key={d.value}
-                    onClick={() => setSelectedDuration(d.value)}
-                    className="text-center py-2.5 rounded-lg border text-sm font-medium transition-all"
-                    style={{
-                      borderColor: selectedDuration === d.value ? accent : '#e5e7eb',
-                      backgroundColor: selectedDuration === d.value ? `${accent}15` : 'white',
-                      color: selectedDuration === d.value ? '#1a1a1a' : '#4b5563',
-                    }}
-                  >
-                    {d.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+                <div className="bg-white rounded-xl border border-gray-100 p-4 mb-6">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Duration</p>
+                  <div className="grid grid-cols-4 gap-2">
+                    {DURATIONS.map((d) => (
+                      <button
+                        key={d.value}
+                        onClick={() => setSelectedDuration(d.value)}
+                        className="text-center py-2.5 rounded-lg border text-sm font-medium transition-all"
+                        style={{
+                          borderColor: selectedDuration === d.value ? accent : '#e5e7eb',
+                          backgroundColor: selectedDuration === d.value ? `${accent}15` : 'white',
+                          color: selectedDuration === d.value ? '#1a1a1a' : '#4b5563',
+                        }}
+                      >
+                        {d.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
 
             <button
               onClick={() => setStep(3)}
-              className="w-full py-3 rounded-xl text-white font-semibold text-sm"
+              disabled={services.length > 0 && !selectedServiceId}
+              className="w-full py-3 rounded-xl text-white font-semibold text-sm disabled:opacity-50"
               style={{ backgroundColor: accent }}
             >
               Continue
@@ -1087,7 +1146,7 @@ export default function PublicBookingPage() {
                   <div className="flex justify-center py-6">
                     <Loader2 className="h-5 w-5 animate-spin text-gray-300" />
                   </div>
-                ) : slots.length === 0 ? (
+                ) : visibleSlots.length === 0 ? (
                   <div className="text-center py-6 space-y-3">
                     <p className="text-sm text-gray-400">No available slots on this day.</p>
                     {nextAvailableResult ? (
@@ -1138,7 +1197,7 @@ export default function PublicBookingPage() {
                   </div>
                 ) : (
                   <div className="grid grid-cols-3 gap-2">
-                    {slots.map((slot) => {
+                    {visibleSlots.map((slot) => {
                       const isSelected = selectedSlot?.startTime === slot.startTime;
                       return (
                         <button
@@ -1465,6 +1524,24 @@ export default function PublicBookingPage() {
                 </div>
               )}
             </div>
+
+            {business?.depositRequired && business.depositAmount != null && (
+              <div
+                className="rounded-xl border p-4 mb-4 text-sm"
+                style={{ borderColor: `${accent}40`, backgroundColor: `${accent}08` }}
+              >
+                <p className="font-semibold mb-1" style={{ color: accent }}>Deposit required</p>
+                <p className="text-gray-600">
+                  A deposit of{' '}
+                  <strong>
+                    {business.depositType === 'PERCENT'
+                      ? `${business.depositAmount}%`
+                      : `$${business.depositAmount.toFixed(2)}`}
+                  </strong>{' '}
+                  is required to secure your booking. Payment details will be collected on confirmation.
+                </p>
+              </div>
+            )}
 
             {error && (
               <div className="flex items-center gap-2 text-red-600 bg-red-50 rounded-lg px-4 py-3 text-sm mb-4">

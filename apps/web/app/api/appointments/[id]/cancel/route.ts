@@ -20,6 +20,23 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (!appointment) return res.notFound('Appointment not found');
     if (appointment.status === AppointmentStatus.CANCELLED) return res.badRequest('Already cancelled');
 
+    // Enforce cancellation window for client-initiated cancellations
+    if (cancellationType === 'CLIENT_REQUESTED') {
+      const business = await prisma.business.findUnique({
+        where: { id: businessId },
+        select: { cancellationWindowHours: true },
+      });
+      const windowHours = business?.cancellationWindowHours ?? 24;
+      if (windowHours > 0) {
+        const hoursUntilStart = (appointment.startTime.getTime() - Date.now()) / (1000 * 60 * 60);
+        if (hoursUntilStart < windowHours) {
+          return res.badRequest(
+            `Cancellations require at least ${windowHours} hours notice. This appointment starts in ${Math.max(0, Math.round(hoursUntilStart))} hour(s).`
+          );
+        }
+      }
+    }
+
     const [updated] = await prisma.$transaction([
       prisma.appointment.update({
         where: { id },

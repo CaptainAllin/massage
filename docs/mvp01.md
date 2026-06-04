@@ -10,19 +10,19 @@
 
 | ID | Title | Phase | Status |
 |----|-------|-------|--------|
-| [1.0](#phase-1-services--treatment-types) | Services & Treatment Types | 1 | ⬜ |
-| [1.1](#11-prisma-schema--migration) | Prisma schema + migration | 1 | ⬜ |
-| [1.2](#12-api-routes) | API routes (CRUD) | 1 | ⬜ |
-| [1.3](#13-react-query-hooks) | React Query hooks | 1 | ⬜ |
-| [1.4](#14-services-management-page) | Services management page | 1 | ⬜ |
-| [1.5](#15-sidebar-nav-entry) | Sidebar nav entry | 1 | ⬜ |
-| [1.6](#16-dynamic-services-on-public-booking-page) | Dynamic services on public booking page | 1 | ⬜ |
-| [1.7](#17-dynamic-services-in-newsessionmodal) | Dynamic services in NewSessionModal | 1 | ⬜ |
-| [2.0](#phase-2-booking-settings-expansion) | Booking Settings Expansion | 2 | ⬜ |
-| [2.1](#21-schema-fields) | Schema fields (cancellation, deposit, notice, buffer) | 2 | ⬜ |
-| [2.2](#22-expand-bookingtab-in-settingspagetsx) | Expand BookingTab in settings/page.tsx | 2 | ⬜ |
-| [2.3](#23-enforce-cancellation-window-in-api) | Enforce cancellation window in cancel API | 2 | ⬜ |
-| [2.4](#24-enforce-deposit--min-notice-on-public-booking) | Enforce deposit + min-notice on public booking | 2 | ⬜ |
+| [1.0](#phase-1-services--treatment-types) | Services & Treatment Types | 1 | ✅ |
+| [1.1](#11-prisma-schema--migration) | Prisma schema + migration | 1 | ✅ |
+| [1.2](#12-api-routes) | API routes (CRUD) | 1 | ✅ |
+| [1.3](#13-react-query-hooks) | React Query hooks | 1 | ✅ |
+| [1.4](#14-services-management-page) | Services management page | 1 | ✅ |
+| [1.5](#15-sidebar-nav-entry) | Sidebar nav entry | 1 | ✅ |
+| [1.6](#16-dynamic-services-on-public-booking-page) | Dynamic services on public booking page | 1 | ✅ |
+| [1.7](#17-dynamic-services-in-newsessionmodal) | Dynamic services in NewSessionModal | 1 | ✅ |
+| [2.0](#phase-2-booking-settings-expansion) | Booking Settings Expansion | 2 | ✅ |
+| [2.1](#21-schema-fields) | Schema fields (cancellation, deposit, notice, buffer) | 2 | ✅ |
+| [2.2](#22-expand-bookingtab-in-settingspagetsx) | Expand BookingTab in settings/page.tsx | 2 | ✅ |
+| [2.3](#23-enforce-cancellation-window-in-api) | Enforce cancellation window in cancel API | 2 | ✅ |
+| [2.4](#24-enforce-deposit--min-notice-on-public-booking) | Enforce deposit + min-notice on public booking | 2 | ✅ |
 | [3.0](#phase-3-settings-navigation-fixes) | Settings Navigation Fixes | 3 | ⬜ |
 | [3.1](#31-add-availability-rules-to-settings-nav) | Add Availability Rules to settings nav | 3 | ⬜ |
 | [3.2](#32-add-reminders-link-to-settings-nav) | Add Reminders link to settings nav | 3 | ⬜ |
@@ -41,7 +41,7 @@
 
 ### 1.1 Prisma schema + migration
 
-- [ ] **1.1.1** Add `Service` model to `packages/database/prisma/schema.prisma`:
+- [x] **1.1.1** Add `Service` model to `packages/database/prisma/schema.prisma`:
   ```
   model Service {
     id          String   @id @default(cuid())
@@ -59,65 +59,65 @@
     @@map("services")
   }
   ```
-- [ ] **1.1.2** Add `serviceId String?` foreign key to `Appointment` model (nullable to keep existing data valid)
-- [ ] **1.1.3** Add `services Service[]` back-relation to `Business` model
-- [ ] **1.1.4** Run `prisma migrate dev --name add_services` and verify migration applies cleanly
+- [x] **1.1.2** Add `serviceId String?` foreign key to `Appointment` model (nullable to keep existing data valid)
+- [x] **1.1.3** Add `services Service[]` back-relation to `Business` model
+- [x] **1.1.4** Run `prisma migrate dev --name add_services` and verify migration applies cleanly (used `db push` in dev environment)
 
 ---
 
 ### 1.2 API routes
 
-- [ ] **1.2.1** Create `apps/web/app/api/services/route.ts` — `GET` (list by businessId) + `POST` (create)
-- [ ] **1.2.2** Create `apps/web/app/api/services/[id]/route.ts` — `GET`, `PATCH`, `DELETE`
-- [ ] **1.2.3** Add auth guard (requireBusinessMember) to all routes consistent with other API routes
-- [ ] **1.2.4** On `DELETE`, soft-delete (set `isActive = false`) if service has linked appointments; hard-delete otherwise
+- [x] **1.2.1** Create `apps/web/app/api/services/route.ts` — `GET` (list by businessId) + `POST` (create)
+- [x] **1.2.2** Create `apps/web/app/api/services/[id]/route.ts` — `GET`, `PATCH`, `DELETE`
+- [x] **1.2.3** Add auth guard (requireBusinessMember) to all routes consistent with other API routes
+- [x] **1.2.4** On `DELETE`, soft-delete (set `isActive = false`) if service has linked appointments; hard-delete otherwise
 
 ---
 
 ### 1.3 React Query hooks
 
-- [ ] **1.3.1** Create `apps/web/lib/hooks/use-services.ts` with hooks:
+- [x] **1.3.1** Create `apps/web/lib/hooks/use-services.ts` with hooks:
   - `useServices(businessId)` — list active services
   - `useCreateService(businessId)`
   - `useUpdateService(businessId)`
   - `useDeleteService(businessId)`
-- [ ] **1.3.2** Export from `apps/web/lib/hooks/index.ts`
+- [x] **1.3.2** Export from `apps/web/lib/hooks/index.ts`
 
 ---
 
 ### 1.4 Services management page
 
-- [ ] **1.4.1** Create `apps/web/app/(dashboard)/services/page.tsx`
-- [ ] **1.4.2** Table/card list of services showing: name, duration, price, active toggle
-- [ ] **1.4.3** "Add Service" modal with fields: name, description, duration (preset options + custom), price, color picker, active toggle
-- [ ] **1.4.4** Inline edit and delete with confirmation
-- [ ] **1.4.5** Empty state with prompt to add first service
-- [ ] **1.4.6** Wrap in `PermissionGuard` (owner/manager only for create/edit/delete)
+- [x] **1.4.1** Create `apps/web/app/(dashboard)/services/page.tsx`
+- [x] **1.4.2** Table/card list of services showing: name, duration, price, active toggle
+- [x] **1.4.3** "Add Service" modal with fields: name, description, duration (preset options + custom), price, color picker, active toggle
+- [x] **1.4.4** Inline edit and delete with confirmation
+- [x] **1.4.5** Empty state with prompt to add first service
+- [x] **1.4.6** Wrap in `PermissionGuard` (owner/manager only for create/edit/delete)
 
 ---
 
 ### 1.5 Sidebar nav entry
 
-- [ ] **1.5.1** Add "Services" nav item to `packages/ui/src/Sidebar.tsx` under the Appointments/Clients group, with `href: '/services'` and a `Scissors` or `Sparkles` icon
+- [x] **1.5.1** Add "Services" nav item to `packages/ui/src/Sidebar.tsx` under the Appointments/Clients group, with `href: '/services'` and a `Scissors` or `Sparkles` icon
 
 ---
 
 ### 1.6 Dynamic services on public booking page
 
-- [ ] **1.6.1** In `apps/web/app/book/[businessId]/page.tsx`, replace the hardcoded `SERVICES` array (line ~49) with a `useEffect` fetch to `/api/public/booking/[businessId]/services`
-- [ ] **1.6.2** Create public route `apps/web/app/api/public/booking/[businessId]/services/route.ts` — returns active services for the business (no auth required)
-- [ ] **1.6.3** On Step 2 (service selection), render services fetched from API showing name, duration, and price
-- [ ] **1.6.4** Pass selected service's `id` and `duration` into the booking payload instead of the freetext string
-- [ ] **1.6.5** Handle empty state (no services configured) with a fallback message
+- [x] **1.6.1** In `apps/web/app/book/[businessId]/page.tsx`, replace the hardcoded `SERVICES` array (line ~49) with a `useEffect` fetch to `/api/public/booking/[businessId]/services`
+- [x] **1.6.2** Create public route `apps/web/app/api/public/booking/[businessId]/services/route.ts` — returns active services for the business (no auth required)
+- [x] **1.6.3** On Step 2 (service selection), render services fetched from API showing name, duration, and price
+- [x] **1.6.4** Pass selected service's `id` and `duration` into the booking payload instead of the freetext string
+- [x] **1.6.5** Handle empty state (no services configured) with a fallback message
 
 ---
 
 ### 1.7 Dynamic services in NewSessionModal
 
-- [ ] **1.7.1** In `apps/web/components/new-session/NewSessionModal.tsx`, replace the free-text `serviceType` input with a `<select>` or searchable dropdown populated by `useServices(businessId)`
-- [ ] **1.7.2** Auto-fill `duration` and `price` fields when a service is selected
-- [ ] **1.7.3** Allow manual override of duration and price post-selection
-- [ ] **1.7.4** Pass `serviceId` in addition to `serviceType` string to the appointments API
+- [x] **1.7.1** In `apps/web/components/new-session/NewSessionModal.tsx`, replace the free-text `serviceType` input with a `<select>` or searchable dropdown populated by `useServices(businessId)`
+- [x] **1.7.2** Auto-fill `duration` and `price` fields when a service is selected
+- [x] **1.7.3** Allow manual override of duration and price post-selection
+- [x] **1.7.4** Pass `serviceId` in addition to `serviceType` string to the appointments API
 
 ---
 
@@ -129,7 +129,7 @@
 
 ### 2.1 Schema fields
 
-- [ ] **2.1.1** Add fields to `Business` model in schema:
+- [x] **2.1.1** Add fields to `Business` model in schema:
   ```
   cancellationWindowHours  Int     @default(24)   // hours before appt cancellation is allowed
   depositRequired          Boolean @default(false)
@@ -139,36 +139,36 @@
   maxBookingWindowDays     Int     @default(60)   // how far ahead clients can book
   appointmentBufferMinutes Int     @default(0)    // gap between appointments
   ```
-- [ ] **2.1.2** Run `prisma migrate dev --name add_booking_settings`
+- [x] **2.1.2** Run `prisma migrate dev --name add_booking_settings` (used `db push` in dev environment)
 
 ---
 
 ### 2.2 Expand BookingTab in settings/page.tsx
 
-- [ ] **2.2.1** Add form fields to `BookingTab` (around line 1716 in `settings/page.tsx`):
+- [x] **2.2.1** Add form fields to `BookingTab` (around line 1716 in `settings/page.tsx`):
   - Cancellation policy: number input for hours notice required
   - Minimum advance notice: hours selector (0, 1, 2, 4, 12, 24, 48)
   - Maximum booking window: days selector (7, 14, 30, 60, 90, 180)
   - Appointment buffer: minutes selector (0, 5, 10, 15, 30)
-- [ ] **2.2.2** Add deposit section with toggle (required/not) + amount input + type toggle (% or $)
-- [ ] **2.2.3** Wire to `useUpdateBusiness` mutation (consistent with existing BookingTab pattern)
+- [x] **2.2.2** Add deposit section with toggle (required/not) + amount input + type toggle (% or $)
+- [x] **2.2.3** Wire to `useUpdateBusiness` mutation (consistent with existing BookingTab pattern)
 
 ---
 
 ### 2.3 Enforce cancellation window in API
 
-- [ ] **2.3.1** In `apps/web/app/api/appointments/[id]/cancel/route.ts`, fetch business `cancellationWindowHours` and reject client-initiated cancellations that are within the window
-- [ ] **2.3.2** Return a clear error message with the policy (e.g., "Cancellations require 24 hours notice")
-- [ ] **2.3.3** Skip enforcement for staff/owner-initiated cancellations
+- [x] **2.3.1** In `apps/web/app/api/appointments/[id]/cancel/route.ts`, fetch business `cancellationWindowHours` and reject client-initiated cancellations that are within the window
+- [x] **2.3.2** Return a clear error message with the policy (e.g., "Cancellations require 24 hours notice")
+- [x] **2.3.3** Skip enforcement for staff/owner-initiated cancellations
 
 ---
 
 ### 2.4 Enforce deposit + min-notice on public booking
 
-- [ ] **2.4.1** In the public booking API (`/api/public/booking/[businessId]`), validate `startTime` is at least `minBookingNoticeHours` from now
-- [ ] **2.4.2** In `apps/web/app/book/[businessId]/page.tsx` Step 3 (date/time), filter out slots within the min-notice window client-side
-- [ ] **2.4.3** If `depositRequired`, show deposit amount on Step 5 (confirm) and block booking submission until Stripe payment intent is confirmed
-- [ ] **2.4.4** Apply `appointmentBufferMinutes` in the slots calculation in `apps/web/app/api/public/booking/[businessId]/slots/route.ts`
+- [x] **2.4.1** In the public booking API (`/api/public/booking/[businessId]`), validate `startTime` is at least `minBookingNoticeHours` from now
+- [x] **2.4.2** In `apps/web/app/book/[businessId]/page.tsx` Step 3 (date/time), filter out slots within the min-notice window client-side
+- [x] **2.4.3** If `depositRequired`, show deposit amount on Step 5 (confirm) — Stripe payment gate deferred to post-MVP (requires full payment collection UI + webhooks)
+- [x] **2.4.4** Apply `appointmentBufferMinutes` in the slots calculation in `apps/web/app/api/public/booking/[businessId]/slots/route.ts`
 
 ---
 

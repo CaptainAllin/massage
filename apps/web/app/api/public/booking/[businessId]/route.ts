@@ -17,7 +17,11 @@ export async function GET(
 
     const business = await prisma.business.findUnique({
       where: { id: businessId },
-      select: { id: true, name: true, logo: true, primaryColor: true, secondaryColor: true, bookingMode: true },
+      select: {
+        id: true, name: true, logo: true, primaryColor: true, secondaryColor: true, bookingMode: true,
+        minBookingNoticeHours: true, maxBookingWindowDays: true,
+        depositRequired: true, depositAmount: true, depositType: true,
+      },
     });
 
     if (!business) return res.notFound('Business not found');
@@ -60,6 +64,7 @@ export async function POST(
       startTime,
       duration,
       serviceType,
+      serviceId,
       clientFirstName,
       clientLastName,
       clientEmail,
@@ -74,9 +79,30 @@ export async function POST(
 
     const business = await prisma.business.findUnique({
       where: { id: businessId },
-      select: { id: true, name: true, email: true, bookingMode: true },
+      select: {
+        id: true, name: true, email: true, bookingMode: true,
+        minBookingNoticeHours: true, maxBookingWindowDays: true,
+        depositRequired: true, depositAmount: true, depositType: true,
+      },
     });
     if (!business) return res.notFound('Business not found');
+
+    // Enforce min booking notice
+    const start = new Date(startTime);
+    const hoursFromNow = (start.getTime() - Date.now()) / (1000 * 60 * 60);
+    const minNotice = business.minBookingNoticeHours ?? 1;
+    if (minNotice > 0 && hoursFromNow < minNotice) {
+      return res.badRequest(
+        `Bookings require at least ${minNotice} hour${minNotice !== 1 ? 's' : ''} advance notice.`
+      );
+    }
+
+    // Enforce max booking window
+    const maxDays = business.maxBookingWindowDays ?? 60;
+    const daysFromNow = hoursFromNow / 24;
+    if (daysFromNow > maxDays) {
+      return res.badRequest(`Bookings can only be made up to ${maxDays} days in advance.`);
+    }
 
     // Access control enforcement
     if (business.bookingMode === 'INVITE_ONLY') {
@@ -105,7 +131,6 @@ export async function POST(
     });
     if (!therapist) return res.notFound('Therapist not found');
 
-    const start = new Date(startTime);
     const end = new Date(start.getTime() + duration * 60000);
 
     const availability = await checkAvailability(therapistId, start, end);
@@ -146,6 +171,7 @@ export async function POST(
         duration,
         status: AppointmentStatus.SCHEDULED,
         serviceType: serviceType || null,
+        serviceId: serviceId || null,
         notes: notes || null,
       },
       include: {
