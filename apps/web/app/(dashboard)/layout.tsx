@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
@@ -8,6 +7,8 @@ import { Sidebar, Header } from '@massage/ui';
 import { useAuth, useRole } from '@massage/auth';
 import { QuickCallProvider } from '@/components/quick-call/QuickCallContext';
 import { QuickCallModal } from '@/components/quick-call/QuickCallModal';
+import { NewSessionProvider, useNewSession } from '@/components/new-session/NewSessionContext';
+import { NewSessionModal } from '@/components/new-session/NewSessionModal';
 import { BusinessIdProvider } from '@/lib/hooks/use-business-id';
 import { useBusinessId } from '@/lib/hooks/use-business-id';
 import { useBusinessMemberRole, usePermissions } from '@/lib/hooks/use-permissions';
@@ -67,6 +68,26 @@ function mapGlobalRole(globalRole: string | null): string | null {
   }
 }
 
+function NewSessionButton() {
+  const { openNewSession } = useNewSession();
+  return (
+    <button
+      onClick={openNewSession}
+      className="iris-cta flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium"
+      style={{
+        background: 'linear-gradient(135deg, #5D4AA8, #3F2F87)',
+        color: '#FFFFFF',
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.16), 0 1px 2px rgba(28,20,54,0.16)',
+        border: 'none',
+        cursor: 'pointer',
+      }}
+    >
+      <CalendarPlusIcon />
+      <span className="hidden sm:inline">New session</span>
+    </button>
+  );
+}
+
 function DashboardContent({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { user, signOut } = useAuth();
@@ -113,18 +134,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
             <div className="flex items-center gap-2 sm:gap-2.5">
               <BusinessSwitcher />
               <DashboardHeaderActions />
-              <Link
-                href="/appointments"
-                className="iris-cta flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium"
-                style={{
-                  background: 'linear-gradient(135deg, #5D4AA8, #3F2F87)',
-                  color: '#FFFFFF',
-                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.16), 0 1px 2px rgba(28,20,54,0.16)',
-                }}
-              >
-                <CalendarPlusIcon />
-                <span className="hidden sm:inline">New session</span>
-              </Link>
+              <NewSessionButton />
             </div>
           }
         />
@@ -136,6 +146,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
 
       <BackgroundPrefetcher />
       <QuickCallModal />
+      <NewSessionModal />
 
       {loaded && !welcomeShown && (
         <WelcomeModal
@@ -163,7 +174,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <BusinessIdProvider>
       <OnboardingProvider>
         <QuickCallProvider>
-          <DashboardContent>{children}</DashboardContent>
+          <NewSessionProvider>
+            <DashboardContent>{children}</DashboardContent>
+          </NewSessionProvider>
         </QuickCallProvider>
       </OnboardingProvider>
     </BusinessIdProvider>
