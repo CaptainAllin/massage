@@ -122,6 +122,19 @@ async function main() {
   });
   console.log('✓ Business:', business.name);
 
+  // Ensure the owner has a BusinessMember record
+  await prisma.businessMember.upsert({
+    where: { userId_businessId: { userId: ownerUser.id, businessId: business.id } },
+    update: {},
+    create: {
+      userId: ownerUser.id,
+      businessId: business.id,
+      role: 'OWNER',
+      status: 'ACTIVE',
+      joinedAt: new Date(),
+    },
+  });
+
   // ── 3. Therapists (3) ────────────────────────────────────────────────────
   const therapistDefs = [
     {
@@ -192,6 +205,19 @@ async function main() {
       },
     });
     therapists.push(t);
+
+    // Ensure each therapist has a BusinessMember record so they appear in Team settings
+    await prisma.businessMember.upsert({
+      where: { userId_businessId: { userId: u.id, businessId: business.id } },
+      update: {},
+      create: {
+        userId: u.id,
+        businessId: business.id,
+        role: 'THERAPIST',
+        status: 'ACTIVE',
+        joinedAt: new Date(),
+      },
+    });
   }
   console.log('✓ Therapists:', therapists.length);
 

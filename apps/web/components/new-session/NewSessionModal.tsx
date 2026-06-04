@@ -26,6 +26,9 @@ export function NewSessionModal() {
   const [search, setSearch] = useState('');
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [therapistId, setTherapistId] = useState('');
+  const [therapistSearch, setTherapistSearch] = useState('');
+  const [selectedTherapist, setSelectedTherapist] = useState<any>(null);
+  const [showTherapistDropdown, setShowTherapistDropdown] = useState(false);
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [time, setTime] = useState('09:00');
   const [duration, setDuration] = useState('60');
@@ -38,6 +41,8 @@ export function NewSessionModal() {
 
   const searchRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const therapistSearchRef = useRef<HTMLInputElement>(null);
+  const therapistDropdownRef = useRef<HTMLDivElement>(null);
 
   const { data: clients = [] } = useClients(businessId, { search, limit: 8 } as any);
   const { data: therapists = [] } = useTherapists(businessId);
@@ -62,10 +67,36 @@ export function NewSessionModal() {
     setShowDropdown(search.length >= 2 && !selectedClient);
   }, [search, selectedClient]);
 
+  const filteredTherapists = (therapists as any[]).filter((t: any) => {
+    if (!therapistSearch) return true;
+    const name = t.user ? `${t.user.firstName || ''} ${t.user.lastName || ''}`.trim().toLowerCase() : '';
+    return name.includes(therapistSearch.toLowerCase());
+  });
+
+  function handleSelectTherapist(therapist: any) {
+    const name = therapist.user
+      ? `${therapist.user.firstName || ''} ${therapist.user.lastName || ''}`.trim()
+      : 'Unknown';
+    setSelectedTherapist(therapist);
+    setTherapistId(therapist.id);
+    setTherapistSearch(name);
+    setShowTherapistDropdown(false);
+  }
+
+  function handleClearTherapist() {
+    setSelectedTherapist(null);
+    setTherapistId('');
+    setTherapistSearch('');
+    setTimeout(() => therapistSearchRef.current?.focus(), 50);
+  }
+
   function reset() {
     setSearch('');
     setSelectedClient(null);
     setTherapistId('');
+    setTherapistSearch('');
+    setSelectedTherapist(null);
+    setShowTherapistDropdown(false);
     setDate(format(new Date(), 'yyyy-MM-dd'));
     setTime('09:00');
     setDuration('60');
@@ -212,20 +243,87 @@ export function NewSessionModal() {
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Therapist <span className="text-red-500">*</span>
           </label>
-          <Select
-            value={therapistId}
-            onChange={(e) => setTherapistId(e.target.value)}
-            required
-            options={[
-              { value: '', label: 'Select a therapist' },
-              ...(therapists as any[]).map((t: any) => ({
-                value: t.id,
-                label: t.user
-                  ? `${t.user.firstName || ''} ${t.user.lastName || ''}`.trim()
-                  : 'Unknown',
-              })),
-            ]}
-          />
+          <div className="relative">
+            <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+              {selectedTherapist ? (
+                <div
+                  className="flex h-5 w-5 items-center justify-center rounded-full text-xs font-semibold flex-shrink-0"
+                  style={{ background: '#EDE5F4', color: '#5D4AA8' }}
+                >
+                  {selectedTherapist.user?.firstName?.[0]}{selectedTherapist.user?.lastName?.[0]}
+                </div>
+              ) : (
+                <SearchIcon />
+              )}
+            </div>
+            <Input
+              ref={therapistSearchRef}
+              value={therapistSearch}
+              onChange={(e) => {
+                setTherapistSearch(e.target.value);
+                if (selectedTherapist) {
+                  setSelectedTherapist(null);
+                  setTherapistId('');
+                }
+                setShowTherapistDropdown(true);
+              }}
+              onFocus={() => setShowTherapistDropdown(true)}
+              placeholder="Select a therapist"
+              className="pl-9 pr-9"
+            />
+            {selectedTherapist && (
+              <button
+                type="button"
+                onClick={handleClearTherapist}
+                className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+            {showTherapistDropdown && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowTherapistDropdown(false)} />
+                <div
+                  ref={therapistDropdownRef}
+                  className="absolute top-full left-0 right-0 z-50 mt-1 rounded-xl shadow-lg overflow-hidden"
+                  style={{ background: '#fff', border: '1px solid #EFE9F2' }}
+                >
+                  {filteredTherapists.length === 0 ? (
+                    <div className="px-4 py-3 text-sm text-gray-500">
+                      No therapists found
+                    </div>
+                  ) : (
+                    <ul className="divide-y divide-gray-100 max-h-48 overflow-y-auto">
+                      {filteredTherapists.map((t: any) => {
+                        const name = t.user
+                          ? `${t.user.firstName || ''} ${t.user.lastName || ''}`.trim()
+                          : 'Unknown';
+                        return (
+                          <li key={t.id}>
+                            <button
+                              type="button"
+                              onClick={() => handleSelectTherapist(t)}
+                              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-left transition-colors"
+                            >
+                              <div
+                                className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold flex-shrink-0"
+                                style={{ background: '#EDE5F4', color: '#5D4AA8' }}
+                              >
+                                {t.user?.firstName?.[0]}{t.user?.lastName?.[0]}
+                              </div>
+                              <p className="text-sm font-medium text-gray-900 truncate">{name}</p>
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Date + Time */}

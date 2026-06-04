@@ -881,7 +881,7 @@ function StaffProfileModal({ businessId, member, onClose }: { businessId: string
 }
 
 function TeamTab({ businessId }: { businessId: string }) {
-  const { data: members, isLoading: membersLoading } = useBusinessMembers(businessId);
+  const { data: members, isLoading: membersLoading, refetch: refetchMembers } = useBusinessMembers(businessId);
   const { data: invites, isLoading: invitesLoading } = useStaffInvites(businessId);
   const { data: rolePermData } = useRolePermissions(businessId);
   const removeMembers = useRemoveBusinessMember(businessId);
@@ -892,6 +892,20 @@ function TeamTab({ businessId }: { businessId: string }) {
   const [editingRole, setEditingRole] = useState<string | null>(null);
   const [editingMember, setEditingMember] = useState<any | null>(null);
   const [editingProfileMember, setEditingProfileMember] = useState<any | null>(null);
+  const didMigrate = useRef(false);
+
+  // One-time backfill: if only 0–1 members found after load, therapists may be missing
+  // BusinessMember records (seed gap). Silently run migration scoped to this business.
+  useEffect(() => {
+    if (membersLoading || didMigrate.current) return;
+    const nonOwnerCount = (members || []).filter((m: any) => m.role !== 'OWNER').length;
+    if (nonOwnerCount === 0) {
+      didMigrate.current = true;
+      apiClient.post(`/admin/migrate-business-members?businessId=${businessId}`, {})
+        .then(() => refetchMembers())
+        .catch(() => {});
+    }
+  }, [membersLoading, members, businessId, refetchMembers]);
 
   const isLoading = membersLoading || invitesLoading;
 
@@ -926,9 +940,99 @@ function TeamTab({ businessId }: { businessId: string }) {
   if (isLoading) return <div className="text-sm text-muted-foreground">Loading team…</div>;
 
   const pendingInvites = (invites || []).filter((inv: any) => !inv.acceptedAt && new Date(inv.expiresAt) > new Date());
+  const ownerMembers = (members || []).filter((m: any) => m.role === 'OWNER');
   const activeMembers = (members || []).filter((m: any) => m.role !== 'OWNER');
+  const totalMembers = (members || []).length;
 
   const emptyRoleOverride = { grant: [] as string[], revoke: [] as string[] };
+
+  const MemberCard = ({ m, isOwner = false }: { m: any; isOwner?: boolean }) => {
+    const u = m.user;
+    const roleInfo = ROLE_INFO[m.role];
+    const memberOverrides = m.permissions as PermissionOverrides | null;
+    const hasMemberCustom = (memberOverrides?.grant?.length ?? 0) > 0 || (memberOverrides?.revoke?.length ?? 0) > 0;
+    return (
+      <Card key={m.id}>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-3">
+              <div
+                className="h-10 w-10 rounded-full flex items-center justify-center font-semibold text-sm flex-shrink-0"
+                style={{ background: isOwner ? 'linear-gradient(135deg, #5D4AA8, #7665C2)' : '#EDE5F4', color: '#fff' }}
+              >
+                {u?.firstName?.[0]}{u?.lastName?.[0]}
+              </div>
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <p className="font-medium text-sm">{u?.firstName} {u?.lastName}</p>
+                  {isOwner && (
+                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full" style={{ background: '#EDE5F4', color: '#5D4AA8' }}>
+                      You
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">{u?.email}</p>
+                {u?.phoneNumber && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                    <Phone className="h-3 w-3" />{formatPhoneDisplay(u.phoneNumber)}
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span
+                className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                style={{
+                  background: isOwner ? '#EDE5F4' : '#F3EFFD',
+                  color: roleInfo?.color ?? '#5D4AA8',
+                }}
+              >
+                {roleInfo?.label ?? m.role}
+              </span>
+              {!isOwner && hasMemberCustom && (
+                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full" style={{ background: '#EDE5F4', color: '#5D4AA8' }}>
+                  Custom
+                </span>
+              )}
+              <Badge variant="success">Active</Badge>
+              {!isOwner && (m.role === 'THERAPIST' || m.role === 'SENIOR_THERAPIST') && (
+                <button
+                  onClick={() => setEditingProfileMember(m)}
+                  className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-colors hover:bg-purple-50"
+                  style={{ borderColor: '#E5DEEC', color: '#5D4AA8' }}
+                  title="Edit therapist profile (bio, specializations)"
+                >
+                  <UserCircle className="h-3 w-3" />Profile
+                </button>
+              )}
+              {!isOwner && (
+                <>
+                  <button
+                    onClick={() => setEditingMember(m)}
+                    className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-colors hover:bg-purple-50"
+                    style={{ borderColor: '#E5DEEC', color: '#5D4AA8' }}
+                    title="Customise permissions for this person"
+                  >
+                    <Sliders className="h-3 w-3" />Permissions
+                  </button>
+                  <button
+                    onClick={() => handleRemoveMember(m.id)}
+                    disabled={actionId === m.id}
+                    className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-colors hover:bg-red-50"
+                    style={{ borderColor: '#FCA5A5', color: '#DC2626' }}
+                    title="Remove from business"
+                  >
+                    {actionId === m.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <UserMinus className="h-3 w-3" />}
+                    Remove
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -1070,12 +1174,12 @@ function TeamTab({ businessId }: { businessId: string }) {
         </div>
       )}
 
-      {/* Active members — 6.2.3 per-member permission overrides */}
+      {/* All team members — owner first, then staff */}
       <div className="space-y-2">
         <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#9B91B0' }}>
-          Team Members {activeMembers.length > 0 ? `(${activeMembers.length})` : ''}
+          Team Members {totalMembers > 0 ? `(${totalMembers})` : ''}
         </p>
-        {activeMembers.length === 0 && pendingInvites.length === 0 && (
+        {totalMembers === 0 && pendingInvites.length === 0 && (
           <div className="text-center py-8 rounded-xl border-2 border-dashed border-gray-200">
             <Users className="h-8 w-8 text-gray-300 mx-auto mb-2" />
             <p className="text-sm text-muted-foreground">No team members yet.</p>
@@ -1084,73 +1188,8 @@ function TeamTab({ businessId }: { businessId: string }) {
             </button>
           </div>
         )}
-        {activeMembers.map((m: any) => {
-          const u = m.user;
-          const roleInfo = ROLE_INFO[m.role];
-          const memberOverrides = m.permissions as PermissionOverrides | null;
-          const hasMemberCustom = (memberOverrides?.grant?.length ?? 0) > 0 || (memberOverrides?.revoke?.length ?? 0) > 0;
-          return (
-            <Card key={m.id}>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between gap-4 flex-wrap">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full flex items-center justify-center font-semibold text-sm flex-shrink-0" style={{ background: '#EDE5F4', color: '#5D4AA8' }}>
-                      {u?.firstName?.[0]}{u?.lastName?.[0]}
-                    </div>
-                    <div>
-                      <p className="font-medium text-sm">{u?.firstName} {u?.lastName}</p>
-                      <p className="text-xs text-muted-foreground">{u?.email}</p>
-                      {u?.phoneNumber && (
-                        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                          <Phone className="h-3 w-3" />{formatPhoneDisplay(u.phoneNumber)}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: '#F3EFFD', color: roleInfo?.color ?? '#5D4AA8' }}>
-                      {roleInfo?.label ?? m.role}
-                    </span>
-                    {hasMemberCustom && (
-                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full" style={{ background: '#EDE5F4', color: '#5D4AA8' }}>
-                        Custom
-                      </span>
-                    )}
-                    <Badge variant="success">Active</Badge>
-                    {(m.role === 'THERAPIST' || m.role === 'SENIOR_THERAPIST') && (
-                      <button
-                        onClick={() => setEditingProfileMember(m)}
-                        className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-colors hover:bg-purple-50"
-                        style={{ borderColor: '#E5DEEC', color: '#5D4AA8' }}
-                        title="Edit therapist profile (bio, specializations)"
-                      >
-                        <UserCircle className="h-3 w-3" />Profile
-                      </button>
-                    )}
-                    <button
-                      onClick={() => setEditingMember(m)}
-                      className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-colors hover:bg-purple-50"
-                      style={{ borderColor: '#E5DEEC', color: '#5D4AA8' }}
-                      title="Customise permissions for this person"
-                    >
-                      <Sliders className="h-3 w-3" />Permissions
-                    </button>
-                    <button
-                      onClick={() => handleRemoveMember(m.id)}
-                      disabled={actionId === m.id}
-                      className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-colors hover:bg-red-50"
-                      style={{ borderColor: '#FCA5A5', color: '#DC2626' }}
-                      title="Remove from business"
-                    >
-                      {actionId === m.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <UserMinus className="h-3 w-3" />}
-                      Remove
-                    </button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+        {ownerMembers.map((m: any) => <MemberCard key={m.id} m={m} isOwner />)}
+        {activeMembers.map((m: any) => <MemberCard key={m.id} m={m} />)}
       </div>
 
       {editingProfileMember && (
