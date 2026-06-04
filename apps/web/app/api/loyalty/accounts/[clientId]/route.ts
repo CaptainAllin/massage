@@ -1,18 +1,13 @@
-import { withAuth, requireBusinessAccess, res } from '@/lib/api-auth';
+import { withAuth, requirePermission, res } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
-
-function computeTier(points: number, settings: { bronzeMinPoints: number; silverMinPoints: number; goldMinPoints: number } | null) {
-  if (!settings) return 'BRONZE';
-  if (points >= settings.goldMinPoints) return 'GOLD';
-  if (points >= settings.silverMinPoints) return 'SILVER';
-  return 'BRONZE';
-}
+import { computeTier, neverDecreaseTier } from '@/lib/loyalty';
+import { sendLoyaltyTierUpgradeEmail } from '@/lib/email';
 
 export const GET = withAuth(async (req, user, { params }: { params: { clientId: string } }) => {
   const { searchParams } = new URL(req.url);
   const businessId = searchParams.get('businessId');
   if (!businessId) return res.badRequest('businessId is required');
-  await requireBusinessAccess(user, businessId);
+  await requirePermission(user, businessId, 'loyalty:view');
 
   const [account, settings] = await Promise.all([
     prisma.loyaltyAccount.findUnique({
@@ -29,7 +24,8 @@ export const GET = withAuth(async (req, user, { params }: { params: { clientId: 
     return res.ok({ points: 0, lifetimePoints: 0, tier: 'BRONZE', transactions: [] });
   }
 
-  const tier = computeTier(account.points, settings);
+  const computedTier = computeTier(account.lifetimePoints, settings);
+  const tier = neverDecreaseTier(account.tier, computedTier);
   if (tier !== account.tier) {
     await prisma.loyaltyAccount.update({ where: { id: account.id }, data: { tier } });
   }
@@ -41,19 +37,25 @@ export const POST = withAuth(async (req, user, { params }: { params: { clientId:
   const body = await req.json();
   const { businessId, points, type = 'EARN', description, referenceId, referenceType } = body;
   if (!businessId || points === undefined) return res.badRequest('businessId and points are required');
-  await requireBusinessAccess(user, businessId);
+  await requirePermission(user, businessId, 'loyalty:manage');
 
-  const settings = await prisma.loyaltySettings.findUnique({ where: { businessId } });
+  const [settings, business] = await Promise.all([
+    prisma.loyaltySettings.findUnique({ where: { businessId } }),
+    prisma.business.findUnique({ where: { id: businessId }, select: { name: true } }),
+  ]);
 
   const account = await prisma.loyaltyAccount.upsert({
     where: { businessId_clientId: { businessId, clientId: params.clientId } },
     create: { businessId, clientId: params.clientId, points: 0, lifetimePoints: 0 },
     update: {},
+    include: { client: { select: { email: true, firstName: true, lastName: true } } },
   });
 
+  const previousTier = account.tier;
   const newPoints = Math.max(0, account.points + points);
-  const newLifetime = type === 'EARN' ? account.lifetimePoints + points : account.lifetimePoints;
-  const tier = computeTier(newPoints, settings);
+  const newLifetime = type === 'EARN' && points > 0 ? account.lifetimePoints + points : account.lifetimePoints;
+  const rawTier = computeTier(newLifetime, settings);
+  const tier = neverDecreaseTier(previousTier, rawTier);
 
   const [transaction] = await prisma.$transaction([
     prisma.loyaltyTransaction.create({
@@ -72,6 +74,21 @@ export const POST = withAuth(async (req, user, { params }: { params: { clientId:
       data: { points: newPoints, lifetimePoints: newLifetime, tier },
     }),
   ]);
+
+  // 7.1.3 — notify client when they reach a new tier
+  if (tier !== previousTier && account.client.email) {
+    const tierRank: Record<string, number> = { BRONZE: 0, SILVER: 1, GOLD: 2, PLATINUM: 3 };
+    if ((tierRank[tier] ?? 0) > (tierRank[previousTier] ?? 0)) {
+      const clientName = [account.client.firstName, account.client.lastName].filter(Boolean).join(' ');
+      sendLoyaltyTierUpgradeEmail({
+        to: account.client.email,
+        clientName,
+        businessName: business?.name ?? 'your practice',
+        newTier: tier,
+        points: newPoints,
+      }).catch(() => {});
+    }
+  }
 
   return res.ok({ transaction, points: newPoints, tier });
 });

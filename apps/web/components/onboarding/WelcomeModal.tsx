@@ -18,7 +18,7 @@ export function WelcomeModal({ firstName, onStart, onSkip }: WelcomeModalProps) 
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 lg:left-[230px] z-50 flex items-center justify-center p-4"
       style={{
         background: 'rgba(30,24,48,0.72)',
         backdropFilter: 'blur(8px)',

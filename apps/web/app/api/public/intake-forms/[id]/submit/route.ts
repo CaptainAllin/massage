@@ -37,6 +37,28 @@ export async function POST(
       businessId: existing.businessId,
     });
 
+    // Award 25 loyalty points for completing intake form (non-blocking)
+    if (existing.clientId) {
+      (async () => {
+        try {
+          const account = await prisma.loyaltyAccount.findUnique({
+            where: { businessId_clientId: { businessId: existing.businessId, clientId: existing.clientId! } },
+          });
+          if (account) {
+            await prisma.$transaction([
+              prisma.loyaltyAccount.update({
+                where: { id: account.id },
+                data: { points: { increment: 25 }, lifetimePoints: { increment: 25 } },
+              }),
+              prisma.loyaltyTransaction.create({
+                data: { loyaltyAccountId: account.id, businessId: existing.businessId, type: 'EARN', points: 25, description: 'Intake form completed', referenceId: id, referenceType: 'intake_form' },
+              }),
+            ]);
+          }
+        } catch {}
+      })();
+    }
+
     return res.ok(updated);
   } catch (err) {
     console.error('[PUBLIC API]', err);

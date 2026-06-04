@@ -44,6 +44,7 @@ import {
   useAutomationAnalytics,
 } from '@/lib/hooks/use-automation';
 import type { ConditionGroup, ConditionRule, ComparatorType } from '@/lib/automation';
+import { PermissionGuard } from '@/components/PermissionGuard';
 
 // ─── Constants ────────────────────────────────────────────────────────────
 
@@ -1637,7 +1638,7 @@ function AnalyticsTab({ businessId }: { businessId: string }) {
 
 // ─── Page ─────────────────────────────────────────────────────────────────
 
-export default function AutomationPage() {
+function AutomationPageInner() {
   const businessId = useBusinessId();
   const { data, isLoading } = useAutomationRules(businessId);
   const [showModal, setShowModal] = useState(false);
@@ -1738,5 +1739,13 @@ export default function AutomationPage() {
         <AnalyticsTab businessId={businessId} />
       )}
     </div>
+  );
+}
+
+export default function AutomationPage() {
+  return (
+    <PermissionGuard permission="automation:view">
+      <AutomationPageInner />
+    </PermissionGuard>
   );
 }

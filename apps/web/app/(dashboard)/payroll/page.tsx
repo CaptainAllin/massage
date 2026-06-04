@@ -26,6 +26,7 @@ import {
   useDeletePayrollPeriod,
   useUpdatePayrollRecord,
 } from '@/lib/hooks/use-payroll';
+import { PermissionGuard } from '@/components/PermissionGuard';
 
 const STATUS_COLORS: Record<string, string> = {
   DRAFT: 'bg-[#EFE9F2] text-[#7A7090]',
@@ -330,7 +331,7 @@ function PayrollPeriodCard({ period, businessId, currency = 'AUD' }: { period: a
   );
 }
 
-export default function PayrollPage() {
+function PayrollPageInner() {
   const businessId = useBusinessId();
   const { data: business } = useBusiness(businessId);
   const currency = (business as any)?.currency || 'AUD';
@@ -409,5 +410,13 @@ export default function PayrollPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function PayrollPage() {
+  return (
+    <PermissionGuard permission="payroll:view">
+      <PayrollPageInner />
+    </PermissionGuard>
   );
 }

@@ -24,27 +24,32 @@ export async function GET(req: NextRequest) {
       return Response.json({ success: true, data: businesses });
     }
 
-    // Business owners see their own business
-    if (user.role === 'BUSINESS_OWNER') {
-      const businesses = await prisma.business.findMany({
-        where: { ownerId: user.id },
-      });
-      return Response.json({ success: true, data: businesses });
+    // Return all businesses the user owns or is a member of
+    const [ownedBusinesses, memberBusinesses, therapistBusiness] = await Promise.all([
+      prisma.business.findMany({ where: { ownerId: user.id } }),
+      prisma.businessMember.findMany({
+        where: { userId: user.id, status: { not: 'INACTIVE' } },
+        include: { business: true },
+      }),
+      prisma.therapist.findFirst({
+        where: { userId: user.id },
+        include: { business: true },
+      }),
+    ]);
+
+    const seen = new Set<string>();
+    const businesses: any[] = [];
+    for (const b of ownedBusinesses) {
+      if (!seen.has(b.id)) { seen.add(b.id); businesses.push(b); }
+    }
+    for (const m of memberBusinesses) {
+      if (!seen.has(m.business.id)) { seen.add(m.business.id); businesses.push(m.business); }
+    }
+    if (therapistBusiness && !seen.has(therapistBusiness.business.id)) {
+      businesses.push(therapistBusiness.business);
     }
 
-    // Other roles see businesses they're associated with
-    const fullUser = await prisma.user.findUnique({
-      where: { id: user.id },
-      include: {
-        therapist: { include: { business: true } },
-      },
-    });
-
-    if ((fullUser as any)?.therapist) {
-      return Response.json({ success: true, data: [(fullUser as any).therapist.business] });
-    }
-
-    return Response.json({ success: true, data: [] });
+    return Response.json({ success: true, data: businesses });
   } catch (err) {
     if (err instanceof AuthError) return res.unauthorized(err.message);
     console.error('[API]', err);
@@ -73,6 +78,17 @@ export async function POST(req: NextRequest) {
         ...rest,
         ownerId: user.id,
       } as any,
+    });
+
+    // Create the owner's BusinessMember record so per-business role checks work
+    await prisma.businessMember.create({
+      data: {
+        userId: user.id,
+        businessId: business.id,
+        role: 'OWNER',
+        status: 'ACTIVE',
+        joinedAt: new Date(),
+      },
     });
 
     await prisma.auditLog.create({

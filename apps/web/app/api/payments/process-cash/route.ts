@@ -1,5 +1,6 @@
-import { withAuth, res } from '@/lib/api-auth';
+import { withAuth, requirePermission, res } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
+import { awardPaymentPoints } from '@/lib/loyalty';
 
 async function updateInvoicePaymentStatus(invoiceId: string) {
   const invoice = await prisma.invoice.findUnique({
@@ -20,6 +21,7 @@ export const POST = withAuth(async (req, user) => {
   const body = await req.json();
   const { paymentId, businessId, notes } = body;
   if (!paymentId || !businessId) return res.badRequest('paymentId and businessId are required');
+  await requirePermission(user, businessId, 'payments:process');
 
   const payment = await prisma.payment.findFirst({ where: { id: paymentId, businessId } });
   if (!payment) return res.notFound('Payment not found');
@@ -36,6 +38,8 @@ export const POST = withAuth(async (req, user) => {
   });
 
   if (payment.invoiceId) await updateInvoicePaymentStatus(payment.invoiceId);
+
+  awardPaymentPoints({ businessId, clientId: payment.clientId, amount: payment.amount, paymentId }).catch(() => {});
 
   await prisma.auditLog.create({
     data: {

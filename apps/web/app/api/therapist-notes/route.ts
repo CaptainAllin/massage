@@ -1,4 +1,4 @@
-import { requireAuth, requireBusinessAccess, res, AuthError } from '@/lib/api-auth';
+import { requireAuth, requireBusinessAccess, getBusinessRole, res, AuthError } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
 import { NextRequest } from 'next/server';
 
@@ -29,9 +29,10 @@ export async function GET(req: NextRequest) {
 
     const where: any = { businessId };
 
-    // RBAC: Therapists can only see their own notes
-    if (user.role === 'THERAPIST') {
-      const therapist = await prisma.therapist.findFirst({ where: { userId: user.id } });
+    // RBAC: Therapists (global role or per-business role) can only see their own notes
+    const businessRole = await getBusinessRole(user.id, businessId);
+    if (user.role === 'THERAPIST' || businessRole === 'THERAPIST') {
+      const therapist = await prisma.therapist.findFirst({ where: { userId: user.id, businessId } });
       if (therapist) where.therapistId = therapist.id;
     }
 

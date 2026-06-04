@@ -10,10 +10,12 @@ import { QuickCallProvider } from '@/components/quick-call/QuickCallContext';
 import { QuickCallModal } from '@/components/quick-call/QuickCallModal';
 import { BusinessIdProvider } from '@/lib/hooks/use-business-id';
 import { useBusinessId } from '@/lib/hooks/use-business-id';
+import { useBusinessMemberRole, usePermissions } from '@/lib/hooks/use-permissions';
 import { OnboardingProvider, useOnboardingContext } from '@/components/onboarding/OnboardingProvider';
 import { WelcomeModal } from '@/components/onboarding/WelcomeModal';
 import { CongratsModal } from '@/components/onboarding/CongratsModal';
 import { DashboardHeaderActions } from './DashboardHeaderActions';
+import { BusinessSwitcher } from '@/components/BusinessSwitcher';
 import { apiClient } from '@/lib/api-client';
 
 // Prefetch the most-visited pages' API data in the background so navigating
@@ -24,9 +26,6 @@ function BackgroundPrefetcher() {
 
   useEffect(() => {
     if (!businessId) return;
-    const now = new Date().toISOString();
-    const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-
     const prefetch = (key: unknown[], fn: () => Promise<unknown>) =>
       queryClient.prefetchQuery({ queryKey: key, queryFn: fn, staleTime: 5 * 60 * 1000 });
 
@@ -56,10 +55,27 @@ function CalendarPlusIcon() {
   );
 }
 
+/** Maps the global Supabase UserRole to a BusinessMemberRole string for immediate sidebar rendering
+ *  while the per-business role is still loading from the API. */
+function mapGlobalRole(globalRole: string | null): string | null {
+  switch (globalRole) {
+    case 'BUSINESS_OWNER': return 'OWNER';
+    case 'RECEPTIONIST': return 'RECEPTIONIST';
+    case 'THERAPIST': return 'THERAPIST';
+    case 'SUPER_ADMIN': return 'SUPER_ADMIN';
+    default: return null;
+  }
+}
+
 function DashboardContent({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { user, signOut } = useAuth();
-  const { role } = useRole();
+  const { role: globalRole } = useRole();
+  const businessId = useBusinessId();
+  const { role: businessMemberRole } = useBusinessMemberRole(businessId);
+  const { permissions } = usePermissions(businessId);
+  // Use the resolved business role once loaded, fall back to mapped global role to avoid flash
+  const role = businessMemberRole ?? mapGlobalRole(globalRole);
   const {
     loaded,
     welcomeShown,
@@ -82,6 +98,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     <div className="flex h-screen overflow-hidden" style={{ background: '#F3F4F7' }}>
       <Sidebar
         userRole={role}
+        permissions={permissions.length > 0 ? permissions : undefined}
         userName={fullName}
         userEmail={email}
         userInitials={initials}
@@ -94,6 +111,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
           userName={fullName}
           userMenu={
             <div className="flex items-center gap-2 sm:gap-2.5">
+              <BusinessSwitcher />
               <DashboardHeaderActions />
               <Link
                 href="/appointments"

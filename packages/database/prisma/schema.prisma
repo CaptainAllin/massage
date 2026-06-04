@@ -16,9 +16,10 @@ model User {
   lastName        String?
   role            UserRole   @default(CLIENT)
   phoneNumber     String?
-  profileImageUrl String?
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
+  profileImageUrl    String?
+  notificationPrefs  Json?
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
   auditLogs        AuditLog[]
   ownedBusiness    Business?      @relation("BusinessOwner")
   client           Client?
@@ -30,9 +31,53 @@ model User {
   tasksCreated     Task[]         @relation("TaskCreator")
   notesForReview   TreatmentNote[] @relation("NoteReviewer")
 
+  businessMembers              BusinessMember[]
+  staffInvitesSent             StaffInvite[]    @relation("StaffInviteSender")
+
   @@index([email])
   @@index([authUserId])
   @@map("users")
+}
+
+model BusinessMember {
+  id          String               @id @default(cuid())
+  userId      String
+  businessId  String
+  role        BusinessMemberRole
+  permissions Json?
+  status      BusinessMemberStatus @default(ACTIVE)
+  isTherapist Boolean              @default(false)
+  invitedAt   DateTime?
+  joinedAt    DateTime?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  business    Business             @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, businessId])
+  @@index([businessId])
+  @@index([userId])
+  @@map("business_members")
+}
+
+model StaffInvite {
+  id         String             @id @default(cuid())
+  businessId String
+  email      String
+  role       BusinessMemberRole
+  token      String             @unique
+  expiresAt  DateTime
+  acceptedAt DateTime?
+  sentBy     String
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+  business   Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  sentByUser User               @relation("StaffInviteSender", fields: [sentBy], references: [id])
+
+  @@index([businessId])
+  @@index([token])
+  @@index([email])
+  @@map("staff_invites")
 }
 
 model Business {
@@ -63,6 +108,7 @@ model Business {
   stripeAccountId            String?
   clientPortalEnabled        Boolean                      @default(false)
   clientPortalSettings       Json?
+  rolePermissions            Json?
   slackAccessToken           String?
   slackDefaultChannel        String?
   googleAccessToken          String?
@@ -99,6 +145,7 @@ model Business {
   loyaltyAccounts            LoyaltyAccount[]
   loyaltySettings            LoyaltySettings?
   loyaltyTransactions        LoyaltyTransaction[]
+  loyaltyRewards             LoyaltyReward[]
   medicalConditions          MedicalCondition[]
   membershipSessions         MembershipSession[]
   memberships                Membership[]
@@ -135,6 +182,10 @@ model Business {
   scheduledExports           ScheduledExport[]
   apiKeys                    ApiKey[]
   webhooks                   Webhook[]
+  businessMembers            BusinessMember[]
+  staffInvites               StaffInvite[]
+  businessHours              BusinessHours[]
+  businessClosures           BusinessClosure[]
 
   @@index([ownerId])
   @@map("businesses")
@@ -221,6 +272,10 @@ model Client {
   lastVisitDate              DateTime?
   totalVisits                Int                          @default(0)
   isActive                   Boolean                      @default(true)
+  referralCode               String?                      @unique
+  referredBy                 String?
+  birthdayMonth              Int?
+  birthdayDay                Int?
   createdAt                  DateTime                     @default(now())
   updatedAt                  DateTime                     @updatedAt
   appointments               Appointment[]
@@ -285,9 +340,10 @@ model Appointment {
   createdAt         DateTime                    @default(now())
   updatedAt         DateTime                    @updatedAt
   recurringSeriesId String?
-  isVirtual         Boolean                     @default(false)
-  isGroup           Boolean                     @default(false)
-  capacity          Int?
+  isVirtual            Boolean                     @default(false)
+  isGroup              Boolean                     @default(false)
+  capacity             Int?
+  needsReassignment    Boolean                     @default(false)
   cancellation      AppointmentCancellation?
   reminders         AppointmentReminder[]
   groupBookings     GroupBooking[]
@@ -566,22 +622,28 @@ model TherapistAvailability {
 }
 
 model TherapistTimeOff {
-  id          String    @id @default(cuid())
-  businessId  String
-  therapistId String
-  startDate   DateTime
-  endDate     DateTime
-  reason      String?
-  isAllDay    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  business    Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  therapist   Therapist @relation(fields: [therapistId], references: [id], onDelete: Cascade)
+  id           String    @id @default(cuid())
+  businessId   String
+  therapistId  String
+  startDate    DateTime
+  endDate      DateTime
+  reason       String?
+  isAllDay     Boolean   @default(true)
+  leaveType    String    @default("PERSONAL")  // VACATION | SICK | PERSONAL
+  status       String    @default("APPROVED")  // PENDING | APPROVED | DECLINED
+  approvedById String?
+  approvedAt   DateTime?
+  notes        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  business     Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  therapist    Therapist @relation(fields: [therapistId], references: [id], onDelete: Cascade)
 
   @@index([businessId])
   @@index([therapistId])
   @@index([startDate])
   @@index([endDate])
+  @@index([status])
   @@map("therapist_time_off")
 }
 
@@ -1277,6 +1339,7 @@ model Location {
   therapists         Therapist[]
   rooms              Room[]
   therapistLocations TherapistLocation[]
+  businessHours      BusinessHours[]
 
   @@index([businessId])
   @@index([isActive])
@@ -1329,18 +1392,28 @@ model GiftCardRedemption {
 }
 
 model LoyaltySettings {
-  id              String   @id @default(cuid())
-  businessId      String   @unique
-  pointsPerDollar Float    @default(1.0)
-  dollarPerPoint  Float    @default(0.01)
-  bronzeMinPoints Int      @default(0)
-  silverMinPoints Int      @default(500)
-  goldMinPoints   Int      @default(1500)
-  isActive        Boolean  @default(true)
-  expiryDays      Int?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  business        Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  id                      String   @id @default(cuid())
+  businessId              String   @unique
+  pointsPerDollar         Float    @default(1.0)
+  dollarPerPoint          Float    @default(0.01)
+  bronzeMinPoints         Int      @default(0)
+  silverMinPoints         Int      @default(500)
+  goldMinPoints           Int      @default(1500)
+  platinumMinPoints       Int      @default(5000)
+  silverBonusRate         Float    @default(0.05)
+  goldBonusRate           Float    @default(0.10)
+  platinumBonusRate       Float    @default(0.15)
+  birthdayMultiplier      Float    @default(2.0)
+  signupBonusPoints       Int      @default(100)
+  firstBookingBonusPoints Int      @default(50)
+  intakeFormBonusPoints   Int      @default(25)
+  referralBonusPoints     Int      @default(200)
+  reviewBonusPoints       Int      @default(50)
+  isActive                Boolean  @default(true)
+  expiryDays              Int?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+  business                Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
 
   @@map("loyalty_settings")
 }
@@ -1357,11 +1430,31 @@ model LoyaltyAccount {
   business       Business             @relation(fields: [businessId], references: [id], onDelete: Cascade)
   client         Client               @relation(fields: [clientId], references: [id], onDelete: Cascade)
   transactions   LoyaltyTransaction[]
+  rewards        LoyaltyReward[]
 
   @@unique([businessId, clientId])
   @@index([businessId])
   @@index([clientId])
   @@map("loyalty_accounts")
+}
+
+model LoyaltyReward {
+  id               String         @id @default(cuid())
+  loyaltyAccountId String
+  businessId       String
+  type             String
+  description      String?
+  pointsUsed       Int?
+  dollarValue      Float?
+  appointmentId    String?
+  createdAt        DateTime       @default(now())
+  account          LoyaltyAccount @relation(fields: [loyaltyAccountId], references: [id], onDelete: Cascade)
+  business         Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([loyaltyAccountId])
+  @@index([businessId])
+  @@index([createdAt])
+  @@map("loyalty_rewards")
 }
 
 model LoyaltyTransaction {
@@ -1449,6 +1542,19 @@ enum UserRole {
   RECEPTIONIST
   THERAPIST
   CLIENT
+}
+
+enum BusinessMemberRole {
+  OWNER
+  SENIOR_THERAPIST
+  THERAPIST
+  RECEPTIONIST
+}
+
+enum BusinessMemberStatus {
+  ACTIVE
+  INACTIVE
+  INVITED
 }
 
 enum AppointmentStatus {
@@ -2156,4 +2262,39 @@ model WebhookDelivery {
   @@index([succeeded])
   @@index([attemptedAt])
   @@map("webhook_deliveries")
+}
+
+model BusinessHours {
+  id         String    @id @default(cuid())
+  businessId String
+  locationId String?
+  dayOfWeek  Int       // 0=Sunday … 6=Saturday
+  openTime   String    // "HH:MM"
+  closeTime  String    // "HH:MM"
+  isClosed   Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  business   Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  location   Location? @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, locationId, dayOfWeek])
+  @@index([businessId])
+  @@index([locationId])
+  @@map("business_hours")
+}
+
+model BusinessClosure {
+  id                String   @id @default(cuid())
+  businessId        String
+  date              DateTime
+  reason            String?
+  notifyClients     Boolean  @default(false)
+  isRecurringAnnual Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  business          Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+  @@index([date])
+  @@map("business_closures")
 }

@@ -2,12 +2,14 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, Button, Input, Badge } from '@massage/ui';
-import { Building2, Users, Bell, Palette, Save, Upload, Loader2, Check, BellRing, MapPin, CalendarCheck, Globe, Lock, UserCheck, ShieldCheck, KeyRound, Trash2, Plus, Link2, FileText, LayoutDashboard, ExternalLink, Copy, CheckCheck, Phone, Pencil, Search, X, Info, MessageSquare, ChevronRight, SlidersHorizontal, Code2 } from 'lucide-react';
+import { Users, Bell, Save, Upload, Loader2, Check, BellRing, MapPin, Globe, Lock, UserCheck, ShieldCheck, KeyRound, Trash2, Plus, LayoutDashboard, ExternalLink, Copy, CheckCheck, Phone, X, Info, ChevronRight, Code2, Mail, Send, UserMinus, RefreshCw, Sliders, RotateCcw, UserCircle, Camera } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useBusinessId } from '@/lib/hooks/use-business-id';
 import { useBusiness, useUpdateBusiness } from '@/lib/hooks/use-business';
-import { useTherapists, useCreateTherapist } from '@/lib/hooks/use-therapists';
+import { useTherapists } from '@/lib/hooks/use-therapists';
+import { useStaffInvites, useSendStaffInvite, useCancelStaffInvite, useResendStaffInvite, useBusinessMembers, useRemoveBusinessMember, useRolePermissions, useUpdateRolePermissions, useUpdateMemberPermissions } from '@/lib/hooks/use-staff-invites';
+import { ROLE_PERMISSIONS, PERMISSION_GROUPS, PERMISSION_LABELS, resolvePermissions, type Permission, type PermissionOverrides } from '@/lib/permissions';
 import { useLocations } from '@/lib/hooks/use-locations';
 import { useCommunicationSettings, useUpdateCommunicationSettings } from '@/lib/hooks/use-messages';
 import { uploadFile, getPublicUrl, brandingPath, uniqueFileName, BUCKETS } from '@/lib/storage';
@@ -18,8 +20,9 @@ import { PostcodeInput } from '@/components/ui/PostcodeInput';
 import { apiClient } from '@/lib/api-client';
 import { usePushNotifications } from '@/lib/hooks/use-push-notifications';
 import { listPasskeys, enrollPasskey, revokePasskey, type PasskeyFactor } from '@/lib/supabase/passkeys';
+import { createClient } from '@/lib/supabase/client';
 
-type Panel = 'overview' | 'business' | 'team' | 'notifications' | 'branding' | 'booking' | 'clinical' | 'security' | 'portal' | 'api';
+type Panel = 'overview' | 'account' | 'business' | 'team' | 'notifications' | 'branding' | 'booking' | 'clinical' | 'security' | 'portal' | 'api';
 
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
@@ -289,349 +292,809 @@ function BusinessTab({ businessId }: { businessId: string }) {
   );
 }
 
-// ─── Team helpers ─────────────────────────────────────────────────────────────
 
-function TagInput({ tags, onChange, placeholder }: { tags: string[]; onChange: (t: string[]) => void; placeholder?: string }) {
-  const [input, setInput] = React.useState('');
-  const addTag = (val: string) => { const t = val.trim(); if (t && !tags.includes(t)) onChange([...tags, t]); setInput(''); };
-  const removeTag = (tag: string) => onChange(tags.filter((t) => t !== tag));
+
+
+// ─── Team Tab ─────────────────────────────────────────────────────────────────
+
+const ROLE_INFO: Record<string, { label: string; description: string; color: string }> = {
+  OWNER: {
+    label: 'Owner',
+    description: 'Full access to all features including settings, payroll, and team management.',
+    color: '#5D4AA8',
+  },
+  SENIOR_THERAPIST: {
+    label: 'Senior Therapist',
+    description: 'Can manage all bookings, client records, and view performance reports. Cannot access payroll, financials, or business settings.',
+    color: '#0284C7',
+  },
+  THERAPIST: {
+    label: 'Therapist',
+    description: 'Can view their own schedule, write treatment notes, and manage their availability. Cannot access billing, payroll, or other therapists\' records.',
+    color: '#059669',
+  },
+  RECEPTIONIST: {
+    label: 'Receptionist',
+    description: 'Can manage all appointments, clients, and invoices across the practice. Cannot access payroll or admin settings.',
+    color: '#D97706',
+  },
+};
+
+// ─── Permission toggle used in both role and member modals ────────────────────
+
+function PermissionToggle({
+  permission,
+  checked,
+  isDefault,
+  onChange,
+}: {
+  permission: string;
+  checked: boolean;
+  isDefault: boolean;
+  onChange: (p: string, val: boolean) => void;
+}) {
+  const label = PERMISSION_LABELS[permission] ?? permission;
+  const isModified = checked !== isDefault;
   return (
-    <div className="min-h-[42px] flex flex-wrap gap-1.5 items-center rounded-xl border-2 border-input bg-background px-3 py-2 cursor-text">
-      {tags.map((tag) => (
-        <span key={tag} className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: '#EDE5F4', color: '#5D4AA8' }}>
-          {tag}
-          <button type="button" onClick={() => removeTag(tag)}><X className="h-3 w-3" /></button>
-        </span>
-      ))}
-      <input
-        type="text" value={input} onChange={(e) => setInput(e.target.value)}
-        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addTag(input); } else if (e.key === 'Backspace' && !input && tags.length) removeTag(tags[tags.length - 1]); }}
-        onBlur={() => { if (input.trim()) addTag(input); }}
-        placeholder={tags.length ? '' : placeholder}
-        className="flex-1 min-w-[120px] text-sm bg-transparent outline-none placeholder:text-gray-400"
-      />
-    </div>
+    <label className="flex items-center justify-between gap-3 py-1.5 cursor-pointer group">
+      <span className="text-xs" style={{ color: '#3D3450' }}>
+        {label}
+        {isModified && (
+          <span
+            className="ml-1.5 text-[10px] font-semibold px-1 rounded"
+            style={{ background: checked ? '#D1FAE5' : '#FEE2E2', color: checked ? '#065F46' : '#991B1B' }}
+          >
+            {checked ? '+added' : '−removed'}
+          </span>
+        )}
+      </span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        onClick={() => onChange(permission, !checked)}
+        className="relative flex-shrink-0 h-5 w-9 rounded-full transition-colors focus:outline-none"
+        style={{ background: checked ? '#5D4AA8' : '#D1D5DB' }}
+      >
+        <span
+          className="absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform"
+          style={{ left: checked ? '17px' : '2px' }}
+        />
+      </button>
+    </label>
   );
 }
 
-interface FoundUser { id: string; email: string; firstName: string | null; lastName: string | null; hasTherapistProfile: boolean; }
+// ─── Role Permissions Modal (6.2.1 + 6.2.2) ──────────────────────────────────
 
-function AddTeamMemberModal({ businessId, onClose, onCreated }: { businessId: string; onClose: () => void; onCreated: () => void }) {
-  const createTherapist = useCreateTherapist(businessId);
-  const { data: locations = [] } = useLocations(businessId);
-  const [email, setEmail] = React.useState('');
-  const [searching, setSearching] = React.useState(false);
-  const [searchError, setSearchError] = React.useState('');
-  const [foundUser, setFoundUser] = React.useState<FoundUser | null>(null);
-  const [specializations, setSpecializations] = React.useState<string[]>([]);
-  const [bio, setBio] = React.useState('');
-  const [licenseNumber, setLicenseNumber] = React.useState('');
-  const [licenseExpiry, setLicenseExpiry] = React.useState('');
-  const [hourlyRate, setHourlyRate] = React.useState('');
-  const [locationId, setLocationId] = React.useState('');
+function RolePermissionsModal({
+  businessId,
+  role,
+  roleOverrides,
+  onClose,
+}: {
+  businessId: string;
+  role: string;
+  roleOverrides: { grant: string[]; revoke: string[] };
+  onClose: () => void;
+}) {
+  const roleInfo = ROLE_INFO[role];
+  const defaults = new Set<string>(ROLE_PERMISSIONS[role] ?? []);
+  const updateRolePermissions = useUpdateRolePermissions(businessId);
 
-  const handleSearch = async () => {
-    if (!email.trim()) return;
-    setSearching(true); setSearchError(''); setFoundUser(null);
-    try {
-      const resp = await apiClient.get<{ success: boolean; data: FoundUser }>(`/users/search?email=${encodeURIComponent(email.trim())}&businessId=${businessId}`);
-      const user = resp.data.data;
-      if (user.hasTherapistProfile) setSearchError('This user already has a therapist profile in your practice.');
-      else setFoundUser(user);
-    } catch (err: any) {
-      const msg = err?.response?.data?.message ?? err?.message ?? 'User not found';
-      setSearchError(msg === 'No account found with that email address' ? 'No account found. The person must sign up first.' : msg);
-    } finally { setSearching(false); }
+  // Initialise from defaults + stored overrides
+  const [checked, setChecked] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    for (const group of PERMISSION_GROUPS) {
+      for (const p of group.permissions) {
+        let on = defaults.has(p);
+        if (roleOverrides.grant.includes(p)) on = true;
+        if (roleOverrides.revoke.includes(p)) on = false;
+        initial[p] = on;
+      }
+    }
+    return initial;
+  });
+
+  const handleToggle = (p: string, val: boolean) => setChecked((prev) => ({ ...prev, [p]: val }));
+
+  const handleReset = () => {
+    const reset: Record<string, boolean> = {};
+    for (const group of PERMISSION_GROUPS) {
+      for (const p of group.permissions) reset[p] = defaults.has(p);
+    }
+    setChecked(reset);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!foundUser) return;
-    await createTherapist.mutateAsync({ userId: foundUser.id, specializations, bio: bio || undefined, licenseNumber: licenseNumber || undefined, licenseExpiry: licenseExpiry ? new Date(licenseExpiry) : undefined, hourlyRate: hourlyRate ? parseFloat(hourlyRate) : undefined, locationId: locationId || undefined } as any);
-    onCreated(); onClose();
+  const handleSave = async () => {
+    const grant: string[] = [];
+    const revoke: string[] = [];
+    for (const [p, on] of Object.entries(checked)) {
+      const inDefault = defaults.has(p as Permission);
+      if (on && !inDefault) grant.push(p);
+      if (!on && inDefault) revoke.push(p);
+    }
+    await updateRolePermissions.mutateAsync({ role, grant, revoke });
+    onClose();
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="p-5 border-b flex items-center justify-between sticky top-0 bg-white dark:bg-gray-900 rounded-t-2xl" style={{ borderColor: '#EFE9F2' }}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto" style={{ background: 'rgba(30,24,48,0.5)' }}>
+      <div className="w-full max-w-lg rounded-2xl" style={{ background: '#fff', boxShadow: '0 8px 32px rgba(93,74,168,0.18)' }}>
+        <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: '#F0EBF8' }}>
           <div>
-            <h2 className="text-lg font-semibold" style={{ color: '#1E1830' }}>Add Team Member</h2>
-            <p className="text-xs mt-0.5" style={{ color: '#7A7090' }}>Link a team member's account and set their profile details.</p>
+            <h3 className="font-semibold text-base" style={{ color: '#1E1830' }}>
+              <span className="mr-2" style={{ color: roleInfo?.color }}>{roleInfo?.label}</span>Permissions
+            </h3>
+            <p className="text-xs mt-0.5" style={{ color: '#9B91B0' }}>Changes apply to all {roleInfo?.label}s in your business.</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 rounded-lg p-1"><X className="h-5 w-5" /></button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleReset}
+              className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border transition-colors hover:bg-gray-50"
+              style={{ borderColor: '#D1D5DB', color: '#6B7280' }}
+            >
+              <RotateCcw className="h-3 w-3" />Reset
+            </button>
+            <button onClick={onClose} className="rounded-lg p-1 hover:bg-gray-100">
+              <X className="h-4 w-4 text-gray-400" />
+            </button>
+          </div>
         </div>
-        <div className="p-5 space-y-5">
-          <div>
-            <p className="text-sm font-semibold mb-1" style={{ color: '#3D3450' }}>Step 1 — Find team member</p>
-            <div className="flex items-start gap-3 rounded-xl p-4 mb-3" style={{ background: '#F3EFFD', border: '1px solid rgba(93,74,168,0.15)' }}>
-              <Info className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color: '#5D4AA8' }} />
-              <p className="text-sm leading-relaxed" style={{ color: '#5D4AA8' }}>The team member must <strong>sign up first</strong> before you can create their profile here.</p>
-            </div>
-            <div className="flex gap-2">
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSearch()} placeholder="team.member@example.com" className="flex-1 rounded-xl border-2 border-input bg-background px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
-              <button type="button" onClick={handleSearch} disabled={searching || !email.trim()} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white disabled:opacity-50" style={{ background: 'linear-gradient(135deg, #5D4AA8, #3F2F87)' }}>
-                {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}Search
-              </button>
-            </div>
-            {searchError && <p className="text-xs mt-2 text-red-600">{searchError}</p>}
-            {foundUser && (
-              <div className="flex items-center gap-3 mt-3 p-3 rounded-xl" style={{ background: '#F0FDF4', border: '1px solid rgba(22,163,74,0.2)' }}>
-                <div className="h-9 w-9 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-semibold text-sm flex-shrink-0">{foundUser.firstName?.[0]}{foundUser.lastName?.[0]}</div>
-                <div><p className="text-sm font-medium text-green-800">{foundUser.firstName} {foundUser.lastName}</p><p className="text-xs text-green-600">{foundUser.email}</p></div>
-                <UserCheck className="h-4 w-4 text-green-600 ml-auto" />
-              </div>
-            )}
-          </div>
 
-          {foundUser && (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <p className="text-sm font-semibold" style={{ color: '#3D3450' }}>Step 2 — Profile details</p>
-              <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: '#3D3450' }}>Specializations <span className="ml-1 text-xs font-normal" style={{ color: '#9E96B0' }}>— press Enter to add</span></label>
-                <TagInput tags={specializations} onChange={setSpecializations} placeholder="e.g. Deep Tissue, Sports…" />
+        <div className="p-5 max-h-[60vh] overflow-y-auto space-y-4">
+          {PERMISSION_GROUPS.map((group) => (
+            <div key={group.label}>
+              <p className="text-xs font-semibold uppercase tracking-wide mb-1.5" style={{ color: '#9B91B0' }}>{group.label}</p>
+              <div className="rounded-xl px-3 py-1 divide-y divide-purple-100" style={{ background: '#F9F7FE' }}>
+                {group.permissions.map((p) => (
+                  <PermissionToggle
+                    key={p}
+                    permission={p}
+                    checked={checked[p] ?? false}
+                    isDefault={defaults.has(p)}
+                    onChange={handleToggle}
+                  />
+                ))}
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: '#3D3450' }}>Bio</label>
-                <textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={2} placeholder="Short background…" className="w-full rounded-xl border-2 border-input bg-background px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
-              </div>
-              <div className="rounded-xl p-4 space-y-3" style={{ background: '#FAFAFA', border: '1px solid #EFE9F2' }}>
-                <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#5D4AA8' }}>Credentials & Rate</p>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium mb-1" style={{ color: '#3D3450' }}>License Number</label>
-                    <input type="text" value={licenseNumber} onChange={(e) => setLicenseNumber(e.target.value)} placeholder="e.g. RMT-12345" className="w-full rounded-xl border-2 border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium mb-1" style={{ color: '#3D3450' }}>License Expiry</label>
-                    <input type="date" value={licenseExpiry} onChange={(e) => setLicenseExpiry(e.target.value)} className="w-full rounded-xl border-2 border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium mb-1" style={{ color: '#3D3450' }}>Hourly Rate</label>
-                    <input type="number" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} min="0" step="0.01" placeholder="0.00" className="w-full rounded-xl border-2 border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
-                  </div>
-                  {locations.length > 0 && (
-                    <div>
-                      <label className="block text-xs font-medium mb-1" style={{ color: '#3D3450' }}>Location</label>
-                      <select value={locationId} onChange={(e) => setLocationId(e.target.value)} className="w-full rounded-xl border-2 border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
-                        <option value="">Any location</option>
-                        {(locations as any[]).map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
-                      </select>
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="flex justify-end gap-2 pt-1">
-                <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-                <Button type="submit" variant="primary" disabled={createTherapist.isPending}>
-                  {createTherapist.isPending ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Adding…</> : 'Add Team Member'}
-                </Button>
-              </div>
-            </form>
-          )}
+            </div>
+          ))}
+        </div>
+
+        <div className="flex items-center justify-end gap-3 p-5 border-t" style={{ borderColor: '#F0EBF8' }}>
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 text-sm rounded-xl border"
+            style={{ borderColor: '#E5DEEC', color: '#7A7090' }}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={updateRolePermissions.isPending}
+            className="px-4 py-2 text-sm font-semibold text-white rounded-xl flex items-center gap-2 disabled:opacity-50"
+            style={{ background: 'linear-gradient(135deg, #5D4AA8, #3F2F87)' }}
+          >
+            {updateRolePermissions.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+            Save Changes
+          </button>
         </div>
       </div>
     </div>
   );
 }
 
-function EditTeamMemberModal({ businessId, therapist, onClose, onSaved }: { businessId: string; therapist: any; onClose: () => void; onSaved: () => void }) {
-  const u = therapist.user;
-  const [form, setForm] = React.useState({
-    firstName: u?.firstName || '',
-    lastName: u?.lastName || '',
-    email: u?.email || '',
-    phoneNumber: u?.phoneNumber || '',
-    role: u?.role || 'THERAPIST',
+// ─── Member Permissions Modal (6.2.3) ─────────────────────────────────────────
+
+function MemberPermissionsModal({
+  businessId,
+  member,
+  roleOverrides,
+  onClose,
+}: {
+  businessId: string;
+  member: { id: string; role: string; permissions?: PermissionOverrides | null; user: { firstName: string; lastName: string } };
+  roleOverrides: { grant: string[]; revoke: string[] };
+  onClose: () => void;
+}) {
+  const roleInfo = ROLE_INFO[member.role];
+  const updateMemberPermissions = useUpdateMemberPermissions(businessId);
+
+  // Effective permissions after role defaults + role overrides (before member overrides)
+  const effectiveRoleSet = resolvePermissions(member.role, undefined, roleOverrides);
+
+  // Build initial state from effectiveRoleSet + any existing member overrides
+  const [checked, setChecked] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    for (const group of PERMISSION_GROUPS) {
+      for (const p of group.permissions) {
+        let on = effectiveRoleSet.has(p as Permission);
+        const mo = member.permissions;
+        if (mo?.grant?.includes(p)) on = true;
+        if (mo?.revoke?.includes(p)) on = false;
+        initial[p] = on;
+      }
+    }
+    return initial;
   });
-  const [specializations, setSpecializations] = React.useState<string[]>(therapist.specializations || []);
-  const [saving, setSaving] = React.useState(false);
-  const [error, setError] = React.useState('');
-  const { data: business } = useBusiness(businessId);
-  const countryCode = business?.country || 'AU';
+
+  const handleToggle = (p: string, val: boolean) => setChecked((prev) => ({ ...prev, [p]: val }));
+
+  const handleReset = () => {
+    const reset: Record<string, boolean> = {};
+    for (const group of PERMISSION_GROUPS) {
+      for (const p of group.permissions) reset[p] = effectiveRoleSet.has(p as Permission);
+    }
+    setChecked(reset);
+  };
+
+  const handleSave = async () => {
+    const grant: string[] = [];
+    const revoke: string[] = [];
+    for (const [p, on] of Object.entries(checked)) {
+      const inEffective = effectiveRoleSet.has(p as Permission);
+      if (on && !inEffective) grant.push(p);
+      if (!on && inEffective) revoke.push(p);
+    }
+    const permissions = grant.length === 0 && revoke.length === 0 ? null : { grant, revoke };
+    await updateMemberPermissions.mutateAsync({ id: member.id, permissions });
+    onClose();
+  };
+
+  const name = `${member.user.firstName} ${member.user.lastName}`.trim();
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto" style={{ background: 'rgba(30,24,48,0.5)' }}>
+      <div className="w-full max-w-lg rounded-2xl" style={{ background: '#fff', boxShadow: '0 8px 32px rgba(93,74,168,0.18)' }}>
+        <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: '#F0EBF8' }}>
+          <div>
+            <h3 className="font-semibold text-base" style={{ color: '#1E1830' }}>{name}&apos;s Permissions</h3>
+            <p className="text-xs mt-0.5" style={{ color: '#9B91B0' }}>
+              Overrides <span style={{ color: roleInfo?.color }}>{roleInfo?.label}</span> defaults for this person only.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleReset}
+              className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border transition-colors hover:bg-gray-50"
+              style={{ borderColor: '#D1D5DB', color: '#6B7280' }}
+            >
+              <RotateCcw className="h-3 w-3" />Reset
+            </button>
+            <button onClick={onClose} className="rounded-lg p-1 hover:bg-gray-100">
+              <X className="h-4 w-4 text-gray-400" />
+            </button>
+          </div>
+        </div>
+
+        <div className="p-5 max-h-[60vh] overflow-y-auto space-y-4">
+          {PERMISSION_GROUPS.map((group) => (
+            <div key={group.label}>
+              <p className="text-xs font-semibold uppercase tracking-wide mb-1.5" style={{ color: '#9B91B0' }}>{group.label}</p>
+              <div className="rounded-xl px-3 py-1 divide-y" style={{ background: '#F9F7FE' }}>
+                {group.permissions.map((p) => (
+                  <PermissionToggle
+                    key={p}
+                    permission={p}
+                    checked={checked[p] ?? false}
+                    isDefault={effectiveRoleSet.has(p as Permission)}
+                    onChange={handleToggle}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex items-center justify-end gap-3 p-5 border-t" style={{ borderColor: '#F0EBF8' }}>
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 text-sm rounded-xl border"
+            style={{ borderColor: '#E5DEEC', color: '#7A7090' }}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={updateMemberPermissions.isPending}
+            className="px-4 py-2 text-sm font-semibold text-white rounded-xl flex items-center gap-2 disabled:opacity-50"
+            style={{ background: 'linear-gradient(135deg, #5D4AA8, #3F2F87)' }}
+          >
+            {updateMemberPermissions.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+            Save Changes
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InviteStaffModal({ businessId, onClose, onSent }: { businessId: string; onClose: () => void; onSent: () => void }) {
+  const [email, setEmail] = useState('');
+  const [role, setRole] = useState('THERAPIST');
+  const [error, setError] = useState('');
+  const sendInvite = useSendStaffInvite(businessId);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-      setError('Please enter a valid email address');
-      return;
-    }
-    setSaving(true); setError('');
+    setError('');
     try {
-      await Promise.all([
-        apiClient.patch(`/users/${u.id}`, { businessId, ...form }),
-        apiClient.patch(`/therapists/${therapist.id}`, { businessId, specializations }),
-      ]);
-      onSaved(); onClose();
+      await sendInvite.mutateAsync({ email, role });
+      onSent();
+      onClose();
     } catch (err: any) {
-      setError(err?.response?.data?.message ?? 'Failed to save');
-    } finally { setSaving(false); }
+      setError(err?.response?.data?.error || 'Failed to send invite');
+    }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-        <div className="p-5 border-b flex items-center justify-between sticky top-0 bg-white dark:bg-gray-900 rounded-t-2xl" style={{ borderColor: '#EFE9F2' }}>
-          <h2 className="text-lg font-semibold" style={{ color: '#1E1830' }}>Edit Team Member</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 rounded-lg p-1"><X className="h-5 w-5" /></button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(30,24,48,0.5)' }}>
+      <div className="w-full max-w-sm rounded-2xl p-6" style={{ background: '#fff', boxShadow: '0 8px 32px rgba(93,74,168,0.18)' }}>
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="font-semibold text-base" style={{ color: '#1E1830' }}>Invite Staff Member</h3>
+          <button onClick={onClose} className="rounded-lg p-1 hover:bg-gray-100">
+            <X className="h-4 w-4 text-gray-400" />
+          </button>
         </div>
-        <form onSubmit={handleSubmit} className="p-5 space-y-4">
-          {error && <div className="rounded-xl p-3 text-sm" style={{ background: '#F5E5E5', color: '#922020', border: '1px solid #F5CECE' }}>{error}</div>}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium mb-1" style={{ color: '#3D3450' }}>First Name</label>
-              <Input value={form.firstName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setForm((f) => ({ ...f, firstName: e.target.value }))} placeholder="First" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1" style={{ color: '#3D3450' }}>Last Name</label>
-              <Input value={form.lastName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setForm((f) => ({ ...f, lastName: e.target.value }))} placeholder="Last" />
-            </div>
-          </div>
+
+        {error && (
+          <div className="rounded-xl p-3 mb-4 text-sm" style={{ background: '#F5E5E5', color: '#922020', border: '1px solid #F5CECE' }}>{error}</div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-1" style={{ color: '#3D3450' }}>Email Address</label>
-            <Input
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: '#3D3450' }}>Email address</label>
+            <input
               type="email"
-              value={form.email}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setForm((f) => ({ ...f, email: e.target.value }))}
-              placeholder="team.member@example.com"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="colleague@example.com"
+              className="w-full px-3.5 py-2.5 text-sm rounded-xl outline-none transition-all"
+              style={{ border: '1px solid #E5DEEC', color: '#1E1830' }}
+              onFocus={(e) => (e.currentTarget.style.borderColor = '#5D4AA8')}
+              onBlur={(e) => (e.currentTarget.style.borderColor = '#E5DEEC')}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1" style={{ color: '#3D3450' }}>Mobile Number</label>
-            <PhoneInput
-              value={form.phoneNumber}
-              onChange={(v) => setForm((f) => ({ ...f, phoneNumber: v }))}
-              countryCode={countryCode}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1" style={{ color: '#3D3450' }}>Role</label>
-            <select value={form.role} onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))} className="w-full rounded-xl border-2 border-input bg-background px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: '#3D3450' }}>Role</label>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              className="w-full px-3.5 py-2.5 text-sm rounded-xl outline-none transition-all"
+              style={{ border: '1px solid #E5DEEC', color: '#1E1830', background: '#fff' }}
+            >
               <option value="THERAPIST">Therapist</option>
+              <option value="SENIOR_THERAPIST">Senior Therapist</option>
               <option value="RECEPTIONIST">Receptionist</option>
             </select>
+            <p className="text-xs mt-1.5" style={{ color: '#9B91B0' }}>{ROLE_INFO[role]?.description}</p>
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-1" style={{ color: '#3D3450' }}>
-              Services / Massage Types
-              <span className="ml-1 text-xs font-normal" style={{ color: '#9E96B0' }}>— press Enter to add</span>
-            </label>
-            <TagInput
-              tags={specializations}
-              onChange={setSpecializations}
-              placeholder="e.g. Deep Tissue, Hot Stone, Remedial…"
-            />
-            <p className="text-xs mt-1" style={{ color: '#9E96B0' }}>
-              Shown on the therapist's card and used for filtering during booking.
-            </p>
-          </div>
-          <div className="flex justify-end gap-2 pt-1">
-            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-            <Button type="submit" variant="primary" disabled={saving}>
-              {saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving…</> : <><Check className="h-4 w-4 mr-2" />Save Changes</>}
-            </Button>
-          </div>
+          <button
+            type="submit"
+            disabled={sendInvite.isPending}
+            className="w-full py-2.5 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-2 disabled:opacity-50"
+            style={{ background: 'linear-gradient(135deg, #5D4AA8, #3F2F87)', boxShadow: '0 4px 16px rgba(93,74,168,0.27)' }}
+          >
+            {sendInvite.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            {sendInvite.isPending ? 'Sending…' : 'Send Invite'}
+          </button>
         </form>
       </div>
     </div>
   );
 }
 
-// ─── Team Tab ─────────────────────────────────────────────────────────────────
+function OwnerTherapistToggle({ businessId }: { businessId: string }) {
+  const [isTherapist, setIsTherapist] = useState<boolean | null>(null);
+  const [saving, setSaving] = useState(false);
 
-const ROLE_INFO: Record<string, { label: string; description: string }> = {
-  THERAPIST: {
-    label: 'Therapist',
-    description: 'Can view their own schedule, write treatment notes, and manage their availability. Cannot access billing, payroll, or other therapists\' records.',
-  },
-  RECEPTIONIST: {
-    label: 'Receptionist',
-    description: 'Can manage all appointments, clients, and invoices across the practice. Cannot access payroll or admin settings.',
-  },
-  ADMIN: {
-    label: 'Admin',
-    description: 'Full access to all features including settings, payroll, and team management.',
-  },
-};
+  useEffect(() => {
+    apiClient.get(`/businesses/${businessId}/owner-therapist`)
+      .then((d: any) => setIsTherapist(d?.isTherapist ?? false))
+      .catch(() => setIsTherapist(false));
+  }, [businessId]);
+
+  const handleToggle = async () => {
+    if (isTherapist === null) return;
+    setSaving(true);
+    try {
+      const result: any = await apiClient.patch(`/businesses/${businessId}/owner-therapist`, { enabled: !isTherapist });
+      setIsTherapist(result?.isTherapist ?? !isTherapist);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div
+      className="rounded-xl p-4 flex items-center justify-between gap-4"
+      style={{ background: '#F3EFFD', border: '1px solid rgba(93,74,168,0.2)' }}
+    >
+      <div className="flex items-center gap-3">
+        <UserCheck className="h-5 w-5 flex-shrink-0" style={{ color: '#5D4AA8' }} />
+        <div>
+          <p className="text-sm font-semibold" style={{ color: '#3D3450' }}>I also work as a therapist</p>
+          <p className="text-xs mt-0.5" style={{ color: '#7A7090' }}>
+            Enable this to appear on the booking schedule and take appointments. Clients only see your name, not your owner role.
+          </p>
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={handleToggle}
+        disabled={saving || isTherapist === null}
+        className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-50 ${isTherapist ? 'bg-[#5D4AA8]' : 'bg-gray-200'}`}
+        aria-checked={isTherapist ?? false}
+        role="switch"
+      >
+        <span
+          className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition duration-200 ease-in-out ${isTherapist ? 'translate-x-5' : 'translate-x-0'}`}
+        />
+      </button>
+    </div>
+  );
+}
+
+function StaffProfileModal({ businessId, member, onClose }: { businessId: string; member: any; onClose: () => void }) {
+  const supabase = createClient();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [therapistId, setTherapistId] = useState<string | null>(null);
+  const [form, setForm] = useState({ bio: '', specializations: [] as string[] });
+  const [specInput, setSpecInput] = useState('');
+  const [userForm, setUserForm] = useState({ firstName: '', lastName: '' });
+
+  useEffect(() => {
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      // Pre-fill from member.user
+      if (member.user) {
+        setUserForm({ firstName: member.user.firstName ?? '', lastName: member.user.lastName ?? '' });
+      }
+      // Load therapist profile for this member
+      const r = await fetch(`/api/therapists?businessId=${businessId}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const { data } = await r.json();
+      const t = (data ?? []).find((th: any) => th.userId === member.userId || th.user?.id === member.userId);
+      if (t) {
+        setTherapistId(t.id);
+        setForm({ bio: t.bio ?? '', specializations: t.specializations ?? [] });
+      }
+      setLoading(false);
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [businessId, member.userId]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    if (therapistId) {
+      await fetch(`/api/therapists/${therapistId}`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ businessId, bio: form.bio, specializations: form.specializations }),
+      });
+    }
+    setSaving(false);
+    setSaved(true);
+    setTimeout(() => { setSaved(false); onClose(); }, 1200);
+  };
+
+  const addSpec = () => {
+    const tag = specInput.trim();
+    if (tag && !form.specializations.includes(tag)) setForm((f) => ({ ...f, specializations: [...f.specializations, tag] }));
+    setSpecInput('');
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(30,24,48,0.5)' }}>
+      <div className="w-full max-w-md rounded-2xl p-6 space-y-5" style={{ background: '#fff', boxShadow: '0 8px 32px rgba(93,74,168,0.18)' }}>
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold text-base" style={{ color: '#1E1830' }}>Edit Staff Profile</h3>
+          <button onClick={onClose} className="rounded-lg p-1 hover:bg-gray-100"><X className="h-4 w-4 text-gray-400" /></button>
+        </div>
+        <div className="flex items-center gap-3 p-3 rounded-xl" style={{ background: '#F9F7FE' }}>
+          <div className="h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0" style={{ background: '#EDE5F4', color: '#5D4AA8' }}>
+            {userForm.firstName?.[0]}{userForm.lastName?.[0]}
+          </div>
+          <div>
+            <p className="text-sm font-semibold" style={{ color: '#1E1830' }}>{userForm.firstName} {userForm.lastName}</p>
+            <p className="text-xs" style={{ color: '#7A7090' }}>{member.user?.email}</p>
+          </div>
+        </div>
+        {loading ? (
+          <div className="text-sm text-muted-foreground py-4 text-center">Loading…</div>
+        ) : (
+          <>
+            {!therapistId && (
+              <p className="text-xs rounded-xl p-3" style={{ background: '#FFF8E1', color: '#A16207', border: '1px solid #FEF08A' }}>
+                This member does not have a therapist profile. Only therapist and senior therapist roles have booking profiles.
+              </p>
+            )}
+            {therapistId && (
+              <>
+                <div>
+                  <label className="block text-xs font-semibold mb-1.5" style={{ color: '#3D3450' }}>Bio</label>
+                  <textarea
+                    value={form.bio}
+                    onChange={(e) => setForm((f) => ({ ...f, bio: e.target.value }))}
+                    rows={3}
+                    placeholder="Bio visible to clients on booking page…"
+                    className="w-full px-3.5 py-2.5 text-sm rounded-xl outline-none resize-none"
+                    style={{ border: '1px solid #E5DEEC', fontFamily: 'inherit' }}
+                    onFocus={(e) => (e.currentTarget.style.borderColor = '#5D4AA8')}
+                    onBlur={(e) => (e.currentTarget.style.borderColor = '#E5DEEC')}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold mb-1.5" style={{ color: '#3D3450' }}>Specializations</label>
+                  <div className="flex gap-2 mb-2">
+                    <input
+                      value={specInput}
+                      onChange={(e) => setSpecInput(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addSpec(); } }}
+                      placeholder="Add specialization…"
+                      className="flex-1 px-3.5 py-2 text-sm rounded-xl outline-none"
+                      style={{ border: '1px solid #E5DEEC' }}
+                    />
+                    <button type="button" onClick={addSpec} className="px-3 py-2 text-sm rounded-xl font-medium" style={{ background: '#EDE5F4', color: '#5D4AA8' }}>Add</button>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {form.specializations.map((s) => (
+                      <span key={s} className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full" style={{ background: '#F3EFFD', color: '#5D4AA8' }}>
+                        {s}
+                        <button type="button" onClick={() => setForm((f) => ({ ...f, specializations: f.specializations.filter((x) => x !== s) }))} className="ml-0.5 hover:text-red-500"><X className="h-3 w-3" /></button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex justify-end gap-3 pt-1">
+                  <button onClick={onClose} className="px-4 py-2 text-sm rounded-xl border" style={{ borderColor: '#E5DEEC', color: '#7A7090' }}>Cancel</button>
+                  <button
+                    onClick={handleSave}
+                    disabled={saving || saved}
+                    className="px-4 py-2 text-sm font-semibold text-white rounded-xl flex items-center gap-2 disabled:opacity-50"
+                    style={{ background: 'linear-gradient(135deg, #5D4AA8, #3F2F87)' }}
+                  >
+                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : saved ? <Check className="h-4 w-4" /> : <Save className="h-4 w-4" />}
+                    {saved ? 'Saved!' : 'Save Profile'}
+                  </button>
+                </div>
+              </>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function TeamTab({ businessId }: { businessId: string }) {
-  const { data: therapists, isLoading, refetch } = useTherapists(businessId);
-  const [updatingId, setUpdatingId] = useState<string | null>(null);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [editingTherapist, setEditingTherapist] = useState<any | null>(null);
+  const { data: members, isLoading: membersLoading } = useBusinessMembers(businessId);
+  const { data: invites, isLoading: invitesLoading } = useStaffInvites(businessId);
+  const { data: rolePermData } = useRolePermissions(businessId);
+  const removeMembers = useRemoveBusinessMember(businessId);
+  const cancelInvite = useCancelStaffInvite(businessId);
+  const resendInvite = useResendStaffInvite(businessId);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [actionId, setActionId] = useState<string | null>(null);
+  const [editingRole, setEditingRole] = useState<string | null>(null);
+  const [editingMember, setEditingMember] = useState<any | null>(null);
+  const [editingProfileMember, setEditingProfileMember] = useState<any | null>(null);
 
-  const handleToggleActive = async (therapistId: string, current: boolean) => {
-    setUpdatingId(therapistId);
+  const isLoading = membersLoading || invitesLoading;
+
+  const handleRemoveMember = async (memberId: string) => {
+    if (!confirm('Remove this team member? Their historical records will remain.')) return;
+    setActionId(memberId);
     try {
-      await apiClient.patch(`/therapists/${therapistId}`, { businessId, isActive: !current });
-      await refetch();
+      await removeMembers.mutateAsync(memberId);
     } finally {
-      setUpdatingId(null);
+      setActionId(null);
+    }
+  };
+
+  const handleCancelInvite = async (inviteId: string) => {
+    setActionId(inviteId);
+    try {
+      await cancelInvite.mutateAsync(inviteId);
+    } finally {
+      setActionId(null);
+    }
+  };
+
+  const handleResendInvite = async (inviteId: string) => {
+    setActionId(inviteId);
+    try {
+      await resendInvite.mutateAsync(inviteId);
+    } finally {
+      setActionId(null);
     }
   };
 
   if (isLoading) return <div className="text-sm text-muted-foreground">Loading team…</div>;
 
+  const pendingInvites = (invites || []).filter((inv: any) => !inv.acceptedAt && new Date(inv.expiresAt) > new Date());
+  const activeMembers = (members || []).filter((m: any) => m.role !== 'OWNER');
+
+  const emptyRoleOverride = { grant: [] as string[], revoke: [] as string[] };
+
   return (
-    <div className="space-y-5">
-      {showAddModal && (
-        <AddTeamMemberModal
+    <div className="space-y-6">
+      {showInviteModal && (
+        <InviteStaffModal
           businessId={businessId}
-          onClose={() => setShowAddModal(false)}
-          onCreated={() => { refetch(); }}
+          onClose={() => setShowInviteModal(false)}
+          onSent={() => {}}
         />
       )}
-      {editingTherapist && (
-        <EditTeamMemberModal
+      {editingRole && rolePermData && (
+        <RolePermissionsModal
           businessId={businessId}
-          therapist={editingTherapist}
-          onClose={() => setEditingTherapist(null)}
-          onSaved={() => { refetch(); }}
+          role={editingRole}
+          roleOverrides={rolePermData[editingRole] ?? emptyRoleOverride}
+          onClose={() => setEditingRole(null)}
+        />
+      )}
+      {editingMember && rolePermData && (
+        <MemberPermissionsModal
+          businessId={businessId}
+          member={editingMember}
+          roleOverrides={rolePermData[editingMember.role] ?? emptyRoleOverride}
+          onClose={() => setEditingMember(null)}
         />
       )}
 
       <div className="flex items-start justify-between">
         <SectionHeader
           title="Team & Permissions"
-          description="Manage your staff members and their access roles."
+          description="Invite staff, manage their roles, and customise what each person can access."
         />
-        <Button variant="primary" onClick={() => setShowAddModal(true)}>
-          <Plus className="h-4 w-4 mr-2" />Add Team Member
+        <Button variant="primary" onClick={() => setShowInviteModal(true)}>
+          <Mail className="h-4 w-4 mr-2" />Invite Staff
         </Button>
       </div>
 
-      {/* Role explanation callout */}
-      <div
-        className="rounded-xl p-4 space-y-3"
-        style={{ background: '#F3EFFD', border: '1px solid rgba(93,74,168,0.15)' }}
-      >
-        <p className="text-sm font-semibold" style={{ color: '#3D3450' }}>Understanding roles</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {['THERAPIST', 'RECEPTIONIST'].map((role) => (
-            <div key={role} className="rounded-lg p-3" style={{ background: '#fff', border: '1px solid rgba(93,74,168,0.1)' }}>
-              <p className="text-xs font-semibold mb-1" style={{ color: '#5D4AA8' }}>{ROLE_INFO[role].label}</p>
-              <p className="text-xs leading-relaxed" style={{ color: '#7A7090' }}>{ROLE_INFO[role].description}</p>
-            </div>
-          ))}
+      <OwnerTherapistToggle businessId={businessId} />
+
+      {/* Role permissions — 6.2.1 view + 6.2.2 edit */}
+      <div className="rounded-xl p-4 space-y-3" style={{ background: '#F3EFFD', border: '1px solid rgba(93,74,168,0.15)' }}>
+        <p className="text-sm font-semibold" style={{ color: '#3D3450' }}>Role permissions</p>
+        <p className="text-xs" style={{ color: '#9B91B0' }}>
+          Customise what each role can access across your business. Changes apply to all members with that role.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {(['SENIOR_THERAPIST', 'THERAPIST', 'RECEPTIONIST'] as const).map((role) => {
+            const overrides = rolePermData?.[role] ?? emptyRoleOverride;
+            const grantCount = overrides.grant.length;
+            const revokeCount = overrides.revoke.length;
+            const hasCustom = grantCount > 0 || revokeCount > 0;
+            const effective = resolvePermissions(role, undefined, overrides);
+            return (
+              <div key={role} className="rounded-lg p-3 flex flex-col gap-2" style={{ background: '#fff', border: '1px solid rgba(93,74,168,0.1)' }}>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold" style={{ color: ROLE_INFO[role].color }}>{ROLE_INFO[role].label}</p>
+                  {hasCustom && (
+                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full" style={{ background: '#EDE5F4', color: '#5D4AA8' }}>
+                      Custom
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs leading-relaxed" style={{ color: '#7A7090' }}>{ROLE_INFO[role].description}</p>
+                <div className="flex items-center justify-between mt-1">
+                  <span className="text-[11px]" style={{ color: '#9B91B0' }}>
+                    {effective.size} permission{effective.size !== 1 ? 's' : ''}
+                    {hasCustom && (
+                      <span className="ml-1">
+                        {grantCount > 0 && <span style={{ color: '#059669' }}>+{grantCount}</span>}
+                        {grantCount > 0 && revokeCount > 0 && ' '}
+                        {revokeCount > 0 && <span style={{ color: '#DC2626' }}>−{revokeCount}</span>}
+                      </span>
+                    )}
+                  </span>
+                  <button
+                    onClick={() => setEditingRole(role)}
+                    className="flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-lg transition-colors hover:bg-purple-50"
+                    style={{ color: '#5D4AA8' }}
+                  >
+                    <Sliders className="h-3 w-3" />Customise
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      <div className="space-y-3">
-        {!therapists?.length && (
-          <div className="text-center py-8 rounded-xl border-2 border-dashed border-gray-200">
-            <Users className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-            <p className="text-sm text-muted-foreground">No team members yet.</p>
-            <button onClick={() => setShowAddModal(true)} className="mt-2 text-sm font-medium" style={{ color: '#5D4AA8' }}>Add your first team member</button>
-          </div>
-        )}
-        {(therapists || []).map((t: any) => {
-          const u = t.user;
-          return (
-            <Card key={t.id}>
+      {/* Pending invites */}
+      {pendingInvites.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#9B91B0' }}>Pending Invites ({pendingInvites.length})</p>
+          {pendingInvites.map((inv: any) => (
+            <Card key={inv.id}>
               <CardContent className="p-4">
                 <div className="flex items-center justify-between gap-4 flex-wrap">
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-[#EDE5F4] flex items-center justify-center text-[#5D4AA8] font-semibold text-sm flex-shrink-0">
+                    <div className="h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: '#FEF9C3' }}>
+                      <Mail className="h-4 w-4" style={{ color: '#A16207' }} />
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm">{inv.email}</p>
+                      <p className="text-xs" style={{ color: '#7A7090' }}>
+                        Expires {new Date(inv.expiresAt).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: '#FEF9C3', color: '#A16207' }}>
+                      Pending
+                    </span>
+                    <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: '#F3EFFD', color: ROLE_INFO[inv.role]?.color ?? '#5D4AA8' }}>
+                      {ROLE_INFO[inv.role]?.label ?? inv.role}
+                    </span>
+                    <button
+                      onClick={() => handleResendInvite(inv.id)}
+                      disabled={actionId === inv.id}
+                      className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-colors hover:bg-gray-50"
+                      style={{ borderColor: '#D1D5DB', color: '#374151' }}
+                      title="Resend invite"
+                    >
+                      {actionId === inv.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+                      Resend
+                    </button>
+                    <button
+                      onClick={() => handleCancelInvite(inv.id)}
+                      disabled={actionId === inv.id}
+                      className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-colors hover:bg-red-50"
+                      style={{ borderColor: '#FCA5A5', color: '#DC2626' }}
+                      title="Cancel invite"
+                    >
+                      <X className="h-3 w-3" />Cancel
+                    </button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Active members — 6.2.3 per-member permission overrides */}
+      <div className="space-y-2">
+        <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#9B91B0' }}>
+          Team Members {activeMembers.length > 0 ? `(${activeMembers.length})` : ''}
+        </p>
+        {activeMembers.length === 0 && pendingInvites.length === 0 && (
+          <div className="text-center py-8 rounded-xl border-2 border-dashed border-gray-200">
+            <Users className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground">No team members yet.</p>
+            <button onClick={() => setShowInviteModal(true)} className="mt-2 text-sm font-medium" style={{ color: '#5D4AA8' }}>
+              Invite your first team member
+            </button>
+          </div>
+        )}
+        {activeMembers.map((m: any) => {
+          const u = m.user;
+          const roleInfo = ROLE_INFO[m.role];
+          const memberOverrides = m.permissions as PermissionOverrides | null;
+          const hasMemberCustom = (memberOverrides?.grant?.length ?? 0) > 0 || (memberOverrides?.revoke?.length ?? 0) > 0;
+          return (
+            <Card key={m.id}>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full flex items-center justify-center font-semibold text-sm flex-shrink-0" style={{ background: '#EDE5F4', color: '#5D4AA8' }}>
                       {u?.firstName?.[0]}{u?.lastName?.[0]}
                     </div>
                     <div>
@@ -645,39 +1108,58 @@ function TeamTab({ businessId }: { businessId: string }) {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <Badge variant={t.isActive ? 'success' : 'default'}>
-                      {t.isActive ? 'Active' : 'Inactive'}
-                    </Badge>
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: '#F3EFFD', color: roleInfo?.color ?? '#5D4AA8' }}>
+                      {roleInfo?.label ?? m.role}
+                    </span>
+                    {hasMemberCustom && (
+                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full" style={{ background: '#EDE5F4', color: '#5D4AA8' }}>
+                        Custom
+                      </span>
+                    )}
+                    <Badge variant="success">Active</Badge>
+                    {(m.role === 'THERAPIST' || m.role === 'SENIOR_THERAPIST') && (
+                      <button
+                        onClick={() => setEditingProfileMember(m)}
+                        className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-colors hover:bg-purple-50"
+                        style={{ borderColor: '#E5DEEC', color: '#5D4AA8' }}
+                        title="Edit therapist profile (bio, specializations)"
+                      >
+                        <UserCircle className="h-3 w-3" />Profile
+                      </button>
+                    )}
                     <button
-                      onClick={() => setEditingTherapist(t)}
-                      className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
-                      style={{ borderColor: '#D1D5DB', color: '#374151' }}
-                      title="Edit team member"
+                      onClick={() => setEditingMember(m)}
+                      className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-colors hover:bg-purple-50"
+                      style={{ borderColor: '#E5DEEC', color: '#5D4AA8' }}
+                      title="Customise permissions for this person"
                     >
-                      <Pencil className="h-3.5 w-3.5" />Edit
+                      <Sliders className="h-3 w-3" />Permissions
                     </button>
-                    <Button
-                      variant={t.isActive ? 'outline' : 'primary'}
-                      onClick={() => handleToggleActive(t.id, t.isActive)}
-                      disabled={updatingId === t.id}
-                      title={t.isActive ? 'Deactivate' : 'Activate'}
+                    <button
+                      onClick={() => handleRemoveMember(m.id)}
+                      disabled={actionId === m.id}
+                      className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-colors hover:bg-red-50"
+                      style={{ borderColor: '#FCA5A5', color: '#DC2626' }}
+                      title="Remove from business"
                     >
-                      {updatingId === t.id ? <Loader2 className="h-3 w-3 animate-spin" /> : t.isActive ? 'Deactivate' : 'Activate'}
-                    </Button>
+                      {actionId === m.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <UserMinus className="h-3 w-3" />}
+                      Remove
+                    </button>
                   </div>
                 </div>
-                {t.specializations?.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-1">
-                    {t.specializations.map((s: string) => (
-                      <span key={s} className="text-xs bg-gray-100 dark:bg-gray-800 rounded px-2 py-0.5">{s}</span>
-                    ))}
-                  </div>
-                )}
               </CardContent>
             </Card>
           );
         })}
       </div>
+
+      {editingProfileMember && (
+        <StaffProfileModal
+          businessId={businessId}
+          member={editingProfileMember}
+          onClose={() => setEditingProfileMember(null)}
+        />
+      )}
     </div>
   );
 }
@@ -844,7 +1326,103 @@ function NotificationsTab({ businessId }: { businessId: string }) {
       </div>
 
       <BrowserPushSection />
+      <StaffNotificationPrefs />
     </form>
+  );
+}
+
+function StaffNotificationPrefs() {
+  const supabase = createClient();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [prefs, setPrefs] = useState({
+    leaveDecision: true,
+    teamJoined: true,
+    newBooking: true,
+  });
+
+  useEffect(() => {
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const r = await fetch('/api/users/me/notification-prefs', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const { data } = await r.json();
+      if (data) setPrefs(data);
+      setLoading(false);
+    })();
+  }, []);
+
+  const save = async (key: keyof typeof prefs, val: boolean) => {
+    const next = { ...prefs, [key]: val };
+    setPrefs(next);
+    setSaving(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { setSaving(false); return; }
+    await fetch('/api/users/me/notification-prefs', {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ [key]: val }),
+    });
+    setSaving(false);
+  };
+
+  const Toggle = ({ id, label, description, checked, onChange }: {
+    id: string; label: string; description: string; checked: boolean; onChange: (v: boolean) => void;
+  }) => (
+    <label htmlFor={id} className="flex items-start justify-between gap-4 p-4 rounded-lg border cursor-pointer hover:bg-gray-50 transition-colors">
+      <div>
+        <p className="text-sm font-medium">{label}</p>
+        <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
+      </div>
+      <div className="relative mt-0.5 flex-shrink-0">
+        <input id={id} type="checkbox" className="sr-only" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+        <div className={`w-11 h-6 rounded-full transition-colors ${checked ? 'bg-[#5D4AA8]' : 'bg-[#D1D5DB]'}`}>
+          <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${checked ? 'translate-x-5' : 'translate-x-0.5'}`} />
+        </div>
+      </div>
+    </label>
+  );
+
+  if (loading) return null;
+
+  return (
+    <div className="mt-6 rounded-xl p-5 space-y-3" style={{ border: '1px solid #EFE9F2' }}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <UserCircle className="h-5 w-5" style={{ color: '#5D4AA8' }} />
+          <h3 className="text-sm font-semibold" style={{ color: '#1E1830' }}>My notification preferences</h3>
+        </div>
+        {saving && <Loader2 className="h-4 w-4 animate-spin" style={{ color: '#5D4AA8' }} />}
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Choose which email notifications you personally receive. These apply to your account only.
+      </p>
+      <div className="space-y-2 pt-1">
+        <Toggle
+          id="pref-leave"
+          label="Leave request decisions"
+          description="Receive an email when your leave request is approved or declined."
+          checked={prefs.leaveDecision}
+          onChange={(v) => save('leaveDecision', v)}
+        />
+        <Toggle
+          id="pref-team"
+          label="Business invites accepted"
+          description="Receive a welcome email when you're successfully added to a business."
+          checked={prefs.teamJoined}
+          onChange={(v) => save('teamJoined', v)}
+        />
+        <Toggle
+          id="pref-booking"
+          label="New bookings assigned"
+          description="Receive an email when a new appointment is assigned to you."
+          checked={prefs.newBooking}
+          onChange={(v) => save('newBooking', v)}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -1166,6 +1744,271 @@ function BookingTab({ businessId }: { businessId: string }) {
 }
 
 // ─── Security Tab ────────────────────────────────────────────────────────────
+
+// ─── Account Tab ─────────────────────────────────────────────────────────────
+
+function AccountTab({ businessId }: { businessId?: string }) {
+  const supabase = createClient();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [resetEmailSent, setResetEmailSent] = useState(false);
+  const [form, setForm] = useState({ firstName: '', lastName: '', profileImageUrl: '' });
+  const [therapistProfile, setTherapistProfile] = useState<{ id: string; bio: string; specializations: string[] } | null>(null);
+  const [therapistForm, setTherapistForm] = useState({ bio: '', specializations: [] as string[] });
+  const [specializationInput, setSpecializationInput] = useState('');
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const r = await fetch('/api/users/me', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const { data } = await r.json();
+      if (data) {
+        setForm({
+          firstName: data.firstName ?? '',
+          lastName: data.lastName ?? '',
+          profileImageUrl: data.profileImageUrl ?? '',
+        });
+      }
+      // Load therapist profile if applicable
+      if (businessId) {
+        const tr = await fetch(`/api/therapists?businessId=${businessId}&me=true`, {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        const tData = await tr.json();
+        if (tData?.data) {
+          setTherapistProfile(tData.data);
+          setTherapistForm({ bio: tData.data.bio ?? '', specializations: tData.data.specializations ?? [] });
+        }
+      }
+      setLoading(false);
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [businessId]);
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setError('');
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      await fetch('/api/users/me', {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ firstName: form.firstName, lastName: form.lastName }),
+      });
+      // Save therapist profile if applicable
+      if (therapistProfile && businessId) {
+        await fetch(`/api/therapists/${therapistProfile.id}`, {
+          method: 'PATCH',
+          headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ businessId, bio: therapistForm.bio, specializations: therapistForm.specializations }),
+        });
+      }
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch {
+      setError('Failed to save changes. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingPhoto(true);
+    setError('');
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const ext = file.name.split('.').pop() ?? 'jpg';
+      const path = `avatars/${session.user.id}/profile.${ext}`;
+      await uploadFile(BUCKETS.DOCUMENTS, path, file);
+      const publicUrl = getPublicUrl(BUCKETS.DOCUMENTS, path);
+      await fetch('/api/users/me', {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profileImageUrl: publicUrl }),
+      });
+      setForm((f) => ({ ...f, profileImageUrl: publicUrl }));
+    } catch {
+      setError('Failed to upload photo. Please try again.');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  const handlePasswordReset = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user.email) return;
+    await supabase.auth.resetPasswordForEmail(session.user.email, {
+      redirectTo: `${window.location.origin}/settings?tab=account`,
+    });
+    setResetEmailSent(true);
+    setTimeout(() => setResetEmailSent(false), 5000);
+  };
+
+  const addSpecialization = () => {
+    const tag = specializationInput.trim();
+    if (tag && !therapistForm.specializations.includes(tag)) {
+      setTherapistForm((f) => ({ ...f, specializations: [...f.specializations, tag] }));
+    }
+    setSpecializationInput('');
+  };
+
+  const removeSpecialization = (tag: string) => {
+    setTherapistForm((f) => ({ ...f, specializations: f.specializations.filter((s) => s !== tag) }));
+  };
+
+  if (loading) return <div className="text-sm text-muted-foreground">Loading…</div>;
+
+  const initials = [form.firstName, form.lastName].filter(Boolean).map(s => s[0]).join('').toUpperCase() || '?';
+
+  return (
+    <form onSubmit={handleSave} className="space-y-6">
+      <SectionHeader title="My Account" description="Update your name, photo, and password." />
+
+      {error && (
+        <div className="rounded-xl p-3 text-sm" style={{ background: '#F5E5E5', color: '#922020', border: '1px solid #F5CECE' }}>
+          {error}
+        </div>
+      )}
+
+      {/* Profile photo */}
+      <div className="flex items-center gap-5 p-5 rounded-xl" style={{ border: '1px solid #EFE9F2' }}>
+        <div className="relative">
+          {form.profileImageUrl ? (
+            <img
+              src={form.profileImageUrl}
+              alt="Profile"
+              className="w-16 h-16 rounded-full object-cover"
+              style={{ border: '2px solid #EFE9F2' }}
+            />
+          ) : (
+            <div className="w-16 h-16 rounded-full flex items-center justify-center text-lg font-bold" style={{ background: 'linear-gradient(135deg, #5D4AA8, #3F2F87)', color: '#fff' }}>
+              {initials}
+            </div>
+          )}
+          <label className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center cursor-pointer" style={{ background: '#5D4AA8' }}>
+            {uploadingPhoto ? <Loader2 className="h-3 w-3 text-white animate-spin" /> : <Camera className="h-3 w-3 text-white" />}
+            <input type="file" accept="image/*" className="sr-only" onChange={handlePhotoUpload} disabled={uploadingPhoto} />
+          </label>
+        </div>
+        <div>
+          <p className="text-sm font-semibold" style={{ color: '#1E1830' }}>{[form.firstName, form.lastName].filter(Boolean).join(' ') || 'Your Name'}</p>
+          <p className="text-xs mt-0.5" style={{ color: '#7A7090' }}>Click the camera icon to update your photo</p>
+        </div>
+      </div>
+
+      {/* Name fields */}
+      <div className="space-y-4 p-5 rounded-xl" style={{ border: '1px solid #EFE9F2' }}>
+        <p className="text-sm font-semibold" style={{ color: '#3D3450' }}>Personal details</p>
+        <div className="grid grid-cols-2 gap-4">
+          <FieldRow label="First name">
+            <Input
+              value={form.firstName}
+              onChange={(e) => setForm((f) => ({ ...f, firstName: e.target.value }))}
+              placeholder="First name"
+            />
+          </FieldRow>
+          <FieldRow label="Last name">
+            <Input
+              value={form.lastName}
+              onChange={(e) => setForm((f) => ({ ...f, lastName: e.target.value }))}
+              placeholder="Last name"
+            />
+          </FieldRow>
+        </div>
+        <div className="flex justify-end pt-1">
+          <Button type="submit" variant="primary" disabled={saving}>
+            {saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving…</> : saved ? <><Check className="h-4 w-4 mr-2" />Saved</> : <><Save className="h-4 w-4 mr-2" />Save Changes</>}
+          </Button>
+        </div>
+      </div>
+
+      {/* Therapist profile — shown only if user has a therapist record */}
+      {therapistProfile && (
+        <div className="space-y-4 p-5 rounded-xl" style={{ border: '1px solid #EFE9F2' }}>
+          <div>
+            <p className="text-sm font-semibold" style={{ color: '#3D3450' }}>Therapist profile</p>
+            <p className="text-xs mt-0.5" style={{ color: '#7A7090' }}>This information is visible to clients on the booking page.</p>
+          </div>
+          <FieldRow label="Bio">
+            <textarea
+              value={therapistForm.bio}
+              onChange={(e) => setTherapistForm((f) => ({ ...f, bio: e.target.value }))}
+              placeholder="Tell clients about your background and approach…"
+              rows={4}
+              className="w-full px-3.5 py-2.5 text-sm rounded-xl outline-none transition-all resize-none"
+              style={{ border: '1px solid #E5DEEC', color: '#1E1830', fontFamily: 'inherit' }}
+              onFocus={(e) => (e.currentTarget.style.borderColor = '#5D4AA8')}
+              onBlur={(e) => (e.currentTarget.style.borderColor = '#E5DEEC')}
+            />
+          </FieldRow>
+          <FieldRow label="Specializations">
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <input
+                  value={specializationInput}
+                  onChange={(e) => setSpecializationInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addSpecialization(); } }}
+                  placeholder="e.g. Deep Tissue, Sports Massage…"
+                  className="flex-1 px-3.5 py-2 text-sm rounded-xl outline-none"
+                  style={{ border: '1px solid #E5DEEC', color: '#1E1830' }}
+                  onFocus={(e) => (e.currentTarget.style.borderColor = '#5D4AA8')}
+                  onBlur={(e) => (e.currentTarget.style.borderColor = '#E5DEEC')}
+                />
+                <button
+                  type="button"
+                  onClick={addSpecialization}
+                  className="px-3 py-2 text-sm rounded-xl font-medium"
+                  style={{ background: '#EDE5F4', color: '#5D4AA8' }}
+                >
+                  Add
+                </button>
+              </div>
+              {therapistForm.specializations.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {therapistForm.specializations.map((s) => (
+                    <span key={s} className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-medium" style={{ background: '#F3EFFD', color: '#5D4AA8' }}>
+                      {s}
+                      <button type="button" onClick={() => removeSpecialization(s)} className="hover:text-red-500 ml-0.5">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <p className="text-xs" style={{ color: '#9B91B0' }}>Press Enter or comma to add. Click × to remove.</p>
+            </div>
+          </FieldRow>
+        </div>
+      )}
+
+      {/* Password */}
+      <div className="space-y-3 p-5 rounded-xl" style={{ border: '1px solid #EFE9F2' }}>
+        <p className="text-sm font-semibold" style={{ color: '#3D3450' }}>Password</p>
+        <p className="text-xs" style={{ color: '#7A7090' }}>We'll send a password reset link to your email address.</p>
+        {resetEmailSent ? (
+          <div className="rounded-xl p-3 text-sm" style={{ background: '#E8F5E9', color: '#1B5E20', border: '1px solid #C8E6C9' }}>
+            Password reset email sent! Check your inbox.
+          </div>
+        ) : (
+          <Button type="button" variant="outline" onClick={handlePasswordReset}>
+            <Lock className="h-4 w-4 mr-2" />Send password reset email
+          </Button>
+        )}
+      </div>
+    </form>
+  );
+}
 
 function SecurityTab() {
   const [passkeys, setPasskeys] = useState<PasskeyFactor[]>([]);
@@ -1820,6 +2663,7 @@ export default function SettingsPage() {
     if (!businessId) return <div style={{ padding: 40, color: '#7A7090', fontSize: 13 }}>Loading settings…</div>;
     switch (active) {
       case 'overview':      return <OverviewPanel go={go} />;
+      case 'account':       return <AccountTab businessId={businessId} />;
       case 'business':      return <BusinessTab businessId={businessId} />;
       case 'team':          return <TeamTab businessId={businessId} />;
       case 'notifications': return <NotificationsTab businessId={businessId} />;

@@ -7,8 +7,9 @@ import { useLocations } from '../../../lib/hooks/use-locations';
 import { useBusinessId } from '../../../lib/hooks/use-business-id';
 import { useBusiness } from '../../../lib/hooks/use-business';
 import { formatCurrency } from '../../../lib/format';
+import { PermissionGuard } from '../../../components/PermissionGuard';
 
-export default function AnalyticsPage() {
+function AnalyticsPageInner() {
   const businessId = useBusinessId();
   // Default to last 30 days
   const [dateRange, setDateRange] = useState({
@@ -270,5 +271,13 @@ export default function AnalyticsPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AnalyticsPage() {
+  return (
+    <PermissionGuard permission="analytics:view">
+      <AnalyticsPageInner />
+    </PermissionGuard>
   );
 }

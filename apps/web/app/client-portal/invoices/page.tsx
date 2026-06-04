@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { PortalShell } from '../components/PortalShell';
-import { Receipt, Loader2 } from 'lucide-react';
+import { Receipt, Loader2, Printer } from 'lucide-react';
 
 function fmt(n: number, currency = 'AUD') {
   return new Intl.NumberFormat('en-AU', { style: 'currency', currency }).format(n);
@@ -95,15 +95,28 @@ export default function PortalInvoices() {
                   </span>
                 </div>
 
-                {inv.status === 'UNPAID' && inv.stripePaymentUrl && (
+                <div className="mt-3 flex gap-2">
+                  {inv.status === 'UNPAID' && inv.stripePaymentUrl && (
+                    <a
+                      href={inv.stripePaymentUrl}
+                      className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-white"
+                      style={{ background: 'linear-gradient(135deg, #5D4AA8, #3F2F87)' }}
+                    >
+                      Pay now
+                    </a>
+                  )}
                   <a
-                    href={inv.stripePaymentUrl}
-                    className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-white"
-                    style={{ background: 'linear-gradient(135deg, #5D4AA8, #3F2F87)' }}
+                    href={`/api/client-portal/invoices/${inv.id}/receipt`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-medium"
+                    style={{ background: '#F3F4F6', color: '#6B7280', border: '1px solid #E5E7EB' }}
+                    title="Download receipt"
                   >
-                    Pay now
+                    <Printer className="h-4 w-4" />
+                    <span className="hidden sm:inline">Receipt</span>
                   </a>
-                )}
+                </div>
               </div>
             ))}
           </div>

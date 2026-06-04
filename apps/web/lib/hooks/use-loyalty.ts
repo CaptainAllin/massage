@@ -83,3 +83,17 @@ export function useRedeemLoyaltyPoints(businessId: string | undefined) {
     },
   });
 }
+
+export function useAwardReviewPoints(businessId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ clientId, reviewId }: { clientId: string; reviewId?: string }) => {
+      const response = await apiClient.post('/loyalty/award-review', { businessId, clientId, reviewId });
+      return response.data;
+    },
+    onSuccess: (_data, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['loyalty-accounts', businessId] });
+      queryClient.invalidateQueries({ queryKey: ['loyalty-account', businessId, vars.clientId] });
+    },
+  });
+}

@@ -9,19 +9,23 @@ import {
   useUpdateLoyaltySettings,
   useAwardLoyaltyPoints,
   useRedeemLoyaltyPoints,
+  useAwardReviewPoints,
 } from '@/lib/hooks/use-loyalty';
 import { useBusinessId } from '@/lib/hooks/use-business-id';
+import { PermissionGuard } from '@/components/PermissionGuard';
 
 const TIER_COLORS: Record<string, string> = {
   BRONZE: 'bg-amber-100 text-amber-800',
   SILVER: 'bg-gray-100 text-gray-700',
   GOLD: 'bg-yellow-100 text-yellow-800',
+  PLATINUM: 'bg-blue-100 text-blue-800',
 };
 
 const TIER_ICONS: Record<string, React.ReactNode> = {
   BRONZE: <Trophy className="w-4 h-4 text-amber-600" />,
   SILVER: <Trophy className="w-4 h-4 text-gray-500" />,
   GOLD: <Trophy className="w-4 h-4 text-yellow-600" />,
+  PLATINUM: <Trophy className="w-4 h-4 text-blue-600" />,
 };
 
 function SettingsPanel({ businessId, settings, onClose }: { businessId: string; settings: any; onClose: () => void }) {
@@ -31,6 +35,13 @@ function SettingsPanel({ businessId, settings, onClose }: { businessId: string; 
     bronzeMinPoints: settings?.bronzeMinPoints ?? 0,
     silverMinPoints: settings?.silverMinPoints ?? 500,
     goldMinPoints: settings?.goldMinPoints ?? 1500,
+    platinumMinPoints: (settings as any)?.platinumMinPoints ?? 5000,
+    silverBonusRate: (settings as any)?.silverBonusRate ?? 0.05,
+    goldBonusRate: (settings as any)?.goldBonusRate ?? 0.10,
+    platinumBonusRate: (settings as any)?.platinumBonusRate ?? 0.15,
+    birthdayMultiplier: (settings as any)?.birthdayMultiplier ?? 2,
+    reviewBonusPoints: (settings as any)?.reviewBonusPoints ?? 50,
+    referralBonusPoints: (settings as any)?.referralBonusPoints ?? 200,
     isActive: settings?.isActive ?? true,
     expiryDays: settings?.expiryDays ?? '',
   });
@@ -84,9 +95,10 @@ function SettingsPanel({ businessId, settings, onClose }: { businessId: string; 
                 { key: 'bronzeMinPoints', label: 'Bronze', color: 'text-amber-600' },
                 { key: 'silverMinPoints', label: 'Silver', color: 'text-gray-500' },
                 { key: 'goldMinPoints', label: 'Gold', color: 'text-yellow-600' },
+                { key: 'platinumMinPoints', label: 'Platinum', color: 'text-blue-600' },
               ].map(({ key, label, color }) => (
                 <div key={key} className="flex items-center gap-3">
-                  <span className={`text-sm font-medium w-14 ${color}`}>{label}</span>
+                  <span className={`text-sm font-medium w-16 ${color}`}>{label}</span>
                   <input
                     type="number"
                     min="0"
@@ -97,6 +109,44 @@ function SettingsPanel({ businessId, settings, onClose }: { businessId: string; 
                   <span className="text-xs text-gray-400">pts</span>
                 </div>
               ))}
+            </div>
+          </div>
+          <div>
+            <p className="text-sm font-medium text-gray-700 mb-2">Tier Bonus Rates</p>
+            <div className="space-y-2">
+              {[
+                { key: 'silverBonusRate', label: 'Silver', color: 'text-gray-500' },
+                { key: 'goldBonusRate', label: 'Gold', color: 'text-yellow-600' },
+                { key: 'platinumBonusRate', label: 'Platinum', color: 'text-blue-600' },
+              ].map(({ key, label, color }) => (
+                <div key={key} className="flex items-center gap-3">
+                  <span className={`text-sm font-medium w-16 ${color}`}>{label}</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value={(form as any)[key]}
+                    onChange={(e) => setForm({ ...form, [key]: parseFloat(e.target.value) })}
+                    className="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                  <span className="text-xs text-gray-400">rate</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Birthday multiplier</label>
+              <input type="number" min="1" step="0.5" value={form.birthdayMultiplier}
+                onChange={(e) => setForm({ ...form, birthdayMultiplier: parseFloat(e.target.value) })}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Review bonus pts</label>
+              <input type="number" min="0" value={form.reviewBonusPoints}
+                onChange={(e) => setForm({ ...form, reviewBonusPoints: parseInt(e.target.value) })}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
             </div>
           </div>
           <div>
@@ -196,10 +246,11 @@ function AdjustPointsModal({
   );
 }
 
-export default function LoyaltyPage() {
+function LoyaltyPageInner() {
   const businessId = useBusinessId();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [adjustAccount, setAdjustAccount] = useState<any>(null);
+  const awardReview = useAwardReviewPoints(businessId);
 
   const { data: accounts = [], isLoading } = useLoyaltyAccounts(businessId);
   const { data: settings } = useLoyaltySettings(businessId);
@@ -207,6 +258,7 @@ export default function LoyaltyPage() {
   const totalMembers = (accounts as any[]).length;
   const goldCount = (accounts as any[]).filter((a: any) => a.tier === 'GOLD').length;
   const silverCount = (accounts as any[]).filter((a: any) => a.tier === 'SILVER').length;
+  const platinumCount = (accounts as any[]).filter((a: any) => a.tier === 'PLATINUM').length;
   const totalPoints = (accounts as any[]).reduce((s: number, a: any) => s + a.points, 0);
 
   return (
@@ -230,8 +282,8 @@ export default function LoyaltyPage() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {[
           { label: 'Total Members', value: totalMembers, icon: <Users className="h-5 w-5 text-blue-600" />, bg: 'bg-blue-100' },
-          { label: 'Total Points Outstanding', value: totalPoints.toLocaleString(), icon: <Star className="h-5 w-5 text-yellow-600" />, bg: 'bg-yellow-100' },
-          { label: 'Gold Members', value: goldCount, icon: <Trophy className="h-5 w-5 text-yellow-600" />, bg: 'bg-yellow-100' },
+          { label: 'Points Outstanding', value: totalPoints.toLocaleString(), icon: <Star className="h-5 w-5 text-yellow-600" />, bg: 'bg-yellow-100' },
+          { label: 'Gold + Platinum', value: goldCount + platinumCount, icon: <Trophy className="h-5 w-5 text-yellow-600" />, bg: 'bg-yellow-100' },
           { label: 'Silver Members', value: silverCount, icon: <Trophy className="h-5 w-5 text-gray-500" />, bg: 'bg-gray-100' },
         ].map((stat) => (
           <Card key={stat.label}>
@@ -262,12 +314,12 @@ export default function LoyaltyPage() {
                 <p className="font-bold text-gray-900">${settings.dollarPerPoint} / pt</p>
               </div>
               <div className="bg-gray-50 rounded-lg p-3">
-                <p className="text-gray-500">Silver Threshold</p>
-                <p className="font-bold text-gray-900">{settings.silverMinPoints} pts</p>
+                <p className="text-gray-500">Silver / Gold</p>
+                <p className="font-bold text-gray-900">{settings.silverMinPoints} / {settings.goldMinPoints} pts</p>
               </div>
               <div className="bg-gray-50 rounded-lg p-3">
-                <p className="text-gray-500">Gold Threshold</p>
-                <p className="font-bold text-gray-900">{settings.goldMinPoints} pts</p>
+                <p className="text-gray-500">Platinum</p>
+                <p className="font-bold text-gray-900">{(settings as any).platinumMinPoints ?? 5000} pts</p>
               </div>
             </div>
           </CardContent>
@@ -319,9 +371,20 @@ export default function LoyaltyPage() {
                       <td className="py-3 pr-4 font-bold text-gray-900">{account.points.toLocaleString()}</td>
                       <td className="py-3 pr-4 text-gray-500">{account.lifetimePoints.toLocaleString()}</td>
                       <td className="py-3">
-                        <Button variant="outline" size="sm" onClick={() => setAdjustAccount(account)}>
-                          Adjust
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="sm" onClick={() => setAdjustAccount(account)}>
+                            Adjust
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={awardReview.isPending}
+                            onClick={() => awardReview.mutate({ clientId: account.clientId })}
+                            title="Award review bonus points"
+                          >
+                            ⭐ Review
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -339,5 +402,13 @@ export default function LoyaltyPage() {
         <AdjustPointsModal account={adjustAccount} businessId={businessId} onClose={() => setAdjustAccount(null)} />
       )}
     </div>
+  );
+}
+
+export default function LoyaltyPage() {
+  return (
+    <PermissionGuard permission="loyalty:view">
+      <LoyaltyPageInner />
+    </PermissionGuard>
   );
 }

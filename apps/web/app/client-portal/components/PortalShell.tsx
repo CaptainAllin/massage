@@ -4,13 +4,16 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { Calendar, FileText, Receipt, LogOut, Loader2, FolderOpen } from 'lucide-react';
+import { Calendar, FileText, Receipt, LogOut, Loader2, FolderOpen, Package, Settings, Star } from 'lucide-react';
 
 const NAV_ITEMS = [
   { href: '/client-portal/appointments', label: 'Appointments', icon: Calendar },
+  { href: '/client-portal/packages', label: 'Packages', icon: Package },
   { href: '/client-portal/invoices', label: 'Invoices', icon: Receipt },
+  { href: '/client-portal/loyalty', label: 'Rewards', icon: Star },
   { href: '/client-portal/intake-forms', label: 'Intake Forms', icon: FileText },
   { href: '/client-portal/documents', label: 'Documents', icon: FolderOpen },
+  { href: '/client-portal/preferences', label: 'Preferences', icon: Settings },
 ];
 
 interface ClientInfo {
@@ -19,6 +22,7 @@ interface ClientInfo {
   lastName: string;
   email: string;
   business: { name: string; logo: string | null; primaryColor: string | null };
+  loyalty: { points: number; tier: string } | null;
 }
 
 export function PortalShell({ children }: { children: React.ReactNode }) {
@@ -79,7 +83,13 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="text-sm" style={{ color: '#7A7090' }}>
+            {client?.loyalty && (
+              <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold" style={{ background: '#EDE5F4', color: '#5D4AA8' }}>
+                <span>⭐</span>
+                <span>{client.loyalty.points.toLocaleString()} pts</span>
+              </div>
+            )}
+            <span className="text-sm hidden sm:inline" style={{ color: '#7A7090' }}>
               {client?.firstName} {client?.lastName}
             </span>
             <button

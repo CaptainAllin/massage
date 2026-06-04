@@ -1,11 +1,11 @@
-import { withAuth, requireBusinessAccess, res, logAudit } from '@/lib/api-auth';
+import { withAuth, requirePermission, res, logAudit } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
 
 export const GET = withAuth(async (req, user) => {
   const { searchParams } = new URL(req.url);
   const businessId = searchParams.get('businessId');
   if (!businessId) return res.badRequest('businessId is required');
-  await requireBusinessAccess(user, businessId);
+  await requirePermission(user, businessId, 'payroll:view');
 
   const periods = await prisma.payrollPeriod.findMany({
     where: { businessId },
@@ -26,7 +26,7 @@ export const POST = withAuth(async (req, user) => {
   if (!businessId || !startDate || !endDate) {
     return res.badRequest('businessId, startDate, and endDate are required');
   }
-  await requireBusinessAccess(user, businessId);
+  await requirePermission(user, businessId, 'payroll:manage');
 
   // Auto-calculate payroll records from completed appointments in the period
   const start = new Date(startDate);

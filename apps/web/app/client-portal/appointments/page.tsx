@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { PortalShell } from '../components/PortalShell';
-import { Calendar, Clock, MapPin, User, Loader2 } from 'lucide-react';
+import { Calendar, Clock, MapPin, User, Loader2, RotateCcw, X } from 'lucide-react';
 
 function formatDateTime(dt: string) {
   const d = new Date(dt);
@@ -29,9 +29,27 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function AppointmentCard({ appt }: { appt: any }) {
+function AppointmentCard({
+  appt,
+  isUpcoming,
+  onCancel,
+}: {
+  appt: any;
+  isUpcoming: boolean;
+  onCancel?: (id: string) => void;
+}) {
   const { date, time } = formatDateTime(appt.startTime);
   const therapistName = [appt.therapist?.user?.firstName, appt.therapist?.user?.lastName].filter(Boolean).join(' ');
+  const [cancelling, setCancelling] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  const rebookUrl = `/book/${appt.businessId}${appt.therapistId ? `?therapistId=${appt.therapistId}` : ''}`;
+
+  const handleCancel = async () => {
+    setCancelling(true);
+    onCancel?.(appt.id);
+  };
+
   return (
     <div className="rounded-xl p-4 space-y-3" style={{ background: '#fff', border: '1px solid #EFE9F2' }}>
       <div className="flex items-start justify-between gap-2">
@@ -63,6 +81,53 @@ function AppointmentCard({ appt }: { appt: any }) {
           </div>
         )}
       </div>
+
+      {isUpcoming && appt.status !== 'CANCELLED' && (
+        <div className="pt-2" style={{ borderTop: '1px solid #F3EEF9' }}>
+          {!showConfirm ? (
+            <button
+              onClick={() => setShowConfirm(true)}
+              className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
+              style={{ color: '#991B1B', background: '#FEE2E2' }}
+            >
+              <X className="h-3.5 w-3.5" />
+              Cancel appointment
+            </button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className="text-xs" style={{ color: '#7A7090' }}>Cancel this appointment?</span>
+              <button
+                onClick={handleCancel}
+                disabled={cancelling}
+                className="text-xs font-semibold px-3 py-1.5 rounded-lg text-white"
+                style={{ background: '#991B1B' }}
+              >
+                {cancelling ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Yes, cancel'}
+              </button>
+              <button
+                onClick={() => setShowConfirm(false)}
+                className="text-xs font-medium px-3 py-1.5 rounded-lg"
+                style={{ background: '#F3F4F6', color: '#6B7280' }}
+              >
+                Keep
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {!isUpcoming && appt.status === 'COMPLETED' && appt.businessId && (
+        <div className="pt-2" style={{ borderTop: '1px solid #F3EEF9' }}>
+          <a
+            href={rebookUrl}
+            className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
+            style={{ color: '#5D4AA8', background: '#EDE5F4' }}
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            Book again
+          </a>
+        </div>
+      )}
     </div>
   );
 }
@@ -91,6 +156,20 @@ export default function PortalAppointments() {
       setLoading(false);
     })();
   }, []);
+
+  const handleCancel = async (id: string) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    const r = await fetch(`/api/client-portal/appointments/${id}/cancel`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+
+    if (r.ok) {
+      setUpcoming((prev) => prev.map((a) => a.id === id ? { ...a, status: 'CANCELLED' } : a));
+    }
+  };
 
   const list = tab === 'upcoming' ? upcoming : past;
 
@@ -127,7 +206,12 @@ export default function PortalAppointments() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {list.map((appt: any) => (
-              <AppointmentCard key={appt.id} appt={appt} />
+              <AppointmentCard
+                key={appt.id}
+                appt={appt}
+                isUpcoming={tab === 'upcoming'}
+                onCancel={handleCancel}
+              />
             ))}
           </div>
         )}

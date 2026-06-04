@@ -98,6 +98,7 @@ export default function PublicBookingPage() {
   const searchParams = useSearchParams();
   const businessId = params.businessId as string;
   const inviteToken = searchParams.get('token');
+  const preselectedTherapistId = searchParams.get('therapistId');
 
   const [step, setStep] = useState(1); // 1=therapist, 2=service, 3=datetime, 4=contact, 5=confirm
   const [business, setBusiness] = useState<Business | null>(null);
@@ -124,6 +125,8 @@ export default function PublicBookingPage() {
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
   const [slots, setSlots] = useState<TimeSlot[]>([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
+  const [nextAvailableLoading, setNextAvailableLoading] = useState(false);
+  const [nextAvailableResult, setNextAvailableResult] = useState<{ startTime: string; endTime: string; date: string } | null>(null);
 
   // Contact
   const [firstName, setFirstName] = useState('');
@@ -170,6 +173,11 @@ export default function PublicBookingPage() {
 
         if (biz.bookingMode === 'PUBLIC') {
           setAccessGranted(true);
+          // Pre-select therapist from URL param (rebook flow)
+          if (preselectedTherapistId) {
+            const found = d.data.therapists.find((t: Therapist) => t.id === preselectedTherapistId);
+            if (found) { setSelectedTherapist(found); setStep(2); }
+          }
         } else if (biz.bookingMode === 'INVITE_ONLY') {
           if (inviteToken) {
             // Validate token and pre-fill client details
@@ -263,9 +271,41 @@ export default function PublicBookingPage() {
 
   useEffect(() => {
     if (selectedTherapist && selectedDate) {
+      setNextAvailableResult(null);
       loadSlots(selectedTherapist, selectedDate, selectedDuration);
     }
   }, [selectedTherapist, selectedDate, selectedDuration, loadSlots]);
+
+  // 5.4.2 — Poll for slot updates every 30s while browsing to catch concurrent bookings.
+  useEffect(() => {
+    if (!selectedTherapist || !selectedDate || selectedSlot) return;
+    const interval = setInterval(() => {
+      loadSlots(selectedTherapist, selectedDate, selectedDuration);
+    }, 30_000);
+    return () => clearInterval(interval);
+  }, [selectedTherapist, selectedDate, selectedDuration, selectedSlot, loadSlots]);
+
+  const findNextAvailable = useCallback(async () => {
+    if (!selectedTherapist || !selectedDate) return;
+    setNextAvailableLoading(true);
+    setNextAvailableResult(null);
+    try {
+      const dateStr = toLocalDateString(selectedDate);
+      const r = await fetch(
+        `/api/public/booking/${businessId}/slots?therapistId=${selectedTherapist.id}&date=${dateStr}&duration=${selectedDuration}&nextAvailable=true`
+      );
+      const d = await r.json();
+      if (d.success && d.data?.nextAvailable) {
+        setNextAvailableResult({ ...d.data.nextAvailable, date: d.data.date });
+      } else {
+        setNextAvailableResult(null);
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setNextAvailableLoading(false);
+    }
+  }, [businessId, selectedTherapist, selectedDate, selectedDuration]);
 
   // Load recurring preview dates
   useEffect(() => {
@@ -470,6 +510,23 @@ export default function PublicBookingPage() {
             <p><span className="text-gray-400">Therapist</span><span className="float-right font-medium text-gray-800">{confirmedBooking.therapist.firstName} {confirmedBooking.therapist.lastName}</span></p>
           </div>
           <p className="text-xs text-gray-400">To cancel or reschedule, contact {business?.name} directly.</p>
+
+          {/* Guest → account CTA */}
+          {email && (
+            <div className="mt-6 rounded-2xl p-5 text-left" style={{ background: `${accent}12`, border: `1px solid ${accent}30` }}>
+              <p className="text-sm font-semibold text-gray-800 mb-1">Save your booking — create an account</p>
+              <p className="text-xs text-gray-500 mb-4">
+                Earn <strong>150 points</strong> on this booking, reschedule online, view your history, and more.
+              </p>
+              <a
+                href={`/client-portal/sign-in?email=${encodeURIComponent(email)}`}
+                className="inline-block w-full text-center py-2.5 rounded-xl text-sm font-semibold text-white"
+                style={{ background: `linear-gradient(135deg, ${accent}, ${accent}cc)` }}
+              >
+                Create your free account
+              </a>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -1031,15 +1088,53 @@ export default function PublicBookingPage() {
                     <Loader2 className="h-5 w-5 animate-spin text-gray-300" />
                   </div>
                 ) : slots.length === 0 ? (
-                  <div className="text-center py-6">
-                    <p className="text-sm text-gray-400 mb-3">No available slots on this day.</p>
-                    <button
-                      onClick={() => setWaitlistStep('form')}
-                      className="px-4 py-2 rounded-xl text-sm font-semibold text-white"
-                      style={{ backgroundColor: accent }}
-                    >
-                      Join Waitlist
-                    </button>
+                  <div className="text-center py-6 space-y-3">
+                    <p className="text-sm text-gray-400">No available slots on this day.</p>
+                    {nextAvailableResult ? (
+                      <div
+                        className="mx-auto max-w-xs rounded-xl p-3 text-sm text-left"
+                        style={{ background: `${accent}10`, border: `1px solid ${accent}30` }}
+                      >
+                        <p className="font-semibold mb-1" style={{ color: accent }}>Next available</p>
+                        <p className="text-gray-600 text-xs mb-2">
+                          {new Date(nextAvailableResult.date).toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long' })} at {formatTime(nextAvailableResult.startTime)}
+                        </p>
+                        <button
+                          onClick={() => {
+                            const d = new Date(nextAvailableResult.date);
+                            d.setHours(12, 0, 0, 0);
+                            setSelectedDate(d);
+                            setNextAvailableResult(null);
+                          }}
+                          className="w-full py-1.5 rounded-lg text-xs font-semibold text-white"
+                          style={{ backgroundColor: accent }}
+                        >
+                          Jump to this date
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-2 items-center">
+                        <button
+                          onClick={findNextAvailable}
+                          disabled={nextAvailableLoading}
+                          className="px-4 py-2 rounded-xl text-sm font-semibold border flex items-center gap-2"
+                          style={{ borderColor: accent, color: accent }}
+                        >
+                          {nextAvailableLoading ? (
+                            <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Finding next slot…</>
+                          ) : (
+                            'Find next available slot'
+                          )}
+                        </button>
+                        <button
+                          onClick={() => setWaitlistStep('form')}
+                          className="px-4 py-2 rounded-xl text-sm font-semibold text-white"
+                          style={{ backgroundColor: accent }}
+                        >
+                          Join Waitlist
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="grid grid-cols-3 gap-2">

@@ -39,7 +39,7 @@ export async function middleware(req: NextRequest) {
   });
 
   // Public routes — API routes and client portal handle their own auth
-  const publicRoutes = ['/', '/sign-in', '/sign-up', '/auth/callback', '/auth/clear-session', '/api', '/intake', '/forms', '/book', '/client-portal'];
+  const publicRoutes = ['/', '/sign-in', '/sign-up', '/auth/callback', '/auth/clear-session', '/api', '/intake', '/forms', '/book', '/client-portal', '/accept-invite'];
   const isPublicRoute = publicRoutes.some((route) =>
     route === '/' ? req.nextUrl.pathname === '/' : req.nextUrl.pathname.startsWith(route)
   );

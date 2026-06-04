@@ -203,11 +203,20 @@ export async function POST(
       emitAutomation('CLIENT_FIRST_APPOINTMENT', businessId, automationPayload);
     }
 
+    // 3.4.2 — Auto-attach: look up client's submitted intake form so therapists
+    // always have health info on file without clients re-filling it per booking.
+    const existingIntakeForm = await prisma.intakeForm.findFirst({
+      where: { clientId: client.id, businessId, isSubmitted: true },
+      orderBy: { submittedAt: 'desc' },
+      select: { id: true },
+    });
+
     return res.created(
       {
         appointmentId: appointment.id,
         startTime: appointment.startTime,
         endTime: appointment.endTime,
+        intakeFormId: existingIntakeForm?.id ?? null,
         therapist: {
           firstName: therapist.user.firstName,
           lastName: therapist.user.lastName,

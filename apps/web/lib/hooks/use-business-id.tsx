@@ -1,11 +1,19 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
 import { useAuth } from '@massage/auth';
 import { createClient } from '@/lib/supabase/client';
 import { apiClient } from '@/lib/api-client';
 
 const LS_KEY = 'wellness-bid';
+
+export interface BusinessSummary { id: string; name: string; logo: string | null; }
+
+interface BusinessContextValue {
+  businessId: string | undefined;
+  businesses: BusinessSummary[];
+  switchBusiness: (id: string) => Promise<void>;
+}
 
 function readLocalBusinessId(): string | undefined {
   try {
@@ -23,16 +31,21 @@ function writeLocalBusinessId(id: string) {
   }
 }
 
-const BusinessIdContext = createContext<string | undefined>(undefined);
+const BusinessIdContext = createContext<BusinessContextValue>({
+  businessId: undefined,
+  businesses: [],
+  switchBusiness: async () => {},
+});
 
 /**
  * Mount once at the top of the dashboard tree (layout.tsx).
- * All descendants call useBusinessId() to read the shared value —
- * the /businesses API is hit exactly once per session instead of once per component.
+ * All descendants call useBusinessId() to read the shared value.
+ * Also exposes useBusinessSwitcher() for multi-business users.
  */
 export function BusinessIdProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [businessId, setBusinessId] = useState<string | undefined>(undefined);
+  const [businesses, setBusinesses] = useState<BusinessSummary[]>([]);
 
   // Populate from localStorage after hydration to keep SSR/client HTML in sync.
   useEffect(() => {
@@ -58,22 +71,25 @@ export function BusinessIdProvider({ children }: { children: ReactNode }) {
 
     async function validate() {
       try {
-        const res = await apiClient.get('/businesses');
-        const businesses = res.data?.data;
-        if (businesses?.length > 0) {
-          const id = businesses[0].id;
-          if (id && id !== readLocalBusinessId()) {
-            setBusinessId(id);
-            writeLocalBusinessId(id);
+        const apiRes = await apiClient.get('/businesses');
+        const biz: BusinessSummary[] = apiRes.data?.data ?? [];
+        setBusinesses(biz);
+
+        if (biz.length > 0) {
+          // Prefer the stored business if it's still in the list; otherwise use first.
+          const stored = readLocalBusinessId();
+          const preferred = biz.find((b) => b.id === stored) ?? biz[0];
+          if (preferred.id !== stored) {
+            setBusinessId(preferred.id);
+            writeLocalBusinessId(preferred.id);
             const supabase = createClient();
-            await supabase.auth.updateUser({ data: { businessId: id } });
+            await supabase.auth.updateUser({ data: { businessId: preferred.id } });
+          } else {
+            setBusinessId(preferred.id);
           }
         } else if (!readLocalBusinessId()) {
-          // No business and no cached ID — user hasn't completed setup yet
           setBusinessId(undefined);
         }
-        // If businesses is empty but we have a cached ID, keep using it rather
-        // than clearing — avoids wiping a valid session on a transient API hiccup.
       } catch {
         // Non-fatal — pages show empty state until backend is reachable
       }
@@ -84,8 +100,19 @@ export function BusinessIdProvider({ children }: { children: ReactNode }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
+  const switchBusiness = useCallback(async (id: string) => {
+    setBusinessId(id);
+    writeLocalBusinessId(id);
+    try {
+      const supabase = createClient();
+      await supabase.auth.updateUser({ data: { businessId: id } });
+    } catch {
+      // best-effort metadata update
+    }
+  }, []);
+
   return (
-    <BusinessIdContext.Provider value={businessId}>
+    <BusinessIdContext.Provider value={{ businessId, businesses, switchBusiness }}>
       {children}
     </BusinessIdContext.Provider>
   );
@@ -93,5 +120,11 @@ export function BusinessIdProvider({ children }: { children: ReactNode }) {
 
 /** Read the current business ID. Must be used inside <BusinessIdProvider>. */
 export function useBusinessId(): string | undefined {
-  return useContext(BusinessIdContext);
+  return useContext(BusinessIdContext).businessId;
+}
+
+/** Returns the full list of businesses and a function to switch between them. */
+export function useBusinessSwitcher() {
+  const { businessId, businesses, switchBusiness } = useContext(BusinessIdContext);
+  return { businessId, businesses, switchBusiness };
 }

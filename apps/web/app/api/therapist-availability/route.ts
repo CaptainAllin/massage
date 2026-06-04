@@ -1,4 +1,4 @@
-import { withAuth, res } from '@/lib/api-auth';
+import { withAuth, requireBusinessRole, res } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
 
 const TIME_REGEX = /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/;
@@ -39,6 +39,24 @@ export const POST = withAuth(async (req, user) => {
   }
   if (startTime >= endTime) return res.badRequest('startTime must be before endTime');
 
+  // Therapist can only edit their own availability; owners/senior therapists can edit anyone
+  const ownTherapist = await prisma.therapist.findFirst({
+    where: { id: therapistId, userId: user.id },
+    select: { id: true },
+  });
+  if (!ownTherapist) {
+    await requireBusinessRole(user, businessId, ['OWNER', 'SENIOR_THERAPIST']);
+  }
+
+  // Warn (soft-validate) if availability falls outside business hours — we don't hard-block
+  // because business hours may not be configured yet, but we note it in the response
+  const bizHours = await prisma.businessHours.findFirst({
+    where: { businessId, locationId: null, dayOfWeek },
+  });
+  const outsideHours =
+    bizHours && !bizHours.isClosed &&
+    (startTime < bizHours.openTime || endTime > bizHours.closeTime);
+
   const existing = await prisma.therapistAvailability.findFirst({
     where: { therapistId, dayOfWeek, businessId },
   });
@@ -66,5 +84,5 @@ export const POST = withAuth(async (req, user) => {
     },
   });
 
-  return res.created(availability);
+  return res.created({ ...availability, ...(outsideHours && { warning: 'Availability extends outside business hours' }) });
 });

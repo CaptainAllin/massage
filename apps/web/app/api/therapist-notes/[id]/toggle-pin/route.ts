@@ -1,4 +1,4 @@
-import { requireAuth, res, AuthError } from '@/lib/api-auth';
+import { requireAuth, getBusinessRole, res, AuthError } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
 import { NextRequest } from 'next/server';
 
@@ -18,9 +18,10 @@ export async function PATCH(
     const existingNote = await prisma.therapistNote.findFirst({ where: { id, businessId } });
     if (!existingNote) return res.notFound('Therapist note not found');
 
-    // RBAC: Therapists can only toggle their own notes
-    if (user.role === 'THERAPIST') {
-      const therapist = await prisma.therapist.findFirst({ where: { userId: user.id } });
+    // RBAC: Therapists (global or per-business role) can only toggle their own notes
+    const businessRole = await getBusinessRole(user.id, businessId);
+    if (user.role === 'THERAPIST' || businessRole === 'THERAPIST') {
+      const therapist = await prisma.therapist.findFirst({ where: { userId: user.id, businessId } });
       if (!therapist || existingNote.therapistId !== therapist.id) {
         return res.forbidden('You can only update your own notes');
       }

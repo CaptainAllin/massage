@@ -7,7 +7,7 @@ import {
   Building2, Users, Bell, Palette, MapPin, CalendarCheck,
   ShieldCheck, FileText, LayoutDashboard, ExternalLink,
   MessageSquare, ChevronRight, SlidersHorizontal, Code2,
-  Link2, Search,
+  Link2, Search, Clock, CalendarOff, UserCircle,
 } from 'lucide-react';
 import { useBusinessId } from '@/lib/hooks/use-business-id';
 import { useBusiness } from '@/lib/hooks/use-business';
@@ -28,6 +28,7 @@ const NAV: NavGroup[] = [
     { id: 'locations',  label: 'Locations & rooms', icon: MapPin,            desc: 'Sites & treatment rooms', href: '/settings/locations' },
   ]},
   { group: 'Team & access', items: [
+    { id: 'account',  label: 'My account',    icon: UserCircle,    desc: 'Name, photo & password' },
     { id: 'team',     label: 'Team',          icon: Users,         desc: 'Members, roles & rates' },
     { id: 'security', label: 'Security',      icon: ShieldCheck,   desc: 'Passkeys & 2-factor' },
     { id: 'portal',   label: 'Client portal', icon: LayoutDashboard, desc: 'Self-service for clients' },
@@ -37,6 +38,10 @@ const NAV: NavGroup[] = [
     { id: 'booking',       label: 'Online booking',  icon: CalendarCheck, desc: 'Who can book & how' },
     { id: 'notifications', label: 'Notifications',   icon: Bell,          desc: 'Reminders & channels' },
     { id: 'clinical',      label: 'Clinical notes',  icon: FileText,      desc: 'Draft visibility' },
+  ]},
+  { group: 'Scheduling', items: [
+    { id: 'hours',  label: 'Business hours', icon: Clock,        desc: 'Opening hours & closures', href: '/settings/hours' },
+    { id: 'leave',  label: 'Leave management', icon: CalendarOff, desc: 'Staff leave & approvals',  href: '/settings/leave' },
   ]},
   { group: 'Connections', items: [
     { id: 'comms',        label: 'Communications', icon: MessageSquare, desc: 'Twilio, SendGrid, WhatsApp', href: '/settings/communications' },
@@ -125,6 +130,8 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
     if (pathname.startsWith('/settings/locations')) return 'locations';
     if (pathname.startsWith('/settings/communications')) return 'comms';
     if (pathname.startsWith('/settings/integrations')) return 'integrations';
+    if (pathname.startsWith('/settings/hours')) return 'hours';
+    if (pathname.startsWith('/settings/leave')) return 'leave';
     return searchParams.get('tab') || 'overview';
   }, [pathname, searchParams]);
 

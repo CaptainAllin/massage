@@ -43,6 +43,8 @@ export interface MenuItem {
   href: string;
   icon: React.ComponentType<{ className?: string; size?: number }> | any;
   allowedRoles?: string[];
+  /** Required permission key (e.g. 'payments:view'). Used when permissions[] prop is passed. */
+  permission?: string;
   badge?: number;
 }
 
@@ -54,6 +56,8 @@ export interface MenuGroup {
 export interface SidebarProps {
   menuItems?: MenuItem[];
   userRole?: string | null;
+  /** Resolved effective permissions for the user. When provided, items are filtered by permission instead of role. */
+  permissions?: string[];
   userName?: string;
   userEmail?: string;
   userInitials?: string;
@@ -73,33 +77,38 @@ const PINNED_ITEMS: MenuItem[] = [
     label: 'Dashboard',
     href: '/dashboard',
     icon: LayoutDashboard,
-    allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER', 'RECEPTIONIST', 'THERAPIST'],
+    permission: 'dashboard:view',
+    allowedRoles: ['OWNER', 'SENIOR_THERAPIST', 'THERAPIST', 'RECEPTIONIST'],
   },
   {
     label: 'Appointments',
     href: '/appointments',
     icon: Calendar,
     badge: 6,
-    allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER', 'RECEPTIONIST', 'THERAPIST'],
+    permission: 'appointments:view',
+    allowedRoles: ['OWNER', 'SENIOR_THERAPIST', 'THERAPIST', 'RECEPTIONIST'],
   },
   {
     label: 'Clients',
     href: '/clients',
     icon: Users,
-    allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER', 'RECEPTIONIST', 'THERAPIST'],
+    permission: 'clients:view',
+    allowedRoles: ['OWNER', 'SENIOR_THERAPIST', 'THERAPIST', 'RECEPTIONIST'],
   },
   {
     label: 'Messages',
     href: '/messages',
     icon: MessageSquare,
     badge: 3,
-    allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER', 'RECEPTIONIST'],
+    permission: 'messages:view',
+    allowedRoles: ['OWNER', 'SENIOR_THERAPIST', 'RECEPTIONIST'],
   },
   {
     label: 'Payments',
     href: '/payments',
     icon: CreditCard,
-    allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER', 'RECEPTIONIST'],
+    permission: 'payments:view',
+    allowedRoles: ['OWNER', 'RECEPTIONIST'],
   },
 ];
 
@@ -111,43 +120,50 @@ const COLLAPSIBLE_GROUPS: MenuGroup[] = [
         label: 'Intake Forms',
         href: '/intake-forms',
         icon: ClipboardList,
-        allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER', 'RECEPTIONIST', 'THERAPIST'],
+        permission: 'intake_forms:view',
+        allowedRoles: ['OWNER', 'SENIOR_THERAPIST', 'THERAPIST', 'RECEPTIONIST'],
       },
       {
         label: 'Tasks',
         href: '/tasks',
         icon: CheckSquare,
-        allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER', 'RECEPTIONIST', 'THERAPIST'],
+        permission: 'tasks:view',
+        allowedRoles: ['OWNER', 'SENIOR_THERAPIST', 'THERAPIST', 'RECEPTIONIST'],
       },
       {
         label: 'Delivery Reports',
         href: '/communications/delivery-reports',
         icon: MailCheck,
-        allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER', 'RECEPTIONIST'],
+        permission: 'delivery_reports:view',
+        allowedRoles: ['OWNER', 'SENIOR_THERAPIST', 'RECEPTIONIST'],
       },
       {
         label: 'Therapists',
         href: '/therapists',
         icon: UserCog,
-        allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER'],
+        permission: 'therapists:view',
+        allowedRoles: ['OWNER'],
       },
       {
         label: 'Inventory',
         href: '/inventory',
         icon: Package,
-        allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER', 'RECEPTIONIST'],
+        permission: 'inventory:view',
+        allowedRoles: ['OWNER', 'SENIOR_THERAPIST', 'RECEPTIONIST'],
       },
       {
         label: 'Telehealth',
         href: '/telehealth',
         icon: Video,
-        allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER', 'THERAPIST'],
+        permission: 'telehealth:view',
+        allowedRoles: ['OWNER', 'SENIOR_THERAPIST', 'THERAPIST'],
       },
       {
         label: 'Insurance',
         href: '/insurance-claims',
         icon: ShieldCheck,
-        allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER', 'RECEPTIONIST'],
+        permission: 'insurance:view',
+        allowedRoles: ['OWNER', 'RECEPTIONIST'],
       },
     ],
   },
@@ -158,31 +174,36 @@ const COLLAPSIBLE_GROUPS: MenuGroup[] = [
         label: 'Promotions',
         href: '/promotions',
         icon: Megaphone,
-        allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER'],
+        permission: 'promotions:view',
+        allowedRoles: ['OWNER'],
       },
       {
         label: 'Gift Cards',
         href: '/gift-cards',
         icon: Gift,
-        allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER', 'RECEPTIONIST'],
+        permission: 'gift_cards:view',
+        allowedRoles: ['OWNER', 'RECEPTIONIST'],
       },
       {
         label: 'Loyalty',
         href: '/loyalty',
         icon: Star,
-        allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER'],
+        permission: 'loyalty:view',
+        allowedRoles: ['OWNER'],
       },
       {
         label: 'Analytics',
         href: '/analytics',
         icon: BarChart3,
-        allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER', 'RECEPTIONIST'],
+        permission: 'analytics:view',
+        allowedRoles: ['OWNER', 'SENIOR_THERAPIST'],
       },
       {
         label: 'Reports',
         href: '/reports',
         icon: FileText,
-        allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER', 'RECEPTIONIST'],
+        permission: 'reports:view',
+        allowedRoles: ['OWNER', 'SENIOR_THERAPIST'],
       },
     ],
   },
@@ -193,31 +214,36 @@ const COLLAPSIBLE_GROUPS: MenuGroup[] = [
         label: 'Automation',
         href: '/automation',
         icon: Zap,
-        allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER'],
+        permission: 'automation:view',
+        allowedRoles: ['OWNER'],
       },
       {
         label: 'Payroll',
         href: '/payroll',
         icon: DollarSign,
-        allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER'],
+        permission: 'payroll:view',
+        allowedRoles: ['OWNER'],
       },
       {
         label: 'Exports',
         href: '/exports',
         icon: Download,
-        allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER', 'RECEPTIONIST'],
+        permission: 'exports:view',
+        allowedRoles: ['OWNER', 'SENIOR_THERAPIST', 'RECEPTIONIST'],
       },
       {
         label: 'Settings',
         href: '/settings',
         icon: Settings,
-        allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER', 'RECEPTIONIST', 'THERAPIST'],
+        permission: 'settings:view',
+        allowedRoles: ['OWNER', 'SENIOR_THERAPIST', 'THERAPIST', 'RECEPTIONIST'],
       },
       {
         label: 'Developer',
         href: '/settings/api',
         icon: Code2,
-        allowedRoles: ['SUPER_ADMIN', 'BUSINESS_OWNER'],
+        permission: 'developer:view',
+        allowedRoles: ['OWNER'],
       },
     ],
   },
@@ -390,6 +416,7 @@ function CollapsibleGroup({
 
 function MenuContent({
   userRole,
+  permissions,
   userName,
   userEmail,
   userInitials,
@@ -397,6 +424,7 @@ function MenuContent({
   onClose,
 }: {
   userRole?: string | null;
+  permissions?: string[];
   userName?: string;
   userEmail?: string;
   userInitials?: string;
@@ -461,19 +489,27 @@ function MenuContent({
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
 
-  const filteredPinned = PINNED_ITEMS.filter((item) => {
+  const isSuperAdmin = userRole === 'SUPER_ADMIN';
+  const permSet = permissions ? new Set(permissions) : null;
+
+  const canShow = (item: MenuItem): boolean => {
+    if (isSuperAdmin) return true;
+    // Permission-based filtering (6.3.1): use resolved permissions when available
+    if (permSet) {
+      if (!item.permission) return true;
+      return permSet.has(item.permission);
+    }
+    // Fallback: role-based filtering (for loading / pre-permissions state)
     if (!item.allowedRoles) return true;
     if (!userRole) return false;
     return item.allowedRoles.includes(userRole);
-  });
+  };
+
+  const filteredPinned = PINNED_ITEMS.filter(canShow);
 
   const filteredGroups = COLLAPSIBLE_GROUPS.map((group) => ({
     ...group,
-    items: group.items.filter((item) => {
-      if (!item.allowedRoles) return true;
-      if (!userRole) return false;
-      return item.allowedRoles.includes(userRole);
-    }),
+    items: group.items.filter(canShow),
   })).filter((group) => group.items.length > 0);
 
   return (
@@ -576,6 +612,7 @@ function MenuContent({
 export function Sidebar({
   menuItems: _menuItems,
   userRole,
+  permissions,
   userName,
   userEmail,
   userInitials,
@@ -585,6 +622,7 @@ export function Sidebar({
 
   const sharedProps = {
     userRole,
+    permissions,
     userName,
     userEmail,
     userInitials,

@@ -18,11 +18,20 @@ const therapistInclude = {
 
 export async function GET(req: NextRequest) {
   try {
-    await requireAuth(req);
+    const user = await requireAuth(req);
     const { searchParams } = new URL(req.url);
     const businessId = searchParams.get('businessId');
+    const meOnly = searchParams.get('me') === 'true';
 
     if (!businessId) return res.badRequest('businessId is required');
+
+    if (meOnly) {
+      const therapist = await prisma.therapist.findFirst({
+        where: { businessId, userId: user.id },
+        include: therapistInclude,
+      });
+      return res.ok(therapist ?? null);
+    }
 
     const therapists = await prisma.therapist.findMany({
       where: { businessId },

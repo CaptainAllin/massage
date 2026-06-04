@@ -18,6 +18,7 @@ import {
   type CreatePromotionDto,
   type RecipientFilter,
 } from '@/lib/hooks/use-promotions';
+import { PermissionGuard } from '@/components/PermissionGuard';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -451,7 +452,7 @@ function PromotionCard({ promotion: p, businessId, onEdit, onSend }: PromotionCa
 
 type ModalMode = 'create' | 'edit' | 'send' | null;
 
-export default function PromotionsPage() {
+function PromotionsPageInner() {
   const businessId = useBusinessId();
   const [statusFilter, setStatusFilter] = useState('');
   const [modalMode, setModalMode] = useState<ModalMode>(null);
@@ -592,5 +593,13 @@ export default function PromotionsPage() {
         )}
       </Modal>
     </div>
+  );
+}
+
+export default function PromotionsPage() {
+  return (
+    <PermissionGuard permission="promotions:view">
+      <PromotionsPageInner />
+    </PermissionGuard>
   );
 }

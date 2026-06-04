@@ -2,6 +2,7 @@
 
 import { useState, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { signInWithPasskey } from '@/lib/supabase/passkeys';
 
@@ -15,6 +16,9 @@ function SignInForm() {
   const [error, setError] = useState('');
 
   const supabase = createClient();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const redirectTo = searchParams.get('redirectTo');
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,8 +30,13 @@ function SignInForm() {
     if (error) {
       setError(error.message);
       setLoading(false);
+      return;
     }
-    // Success — let AuthProvider's onStateChange trigger navigation
+
+    if (redirectTo) {
+      router.push(redirectTo);
+    }
+    // Otherwise let AuthProvider's onStateChange trigger navigation to /dashboard
   };
 
   const handlePasskeySignIn = async () => {

@@ -11,8 +11,9 @@ import { useTherapists } from '../../../lib/hooks/use-therapists';
 import { useBusinessId } from '../../../lib/hooks/use-business-id';
 import { useBusiness } from '../../../lib/hooks/use-business';
 import { useAuth } from '@massage/auth';
+import { PermissionGuard } from '../../../components/PermissionGuard';
 
-export default function ReportsPage() {
+function ReportsPageInner() {
   const [reportData, setReportData] = useState<any>(null);
   const [reportType, setReportType] = useState<ReportType | null>(null);
   const [reportSelectedFields, setReportSelectedFields] = useState<string[]>([]);
@@ -188,5 +189,13 @@ export default function ReportsPage() {
         </div>
       </Modal>
     </div>
+  );
+}
+
+export default function ReportsPage() {
+  return (
+    <PermissionGuard permission="reports:view">
+      <ReportsPageInner />
+    </PermissionGuard>
   );
 }

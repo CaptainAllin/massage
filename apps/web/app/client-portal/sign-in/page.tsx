@@ -1,16 +1,20 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Loader2 } from 'lucide-react';
 
-export default function ClientPortalSignIn() {
+function ClientPortalSignInContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const prefillEmail = searchParams.get('email') ?? '';
   const supabase = createClient();
   const [mode, setMode] = useState<'sign-in' | 'sign-up'>('sign-in');
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(prefillEmail);
   const [password, setPassword] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -51,10 +55,20 @@ export default function ClientPortalSignIn() {
     setLoading(true);
     setError('');
 
-    const { error } = await supabase.auth.signUp({ email, password });
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { first_name: firstName, last_name: lastName, role: 'CLIENT' } },
+    });
     if (error) {
       setError(error.message);
       setLoading(false);
+      return;
+    }
+
+    if (data.session) {
+      // Instant sign-up (no email confirmation required) — go straight in
+      router.push('/client-portal/appointments');
       return;
     }
 
@@ -99,6 +113,34 @@ export default function ClientPortalSignIn() {
           )}
 
           <form onSubmit={mode === 'sign-in' ? handleSignIn : handleSignUp} className="space-y-4">
+            {mode === 'sign-up' && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium mb-1.5" style={{ color: '#3D3450' }}>First name</label>
+                  <input
+                    type="text"
+                    required
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    placeholder="Jane"
+                    className="w-full px-3.5 py-2.5 rounded-xl text-sm outline-none"
+                    style={{ border: '1.5px solid #D9D3E8', background: '#FDFCFF', color: '#1E1830' }}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5" style={{ color: '#3D3450' }}>Last name</label>
+                  <input
+                    type="text"
+                    required
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    placeholder="Smith"
+                    className="w-full px-3.5 py-2.5 rounded-xl text-sm outline-none"
+                    style={{ border: '1.5px solid #D9D3E8', background: '#FDFCFF', color: '#1E1830' }}
+                  />
+                </div>
+              </div>
+            )}
             <div>
               <label className="block text-sm font-medium mb-1.5" style={{ color: '#3D3450' }}>Email address</label>
               <input
@@ -151,5 +193,13 @@ export default function ClientPortalSignIn() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function ClientPortalSignIn() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center" style={{ background: '#F3F4F7' }}><Loader2 className="h-6 w-6 animate-spin" style={{ color: '#5D4AA8' }} /></div>}>
+      <ClientPortalSignInContent />
+    </Suspense>
   );
 }

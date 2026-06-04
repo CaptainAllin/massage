@@ -1,4 +1,4 @@
-import { requireAuth, res, AuthError } from '@/lib/api-auth';
+import { requireAuth, getBusinessRole, res, AuthError } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
 import { NextRequest } from 'next/server';
 
@@ -37,8 +37,9 @@ export async function GET(
 
     if (!note) return res.notFound('Therapist note not found');
 
-    // RBAC: Therapists can only access their own notes
-    if (user.role === 'THERAPIST') {
+    // RBAC: Therapists (global or per-business role) can only access their own notes
+    const businessRole = await getBusinessRole(user.id, businessId);
+    if (user.role === 'THERAPIST' || businessRole === 'THERAPIST') {
       const therapistId = await getTherapistId(user.id);
       if (note.therapistId !== therapistId) return res.forbidden('You can only access your own notes');
     }
@@ -66,8 +67,9 @@ export async function PATCH(
     const existingNote = await prisma.therapistNote.findFirst({ where: { id, businessId } });
     if (!existingNote) return res.notFound('Therapist note not found');
 
-    // RBAC: Therapists can only update their own notes
-    if (user.role === 'THERAPIST') {
+    // RBAC: Therapists (global or per-business role) can only update their own notes
+    const businessRole = await getBusinessRole(user.id, businessId);
+    if (user.role === 'THERAPIST' || businessRole === 'THERAPIST') {
       const therapistId = await getTherapistId(user.id);
       if (existingNote.therapistId !== therapistId) return res.forbidden('You can only update your own notes');
     }
@@ -112,8 +114,9 @@ export async function DELETE(
     const existingNote = await prisma.therapistNote.findFirst({ where: { id, businessId } });
     if (!existingNote) return res.notFound('Therapist note not found');
 
-    // RBAC: Therapists can only delete their own notes
-    if (user.role === 'THERAPIST') {
+    // RBAC: Therapists (global or per-business role) can only delete their own notes
+    const businessRoleDel = await getBusinessRole(user.id, businessId);
+    if (user.role === 'THERAPIST' || businessRoleDel === 'THERAPIST') {
       const therapistId = await getTherapistId(user.id);
       if (existingNote.therapistId !== therapistId) return res.forbidden('You can only delete your own notes');
     }
