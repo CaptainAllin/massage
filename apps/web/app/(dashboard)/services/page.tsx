@@ -5,6 +5,8 @@ import { Button, Card, CardContent } from '@massage/ui';
 import { Scissors, Plus, Pencil, Trash2, ToggleLeft, ToggleRight, Clock, DollarSign } from 'lucide-react';
 import { useServices, useCreateService, useUpdateService, useDeleteService } from '@/lib/hooks/use-services';
 import { useBusinessId } from '@/lib/hooks/use-business-id';
+import { useIntakeFormTemplates } from '@/lib/hooks/use-intake-forms';
+import { useNoteTemplates } from '@/lib/hooks/use-note-templates';
 
 const DURATION_PRESETS = [
   { label: '30 min', value: 30 },
@@ -27,6 +29,8 @@ const DEFAULT_FORM = {
   price: '',
   color: '#5D4AA8',
   isActive: true,
+  defaultIntakeFormTemplateId: '',
+  defaultNoteTemplateId: '',
 };
 
 function ServiceModal({
@@ -41,7 +45,16 @@ function ServiceModal({
   const isEdit = !!service;
   const [form, setForm] = useState(
     isEdit
-      ? { name: service.name, description: service.description ?? '', duration: service.duration, price: String(service.price), color: service.color ?? '#5D4AA8', isActive: service.isActive }
+      ? {
+          name: service.name,
+          description: service.description ?? '',
+          duration: service.duration,
+          price: String(service.price),
+          color: service.color ?? '#5D4AA8',
+          isActive: service.isActive,
+          defaultIntakeFormTemplateId: service.defaultIntakeFormTemplateId ?? '',
+          defaultNoteTemplateId: service.defaultNoteTemplateId ?? '',
+        }
       : { ...DEFAULT_FORM }
   );
   const [customDuration, setCustomDuration] = useState(!DURATION_PRESETS.find((p) => p.value === form.duration));
@@ -49,9 +62,19 @@ function ServiceModal({
   const updateService = useUpdateService(businessId);
   const saving = createService.isPending || updateService.isPending;
 
+  const { data: intakeTemplatesData } = useIntakeFormTemplates(businessId);
+  const intakeTemplates = (intakeTemplatesData?.data ?? intakeTemplatesData ?? []) as any[];
+  const { data: noteTemplates = [] } = useNoteTemplates(businessId);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const payload = { ...form, duration: Number(form.duration), price: parseFloat(form.price as string) };
+    const payload = {
+      ...form,
+      duration: Number(form.duration),
+      price: parseFloat(form.price as string),
+      defaultIntakeFormTemplateId: form.defaultIntakeFormTemplateId || null,
+      defaultNoteTemplateId: form.defaultNoteTemplateId || null,
+    };
     if (isEdit) {
       await updateService.mutateAsync({ id: service.id, ...payload });
     } else {
@@ -62,8 +85,8 @@ function ServiceModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.4)' }}>
-      <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#EFE9F2]">
+      <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#EFE9F2] flex-shrink-0">
           <h2 className="text-lg font-semibold text-[#1E1830]">{isEdit ? 'Edit Service' : 'Add Service'}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -71,7 +94,7 @@ function ServiceModal({
             </svg>
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Name <span className="text-red-500">*</span></label>
             <input
@@ -163,6 +186,36 @@ function ServiceModal({
                 />
               ))}
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Default Intake Form</label>
+            <select
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#5D4AA8]/30"
+              value={form.defaultIntakeFormTemplateId}
+              onChange={(e) => setForm((f) => ({ ...f, defaultIntakeFormTemplateId: e.target.value }))}
+            >
+              <option value="">None</option>
+              {intakeTemplates.map((t: any) => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-gray-400">Auto-attached to new appointments for this service</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Default SOAP Note Template</label>
+            <select
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#5D4AA8]/30"
+              value={form.defaultNoteTemplateId}
+              onChange={(e) => setForm((f) => ({ ...f, defaultNoteTemplateId: e.target.value }))}
+            >
+              <option value="">None</option>
+              {(noteTemplates as any[]).map((t: any) => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-gray-400">Pre-selected when creating a treatment note for this service</p>
           </div>
 
           <label className="flex items-center gap-3 cursor-pointer">

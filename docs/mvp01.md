@@ -23,13 +23,13 @@
 | [2.2](#22-expand-bookingtab-in-settingspagetsx) | Expand BookingTab in settings/page.tsx | 2 | ✅ |
 | [2.3](#23-enforce-cancellation-window-in-api) | Enforce cancellation window in cancel API | 2 | ✅ |
 | [2.4](#24-enforce-deposit--min-notice-on-public-booking) | Enforce deposit + min-notice on public booking | 2 | ✅ |
-| [3.0](#phase-3-settings-navigation-fixes) | Settings Navigation Fixes | 3 | ⬜ |
-| [3.1](#31-add-availability-rules-to-settings-nav) | Add Availability Rules to settings nav | 3 | ⬜ |
-| [3.2](#32-add-reminders-link-to-settings-nav) | Add Reminders link to settings nav | 3 | ⬜ |
-| [3.3](#33-scheduling-availability-rules-link-in-settings-layout) | Scheduling → Availability Rules in settings layout | 3 | ⬜ |
-| [4.0](#phase-4-clinical-settings-expansion) | Clinical Settings Expansion | 4 | ⬜ |
-| [4.1](#41-intake-form-auto-assignment-per-service) | Intake form auto-assignment per service | 4 | ⬜ |
-| [4.2](#42-default-soap-note-template-per-service) | Default SOAP note template per service | 4 | ⬜ |
+| [3.0](#phase-3-settings-navigation-fixes) | Settings Navigation Fixes | 3 | ✅ |
+| [3.1](#31-add-availability-rules-to-settings-nav) | Add Availability Rules to settings nav | 3 | ✅ |
+| [3.2](#32-add-reminders-link-to-settings-nav) | Add Reminders link to settings nav | 3 | ✅ |
+| [3.3](#33-scheduling-availability-rules-link-in-settings-layout) | Scheduling → Availability Rules in settings layout | 3 | ✅ |
+| [4.0](#phase-4-clinical-settings-expansion) | Clinical Settings Expansion | 4 | ✅ |
+| [4.1](#41-intake-form-auto-assignment-per-service) | Intake form auto-assignment per service | 4 | ✅ |
+| [4.2](#42-default-soap-note-template-per-service) | Default SOAP note template per service | 4 | ✅ |
 
 ---
 
@@ -180,28 +180,28 @@
 
 ### 3.1 Add Availability Rules to settings nav
 
-- [ ] **3.1.1** In `apps/web/app/(dashboard)/settings/layout.tsx`, add to the `Scheduling` group:
+- [x] **3.1.1** In `apps/web/app/(dashboard)/settings/layout.tsx`, add to the `Scheduling` group:
   ```ts
   { id: 'scheduling', label: 'Availability rules', icon: SlidersHorizontal, desc: 'Fine-grained booking windows', href: '/settings/scheduling' }
   ```
-- [ ] **3.1.2** Verify the `/settings/scheduling` page renders correctly when navigated from the settings sidebar
+- [x] **3.1.2** Verify the `/settings/scheduling` page renders correctly when navigated from the settings sidebar
 
 ---
 
 ### 3.2 Add Reminders link to settings nav
 
-- [ ] **3.2.1** In `apps/web/app/(dashboard)/settings/layout.tsx`, add to the `Client experience` group (after Notifications):
+- [x] **3.2.1** In `apps/web/app/(dashboard)/settings/layout.tsx`, add to the `Client experience` group (after Notifications):
   ```ts
   { id: 'reminders', label: 'Reminder rules', icon: Bell, desc: '10 trigger templates', href: '/settings/reminders' }
   ```
-- [ ] **3.2.2** Add a "Configure reminder rules →" link in the `NotificationsTab` in `settings/page.tsx` pointing to `/settings/reminders` so users discover it from the channel toggles
+- [x] **3.2.2** Add a "Configure reminder rules →" link in the `NotificationsTab` in `settings/page.tsx` pointing to `/settings/reminders` so users discover it from the channel toggles
 
 ---
 
 ### 3.3 Scheduling — Availability Rules link in settings layout
 
-- [ ] **3.3.1** Verify the settings layout nav `SlidersHorizontal` icon is imported; add import if missing
-- [ ] **3.3.2** Smoke-test all settings nav links after changes to confirm none are broken
+- [x] **3.3.1** Verify the settings layout nav `SlidersHorizontal` icon is imported; add import if missing
+- [x] **3.3.2** Smoke-test all settings nav links after changes to confirm none are broken
 
 ---
 
@@ -213,18 +213,18 @@
 
 ### 4.1 Intake form auto-assignment per service
 
-- [ ] **4.1.1** Add `defaultIntakeFormTemplateId String?` to `Service` model (Phase 1 prereq)
-- [ ] **4.1.2** Add intake form selector to the Service form modal (Phase 1.4)
-- [ ] **4.1.3** In the appointment creation flow, auto-attach the service's default intake form to the new appointment if one is configured
-- [ ] **4.1.4** Add a "Default intake form" row to the ClinicalTab in `settings/page.tsx` for the business-wide fallback
+- [x] **4.1.1** Add `defaultIntakeFormTemplateId String?` to `Service` model (Phase 1 prereq)
+- [x] **4.1.2** Add intake form selector to the Service form modal (Phase 1.4)
+- [x] **4.1.3** In the appointment creation flow, auto-attach the service's default intake form to the new appointment if one is configured
+- [x] **4.1.4** Add a "Default intake form" row to the ClinicalTab in `settings/page.tsx` for the business-wide fallback
 
 ---
 
 ### 4.2 Default SOAP note template per service
 
-- [ ] **4.2.1** Add `defaultNoteTemplateId String?` to `Service` model
-- [ ] **4.2.2** In the treatment note creation flow, pre-select the template matching the appointment's service
-- [ ] **4.2.3** Add template selector to the Service form modal alongside the intake form selector
+- [x] **4.2.1** Add `defaultNoteTemplateId String?` to `Service` model
+- [x] **4.2.2** In the treatment note creation flow, pre-select the template matching the appointment's service
+- [x] **4.2.3** Add template selector to the Service form modal alongside the intake form selector
 
 ---
 

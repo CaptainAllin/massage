@@ -37,11 +37,13 @@ const NAV: NavGroup[] = [
     { id: 'branding',      label: 'Branding',        icon: Palette,      desc: 'Logo, colors & email' },
     { id: 'booking',       label: 'Online booking',  icon: CalendarCheck, desc: 'Who can book & how' },
     { id: 'notifications', label: 'Notifications',   icon: Bell,          desc: 'Reminders & channels' },
+    { id: 'reminders',     label: 'Reminder rules',  icon: Bell,          desc: '10 trigger templates', href: '/settings/reminders' },
     { id: 'clinical',      label: 'Clinical notes',  icon: FileText,      desc: 'Draft visibility' },
   ]},
   { group: 'Scheduling', items: [
-    { id: 'hours',  label: 'Business hours', icon: Clock,        desc: 'Opening hours & closures', href: '/settings/hours' },
-    { id: 'leave',  label: 'Leave management', icon: CalendarOff, desc: 'Staff leave & approvals',  href: '/settings/leave' },
+    { id: 'hours',      label: 'Business hours',    icon: Clock,             desc: 'Opening hours & closures', href: '/settings/hours' },
+    { id: 'leave',      label: 'Leave management',  icon: CalendarOff,       desc: 'Staff leave & approvals',  href: '/settings/leave' },
+    { id: 'scheduling', label: 'Availability rules', icon: SlidersHorizontal, desc: 'Fine-grained booking windows', href: '/settings/scheduling' },
   ]},
   { group: 'Connections', items: [
     { id: 'comms',        label: 'Communications', icon: MessageSquare, desc: 'Twilio, SendGrid, WhatsApp', href: '/settings/communications' },
@@ -132,6 +134,8 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
     if (pathname.startsWith('/settings/integrations')) return 'integrations';
     if (pathname.startsWith('/settings/hours')) return 'hours';
     if (pathname.startsWith('/settings/leave')) return 'leave';
+    if (pathname.startsWith('/settings/scheduling')) return 'scheduling';
+    if (pathname.startsWith('/settings/reminders')) return 'reminders';
     return searchParams.get('tab') || 'overview';
   }, [pathname, searchParams]);
 

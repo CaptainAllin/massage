@@ -21,6 +21,7 @@ import { apiClient } from '@/lib/api-client';
 import { usePushNotifications } from '@/lib/hooks/use-push-notifications';
 import { listPasskeys, enrollPasskey, revokePasskey, type PasskeyFactor } from '@/lib/supabase/passkeys';
 import { createClient } from '@/lib/supabase/client';
+import { useIntakeFormTemplates } from '@/lib/hooks/use-intake-forms';
 
 type Panel = 'overview' | 'account' | 'business' | 'team' | 'notifications' | 'branding' | 'booking' | 'clinical' | 'security' | 'portal' | 'api';
 
@@ -1364,6 +1365,23 @@ function NotificationsTab({ businessId }: { businessId: string }) {
         <SaveButton isSaving={updateSettings.isPending} saved={saved} />
       </div>
 
+      <div
+        className="flex items-center justify-between rounded-xl p-3.5"
+        style={{ background: '#F3EFFD', border: '1px solid rgba(93,74,168,0.15)' }}
+      >
+        <div>
+          <p className="text-sm font-semibold" style={{ color: '#1E1830' }}>Reminder rules</p>
+          <p className="text-xs" style={{ color: '#7A7090', marginTop: 2 }}>Configure per-trigger automation templates (10 triggers available).</p>
+        </div>
+        <Link
+          href="/settings/reminders"
+          className="text-xs font-medium underline"
+          style={{ color: '#5D4AA8', whiteSpace: 'nowrap' }}
+        >
+          Configure reminder rules →
+        </Link>
+      </div>
+
       <BrowserPushSection />
       <StaffNotificationPrefs />
     </form>
@@ -2440,17 +2458,49 @@ function ClinicalTab({ businessId }: { businessId: string }) {
   const [saved, setSaved] = useState(false);
   const [visibility, setVisibility] = useState<DraftNoteVisibility>('ALL_THERAPISTS');
 
+  const { data: intakeTemplatesData } = useIntakeFormTemplates(businessId);
+  const intakeTemplates = (intakeTemplatesData?.data ?? intakeTemplatesData ?? []) as any[];
+  const [defaultIntakeTemplateId, setDefaultIntakeTemplateId] = useState('');
+  const [intakeSaved, setIntakeSaved] = useState(false);
+
   useEffect(() => {
     if (business) {
       setVisibility(((business as any).draftNoteVisibility as DraftNoteVisibility) || 'ALL_THERAPISTS');
     }
   }, [business]);
 
+  useEffect(() => {
+    const defaultTemplate = intakeTemplates.find((t: any) => t.isDefault);
+    setDefaultIntakeTemplateId(defaultTemplate?.id ?? '');
+  }, [intakeTemplates]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     await updateBusiness.mutateAsync({ draftNoteVisibility: visibility } as any);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
+  };
+
+  const handleDefaultIntakeChange = async (templateId: string) => {
+    setDefaultIntakeTemplateId(templateId);
+    if (templateId) {
+      // Setting a new default — API handles clearing the old one
+      await apiClient.patch(`/intake-form-templates/${templateId}?businessId=${businessId}`, {
+        businessId,
+        isDefault: true,
+      });
+    } else {
+      // Clearing the default
+      const currentDefault = intakeTemplates.find((t: any) => t.isDefault);
+      if (currentDefault) {
+        await apiClient.patch(`/intake-form-templates/${currentDefault.id}?businessId=${businessId}`, {
+          businessId,
+          isDefault: false,
+        });
+      }
+    }
+    setIntakeSaved(true);
+    setTimeout(() => setIntakeSaved(false), 2000);
   };
 
   if (isLoading) return <div className="text-sm text-muted-foreground">Loading…</div>;
@@ -2512,6 +2562,36 @@ function ClinicalTab({ businessId }: { businessId: string }) {
 
       <div className="flex justify-end pt-2">
         <SaveButton isSaving={updateBusiness.isPending} saved={saved} />
+      </div>
+
+      <div className="border-t pt-6 mt-2" style={{ borderColor: '#EFE9F2' }}>
+        <SectionHeader
+          title="Default Intake Form"
+          description="Select the intake form automatically attached to new appointments when no service-specific form is configured."
+        />
+        <div className="flex items-center gap-3">
+          <select
+            className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#5D4AA8]/30"
+            value={defaultIntakeTemplateId}
+            onChange={(e) => handleDefaultIntakeChange(e.target.value)}
+          >
+            <option value="">None (no default form)</option>
+            {intakeTemplates.map((t: any) => (
+              <option key={t.id} value={t.id}>{t.name}</option>
+            ))}
+          </select>
+          {intakeSaved && (
+            <span className="text-sm font-medium flex items-center gap-1" style={{ color: '#2E7D32' }}>
+              <Check className="h-4 w-4" /> Saved
+            </span>
+          )}
+        </div>
+        {intakeTemplates.length === 0 && (
+          <p className="mt-2 text-sm text-gray-400">
+            No intake form templates found.{' '}
+            <Link href="/intake-forms/templates" className="text-[#5D4AA8] underline">Create one</Link> first.
+          </p>
+        )}
       </div>
     </form>
   );

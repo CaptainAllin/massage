@@ -125,6 +125,30 @@ export const POST = withAuth(async (req, user) => {
     },
   });
 
+  // Auto-attach intake form if the service has a default template configured
+  if (body.serviceId) {
+    const service = await prisma.service.findUnique({
+      where: { id: body.serviceId },
+      select: { defaultIntakeFormTemplateId: true },
+    });
+    if (service?.defaultIntakeFormTemplateId) {
+      const alreadyExists = await prisma.intakeForm.findFirst({
+        where: { businessId, clientId: primaryClientId, templateId: service.defaultIntakeFormTemplateId, isSubmitted: false },
+      });
+      if (!alreadyExists) {
+        await prisma.intakeForm.create({
+          data: {
+            businessId,
+            clientId: primaryClientId,
+            templateId: service.defaultIntakeFormTemplateId,
+            formData: {},
+            isSubmitted: false,
+          },
+        });
+      }
+    }
+  }
+
   emitWebhookEvent(businessId, 'appointment.created', { id: appointment.id, clientId: primaryClientId, therapistId, startTime: start, status: 'SCHEDULED' }).catch(() => {});
 
   const automationPayload = {

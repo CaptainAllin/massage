@@ -1,10 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Select } from '@massage/ui';
 import { useCreateTreatmentNote } from '@/lib/hooks';
 import { useAppointments } from '@/lib/hooks/use-appointments';
+import { useServices } from '@/lib/hooks/use-services';
+import { useNoteTemplates } from '@/lib/hooks/use-note-templates';
 import { SOAPNoteEditor, SOAPNoteData } from '@/components/treatment-notes/SOAPNoteEditor';
 import { TemplatePickerModal } from '@/components/treatment-notes/TemplatePickerModal';
 import { useBusinessId } from '@/lib/hooks/use-business-id';
@@ -30,9 +32,23 @@ export default function NewTreatmentNotePage() {
     endDate: new Date(today.getTime() + 24 * 60 * 60 * 1000),
     limit: 100,
   });
+  const { data: services = [] } = useServices(businessId);
+  const { data: noteTemplates = [] } = useNoteTemplates(businessId);
 
   const appointments = (appointmentsData?.data ?? []) as any[];
   const selectedAppointment = appointments.find((a) => a.id === selectedAppointmentId);
+
+  // Auto-select template when appointment changes if service has a default note template
+  useEffect(() => {
+    if (!selectedAppointmentId || !selectedAppointment?.serviceId) return;
+    const service = (services as any[]).find((s: any) => s.id === selectedAppointment.serviceId);
+    if (!service?.defaultNoteTemplateId) return;
+    const template = (noteTemplates as any[]).find((t: any) => t.id === service.defaultNoteTemplateId);
+    if (template && !selectedTemplate) {
+      setSelectedTemplate(template as NoteTemplate);
+      setShowTemplatePicker(false);
+    }
+  }, [selectedAppointmentId, selectedAppointment, services, noteTemplates]);
 
   const appointmentOptions = [
     { value: '', label: 'Select an appointment' },
