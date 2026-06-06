@@ -7,6 +7,12 @@ import { sendBookingConfirmation } from '@/lib/email';
 import { sendBookingConfirmationSms } from '@/lib/sms';
 import { emitAutomation } from '@/lib/automation';
 
+const HEX_COLOR_RE = /^#[0-9A-Fa-f]{6}$/;
+function sanitizeColor(color: string | null | undefined): string | null {
+  if (!color) return null;
+  return HEX_COLOR_RE.test(color) ? color : null;
+}
+
 // GET — return business info + active therapists with availability days
 export async function GET(
   _req: NextRequest,
@@ -25,6 +31,25 @@ export async function GET(
     });
 
     if (!business) return res.notFound('Business not found');
+
+    // Seed default primary color on first load if not set or still holds the old placeholder
+    const OLD_PRIMARY = '#A8C3A0';
+    const OLD_SECONDARY = '#E7D8C9';
+    if (!business.primaryColor || business.primaryColor === OLD_PRIMARY) {
+      prisma.business.update({
+        where: { id: businessId },
+        data: {
+          primaryColor: '#5D4AA8',
+          ...(business.secondaryColor === OLD_SECONDARY ? { secondaryColor: '#EDE5F4' } : {}),
+        },
+      }).catch(() => {});
+      business.primaryColor = '#5D4AA8';
+      if (business.secondaryColor === OLD_SECONDARY) business.secondaryColor = '#EDE5F4';
+    }
+
+    // Validate color fields — reject non-hex values so clients always get null or a valid hex string
+    business.primaryColor = sanitizeColor(business.primaryColor);
+    business.secondaryColor = sanitizeColor(business.secondaryColor);
 
     const [therapists, locations] = await Promise.all([
       prisma.therapist.findMany({

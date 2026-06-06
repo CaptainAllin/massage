@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Calendar, FileText, Receipt, LogOut, Loader2, FolderOpen, Package, Settings, Star } from 'lucide-react';
+import { deriveBrandTokens, brandTokensToCssVars } from '@/lib/brandTokens';
 
 const NAV_ITEMS = [
   { href: '/client-portal/appointments', label: 'Appointments', icon: Calendar },
@@ -52,23 +53,26 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
     router.push('/client-portal/sign-in');
   };
 
+  const tokens = deriveBrandTokens(client?.business.primaryColor ?? null, null);
+  const brandVars = brandTokensToCssVars(tokens);
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: '#F3F4F7' }}>
-        <Loader2 className="h-6 w-6 animate-spin" style={{ color: '#5D4AA8' }} />
+      <div className="min-h-screen flex items-center justify-center" style={{ ...brandVars, background: 'var(--brand-secondary)' }}>
+        <Loader2 className="h-6 w-6 animate-spin" style={{ color: 'var(--brand-primary)' }} />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: '#F3F4F7' }}>
+    <div className="min-h-screen flex flex-col" style={{ ...brandVars, background: 'var(--brand-secondary)' }}>
       {/* Top nav */}
       <header className="sticky top-0 z-10" style={{ background: '#fff', borderBottom: '1px solid #EFE9F2' }}>
         <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div
               className="w-8 h-8 rounded-xl flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg, #5D4AA8, #3F2F87)' }}
+              style={{ background: 'linear-gradient(135deg, var(--brand-primary), var(--brand-primary-dark))' }}
             >
               <svg width="14" height="14" viewBox="0 0 18 18" fill="none">
                 <path d="M9 2C9 2 5 5.5 5 9.5C5 11.985 6.791 14 9 14C11.209 14 13 11.985 13 9.5C13 5.5 9 2 9 2Z" fill="white" opacity="0.9" />
@@ -84,7 +88,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
 
           <div className="flex items-center gap-3">
             {client?.loyalty && (
-              <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold" style={{ background: '#EDE5F4', color: '#5D4AA8' }}>
+              <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold" style={{ background: 'var(--brand-primary-light)', color: 'var(--brand-primary)' }}>
                 <span>⭐</span>
                 <span>{client.loyalty.points.toLocaleString()} pts</span>
               </div>
@@ -114,8 +118,8 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
                   href={href}
                   className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors"
                   style={{
-                    borderBottomColor: active ? '#5D4AA8' : 'transparent',
-                    color: active ? '#5D4AA8' : '#7A7090',
+                    borderBottomColor: active ? 'var(--brand-primary)' : 'transparent',
+                    color: active ? 'var(--brand-primary)' : '#7A7090',
                   }}
                 >
                   <Icon className="h-4 w-4" />

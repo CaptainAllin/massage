@@ -83,7 +83,7 @@ const PINNED_ITEMS: MenuItem[] = [
     allowedRoles: ['OWNER', 'SENIOR_THERAPIST', 'THERAPIST', 'RECEPTIONIST'],
   },
   {
-    label: 'Appointments',
+    label: 'Calendar',
     href: '/appointments',
     icon: Calendar,
     badge: 6,

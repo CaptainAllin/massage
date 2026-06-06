@@ -77,8 +77,11 @@ export function deriveBrandTokens(
 
   const rgb = hexToRgb(primary)!;
   const lum = relativeLuminance(...rgb);
-  // WCAG contrast threshold: use dark text on light backgrounds
-  const onPrimary = lum > 0.179 ? '#1C1430' : '#FFFFFF';
+  // Pick whichever foreground (white vs dark) gives higher contrast ratio
+  const darkTextLum = relativeLuminance(28, 20, 48); // #1C1430
+  const contrastWithWhite = 1.05 / (lum + 0.05);
+  const contrastWithDark = (lum + 0.05) / (darkTextLum + 0.05);
+  const onPrimary = contrastWithWhite >= contrastWithDark ? '#FFFFFF' : '#1C1430';
 
   return { primary, secondary, primaryLight, primaryDark, onPrimary };
 }

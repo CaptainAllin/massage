@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { CheckCircle, AlertCircle, Calendar, Clock, ChevronLeft, Loader2, Users, User, RefreshCw, Lock, Mail, Phone } from 'lucide-react';
+import { deriveBrandTokens, brandTokensToCssVars } from '@/lib/brandTokens';
 
 const RECURRING_DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -479,21 +480,22 @@ export default function PublicBookingPage() {
     }
   };
 
-  const accent = business?.primaryColor || '#A8C3A0';
+  const tokens = deriveBrandTokens(business?.primaryColor ?? null, business?.secondaryColor ?? null);
+  const cssVars = brandTokensToCssVars(tokens);
 
   // ── Loading / Error ──────────────────────────────────────────────────────
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--brand-secondary)', ...cssVars }}>
+        <Loader2 className="h-8 w-8 animate-spin" style={{ color: 'var(--brand-primary)' }} />
       </div>
     );
   }
 
   if (error && !business) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: 'var(--brand-secondary)', ...cssVars }}>
         <div className="text-center">
           <AlertCircle className="h-12 w-12 text-red-400 mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-gray-800 mb-2">Page Unavailable</h2>
@@ -507,13 +509,13 @@ export default function PublicBookingPage() {
 
   if (booked && confirmedBooking) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: 'var(--brand-secondary)', ...cssVars }}>
         <div className="max-w-md w-full text-center bg-white rounded-2xl shadow-sm border border-gray-100 p-10">
           <div
             className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
-            style={{ backgroundColor: `${accent}25` }}
+            style={{ backgroundColor: `${tokens.primary}25` }}
           >
-            <CheckCircle className="h-8 w-8" style={{ color: accent }} />
+            <CheckCircle className="h-8 w-8" style={{ color: tokens.primary }} />
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
             {isRecurring ? 'Recurring Series Booked!' : 'Booking Confirmed!'}
@@ -524,7 +526,7 @@ export default function PublicBookingPage() {
               : `Your appointment has been booked at ${business?.name}.`}
             {email && ' A confirmation email is on its way.'}
           </p>
-          <div className="bg-gray-50 rounded-xl p-5 text-left text-sm space-y-2 mb-6">
+          <div className="rounded-xl p-5 text-left text-sm space-y-2 mb-6" style={{ background: 'var(--brand-secondary)' }}>
             <p><span className="text-gray-400">Service</span><span className="float-right font-medium text-gray-800">{selectedService}</span></p>
             <p><span className="text-gray-400">Duration</span><span className="float-right font-medium text-gray-800">{selectedDuration} min</span></p>
             {isRecurring ? (
@@ -541,15 +543,15 @@ export default function PublicBookingPage() {
 
           {/* Guest → account CTA */}
           {email && (
-            <div className="mt-6 rounded-2xl p-5 text-left" style={{ background: `${accent}12`, border: `1px solid ${accent}30` }}>
+            <div className="mt-6 rounded-2xl p-5 text-left" style={{ background: `${tokens.primary}12`, border: `1px solid ${tokens.primary}30` }}>
               <p className="text-sm font-semibold text-gray-800 mb-1">Save your booking — create an account</p>
               <p className="text-xs text-gray-500 mb-4">
                 Earn <strong>150 points</strong> on this booking, reschedule online, view your history, and more.
               </p>
               <a
                 href={`/client-portal/sign-in?email=${encodeURIComponent(email)}`}
-                className="inline-block w-full text-center py-2.5 rounded-xl text-sm font-semibold text-white"
-                style={{ background: `linear-gradient(135deg, ${accent}, ${accent}cc)` }}
+                className="inline-block w-full text-center py-2.5 rounded-xl text-sm font-semibold"
+                style={{ background: `linear-gradient(135deg, ${tokens.primary}, ${tokens.primary}cc)`, color: 'var(--brand-on-primary)' }}
               >
                 Create your free account
               </a>
@@ -590,14 +592,14 @@ export default function PublicBookingPage() {
   if (!accessGranted && business) {
     const isInviteOnly = business.bookingMode === 'INVITE_ONLY';
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: 'var(--brand-secondary)', ...cssVars }}>
         <div className="max-w-md w-full bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
           {/* Header */}
           {business.logo && (
             <img src={business.logo} alt={business.name} className="h-10 mx-auto mb-4 object-contain" />
           )}
           <div className="flex items-center justify-center gap-2 mb-2">
-            <Lock className="h-5 w-5" style={{ color: accent }} />
+            <Lock className="h-5 w-5" style={{ color: tokens.primary }} />
             <h2 className="text-xl font-semibold text-gray-800">
               {isInviteOnly ? 'Invitation Required' : 'Existing Clients Only'}
             </h2>
@@ -625,7 +627,7 @@ export default function PublicBookingPage() {
                     value={gateEmail}
                     onChange={(e) => setGateEmail(e.target.value)}
                     className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:border-transparent"
-                    style={{ '--tw-ring-color': accent } as any}
+                    style={{ '--tw-ring-color': tokens.primary } as any}
                   />
                 </div>
                 <div className="text-center text-xs text-gray-400">or</div>
@@ -637,7 +639,7 @@ export default function PublicBookingPage() {
                     value={gatePhone}
                     onChange={(e) => setGatePhone(e.target.value)}
                     className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:border-transparent"
-                    style={{ '--tw-ring-color': accent } as any}
+                    style={{ '--tw-ring-color': tokens.primary } as any}
                   />
                 </div>
                 {accessError && (
@@ -648,8 +650,8 @@ export default function PublicBookingPage() {
                 <button
                   onClick={handleVerifyClient}
                   disabled={accessLoading || (!gateEmail && !gatePhone)}
-                  className="w-full py-2.5 rounded-lg text-white text-sm font-medium transition-opacity disabled:opacity-50"
-                  style={{ backgroundColor: accent }}
+                  className="w-full py-2.5 rounded-lg text-sm font-medium transition-all disabled:opacity-50 btn-brand-primary"
+                  style={{ backgroundColor: tokens.primary, color: 'var(--brand-on-primary)' }}
                 >
                   {accessLoading ? <Loader2 className="h-4 w-4 animate-spin mx-auto" /> : 'Continue'}
                 </button>
@@ -681,29 +683,29 @@ export default function PublicBookingPage() {
   const visibleSlots = slots.filter((s) => new Date(s.startTime).getTime() - Date.now() >= minNoticeMs);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen" style={{ background: 'var(--brand-secondary)', ...cssVars }}>
       {/* Header */}
-      <header className="bg-white border-b border-gray-100 px-4 py-4">
+      <header className="bg-white border-b px-4 py-4" style={{ borderBottomColor: `${tokens.primary}30` }}>
         <div className="max-w-lg mx-auto flex items-center gap-3">
           {business?.logo && (
             <img src={business.logo} alt={business.name} className="h-8 w-auto rounded-md object-contain" />
           )}
           <div>
             <p className="text-xs text-gray-400 uppercase tracking-wide">Book an appointment</p>
-            <h1 className="text-lg font-bold text-gray-900">{business?.name}</h1>
+            <h1 className="text-lg font-bold" style={{ color: 'var(--brand-primary)' }}>{business?.name}</h1>
           </div>
         </div>
       </header>
 
       {/* Progress bar */}
-      <div className="bg-white border-b border-gray-100">
+      <div className="bg-white border-b" style={{ borderBottomColor: `${tokens.primary}30` }}>
         <div className="max-w-lg mx-auto px-4 py-2">
           <div className="flex items-center gap-1">
             {Array.from({ length: totalSteps }).map((_, i) => (
               <div
                 key={i}
                 className="flex-1 h-1 rounded-full transition-all"
-                style={{ backgroundColor: i < step ? accent : '#e5e7eb' }}
+                style={{ backgroundColor: i < step ? 'var(--brand-primary)' : 'var(--brand-secondary)' }}
               />
             ))}
           </div>
@@ -719,8 +721,8 @@ export default function PublicBookingPage() {
             onClick={() => { setBookingMode('individual'); setSelectedGroupSession(null); setGroupStep('select'); }}
             className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition-all"
             style={{
-              backgroundColor: bookingMode === 'individual' ? accent : 'transparent',
-              color: bookingMode === 'individual' ? 'white' : '#6b7280',
+              backgroundColor: bookingMode === 'individual' ? tokens.primary : 'transparent',
+              color: bookingMode === 'individual' ? 'var(--brand-on-primary)' : '#6b7280',
             }}
           >
             <User size={15} />
@@ -730,8 +732,8 @@ export default function PublicBookingPage() {
             onClick={() => { setBookingMode('group'); setStep(1); }}
             className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition-all"
             style={{
-              backgroundColor: bookingMode === 'group' ? accent : 'transparent',
-              color: bookingMode === 'group' ? 'white' : '#6b7280',
+              backgroundColor: bookingMode === 'group' ? tokens.primary : 'transparent',
+              color: bookingMode === 'group' ? 'var(--brand-on-primary)' : '#6b7280',
             }}
           >
             <Users size={15} />
@@ -767,7 +769,7 @@ export default function PublicBookingPage() {
                           disabled={isFull}
                           onClick={() => setSelectedGroupSession(session)}
                           className="w-full text-left bg-white border-2 rounded-xl p-4 transition-all hover:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                          style={{ borderColor: isSelected ? accent : '#e5e7eb' }}
+                          style={{ borderColor: isSelected ? tokens.primary : '#e5e7eb' }}
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div>
@@ -797,7 +799,7 @@ export default function PublicBookingPage() {
                               ) : (
                                 <span
                                   className="text-xs font-semibold px-2 py-1 rounded-lg"
-                                  style={{ background: `${accent}20`, color: accent }}
+                                  style={{ background: `${tokens.primary}20`, color: tokens.primary }}
                                 >
                                   {session.spotsRemaining != null
                                     ? `${session.spotsRemaining} spot${session.spotsRemaining === 1 ? '' : 's'} left`
@@ -815,8 +817,8 @@ export default function PublicBookingPage() {
                 <button
                   disabled={!selectedGroupSession}
                   onClick={() => setGroupStep('contact')}
-                  className="mt-6 w-full py-3 rounded-xl text-white font-semibold text-sm transition-opacity disabled:opacity-40"
-                  style={{ backgroundColor: accent }}
+                  className="mt-6 w-full py-3 rounded-xl text-white font-semibold text-sm transition-all disabled:opacity-40 btn-brand-primary"
+                  style={{ backgroundColor: tokens.primary, color: 'var(--brand-on-primary)' }}
                 >
                   Continue
                 </button>
@@ -868,8 +870,8 @@ export default function PublicBookingPage() {
                 <button
                   disabled={!firstName.trim() || !lastName.trim() || submitting}
                   onClick={handleGroupBook}
-                  className="w-full py-3.5 rounded-xl text-white font-semibold text-sm transition-opacity disabled:opacity-40 flex items-center justify-center gap-2"
-                  style={{ backgroundColor: accent }}
+                  className="w-full py-3.5 rounded-xl font-semibold text-sm transition-all disabled:opacity-40 flex items-center justify-center gap-2 btn-brand-primary"
+                  style={{ backgroundColor: tokens.primary, color: 'var(--brand-on-primary)' }}
                 >
                   {submitting ? <><Loader2 className="h-4 w-4 animate-spin" /> Confirming...</> : 'Confirm Spot'}
                 </button>
@@ -900,9 +902,9 @@ export default function PublicBookingPage() {
                     onClick={() => setSelectedLocationId(null)}
                     className="px-3 py-1.5 rounded-full text-xs font-medium border transition-colors"
                     style={{
-                      background: !selectedLocationId ? accent : '#fff',
-                      color: !selectedLocationId ? '#fff' : '#6B7280',
-                      borderColor: !selectedLocationId ? accent : '#e5e7eb',
+                      background: !selectedLocationId ? tokens.primary : '#fff',
+                      color: !selectedLocationId ? 'var(--brand-on-primary)' : '#6B7280',
+                      borderColor: !selectedLocationId ? tokens.primary : '#e5e7eb',
                     }}
                   >
                     All locations
@@ -913,9 +915,9 @@ export default function PublicBookingPage() {
                       onClick={() => setSelectedLocationId(loc.id)}
                       className="px-3 py-1.5 rounded-full text-xs font-medium border transition-colors"
                       style={{
-                        background: selectedLocationId === loc.id ? accent : '#fff',
-                        color: selectedLocationId === loc.id ? '#fff' : '#6B7280',
-                        borderColor: selectedLocationId === loc.id ? accent : '#e5e7eb',
+                        background: selectedLocationId === loc.id ? tokens.primary : '#fff',
+                        color: selectedLocationId === loc.id ? 'var(--brand-on-primary)' : '#6B7280',
+                        borderColor: selectedLocationId === loc.id ? tokens.primary : '#e5e7eb',
                       }}
                     >
                       {loc.name}
@@ -942,12 +944,12 @@ export default function PublicBookingPage() {
                       key={t.id}
                       onClick={() => { setSelectedTherapist(t); setSelectedDate(null); setSelectedSlot(null); }}
                       className="w-full text-left bg-white border-2 rounded-xl p-4 transition-all hover:shadow-sm"
-                      style={{ borderColor: selected ? accent : '#e5e7eb' }}
+                      style={{ borderColor: selected ? tokens.primary : '#e5e7eb' }}
                     >
                       <div className="flex items-start gap-3">
                         <div
                           className="w-11 h-11 rounded-full flex items-center justify-center text-white font-semibold text-sm shrink-0 overflow-hidden"
-                          style={{ backgroundColor: accent }}
+                          style={{ backgroundColor: tokens.primary, color: 'var(--brand-on-primary)' }}
                         >
                           {t.user.profileImageUrl ? (
                             <img src={t.user.profileImageUrl} alt={name} className="w-full h-full object-cover" />
@@ -974,9 +976,9 @@ export default function PublicBookingPage() {
                         {selected && (
                           <div
                             className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5"
-                            style={{ backgroundColor: accent }}
+                            style={{ backgroundColor: tokens.primary, color: 'var(--brand-on-primary)' }}
                           >
-                            <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20" style={{ color: 'var(--brand-on-primary)' }}>
                               <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                             </svg>
                           </div>
@@ -992,8 +994,8 @@ export default function PublicBookingPage() {
             <button
               disabled={!selectedTherapist}
               onClick={() => setStep(2)}
-              className="mt-6 w-full py-3 rounded-xl text-white font-semibold text-sm transition-opacity disabled:opacity-40"
-              style={{ backgroundColor: accent }}
+              className="mt-6 w-full py-3 rounded-xl text-white font-semibold text-sm transition-all disabled:opacity-40 btn-brand-primary"
+              style={{ backgroundColor: tokens.primary, color: 'var(--brand-on-primary)' }}
             >
               Continue
             </button>
@@ -1028,8 +1030,8 @@ export default function PublicBookingPage() {
                         }}
                         className="w-full text-left px-4 py-3 rounded-lg border text-sm transition-all flex items-center justify-between"
                         style={{
-                          borderColor: selectedServiceId === s.id ? accent : '#e5e7eb',
-                          backgroundColor: selectedServiceId === s.id ? `${accent}15` : 'white',
+                          borderColor: selectedServiceId === s.id ? tokens.primary : '#e5e7eb',
+                          backgroundColor: selectedServiceId === s.id ? `${tokens.primary}15` : 'white',
                           color: selectedServiceId === s.id ? '#1a1a1a' : '#4b5563',
                         }}
                       >
@@ -1062,8 +1064,8 @@ export default function PublicBookingPage() {
                         onClick={() => setSelectedDuration(d.value)}
                         className="text-center py-2.5 rounded-lg border text-sm font-medium transition-all"
                         style={{
-                          borderColor: selectedDuration === d.value ? accent : '#e5e7eb',
-                          backgroundColor: selectedDuration === d.value ? `${accent}15` : 'white',
+                          borderColor: selectedDuration === d.value ? tokens.primary : '#e5e7eb',
+                          backgroundColor: selectedDuration === d.value ? `${tokens.primary}15` : 'white',
                           color: selectedDuration === d.value ? '#1a1a1a' : '#4b5563',
                         }}
                       >
@@ -1078,8 +1080,8 @@ export default function PublicBookingPage() {
             <button
               onClick={() => setStep(3)}
               disabled={services.length > 0 && !selectedServiceId}
-              className="w-full py-3 rounded-xl text-white font-semibold text-sm disabled:opacity-50"
-              style={{ backgroundColor: accent }}
+              className="w-full py-3 rounded-xl font-semibold text-sm disabled:opacity-50 btn-brand-primary"
+              style={{ backgroundColor: tokens.primary, color: 'var(--brand-on-primary)' }}
             >
               Continue
             </button>
@@ -1121,8 +1123,8 @@ export default function PublicBookingPage() {
                       onClick={() => { setSelectedDate(day); setSelectedSlot(null); setError(null); }}
                       className="flex flex-col items-center p-1.5 rounded-lg text-xs transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                       style={{
-                        backgroundColor: isSelected ? accent : isWorking ? '#f9fafb' : 'transparent',
-                        color: isSelected ? 'white' : '#374151',
+                        backgroundColor: isSelected ? tokens.primary : isWorking ? '#f9fafb' : 'transparent',
+                        color: isSelected ? 'var(--brand-on-primary)' : '#374151',
                       }}
                     >
                       <span className="font-medium">{DAY_NAMES[day.getDay()]}</span>
@@ -1152,9 +1154,9 @@ export default function PublicBookingPage() {
                     {nextAvailableResult ? (
                       <div
                         className="mx-auto max-w-xs rounded-xl p-3 text-sm text-left"
-                        style={{ background: `${accent}10`, border: `1px solid ${accent}30` }}
+                        style={{ background: `${tokens.primary}10`, border: `1px solid ${tokens.primary}30` }}
                       >
-                        <p className="font-semibold mb-1" style={{ color: accent }}>Next available</p>
+                        <p className="font-semibold mb-1" style={{ color: tokens.primary }}>Next available</p>
                         <p className="text-gray-600 text-xs mb-2">
                           {new Date(nextAvailableResult.date).toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long' })} at {formatTime(nextAvailableResult.startTime)}
                         </p>
@@ -1166,7 +1168,7 @@ export default function PublicBookingPage() {
                             setNextAvailableResult(null);
                           }}
                           className="w-full py-1.5 rounded-lg text-xs font-semibold text-white"
-                          style={{ backgroundColor: accent }}
+                          style={{ backgroundColor: tokens.primary, color: 'var(--brand-on-primary)' }}
                         >
                           Jump to this date
                         </button>
@@ -1177,7 +1179,7 @@ export default function PublicBookingPage() {
                           onClick={findNextAvailable}
                           disabled={nextAvailableLoading}
                           className="px-4 py-2 rounded-xl text-sm font-semibold border flex items-center gap-2"
-                          style={{ borderColor: accent, color: accent }}
+                          style={{ borderColor: tokens.primary, color: tokens.primary }}
                         >
                           {nextAvailableLoading ? (
                             <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Finding next slot…</>
@@ -1188,7 +1190,7 @@ export default function PublicBookingPage() {
                         <button
                           onClick={() => setWaitlistStep('form')}
                           className="px-4 py-2 rounded-xl text-sm font-semibold text-white"
-                          style={{ backgroundColor: accent }}
+                          style={{ backgroundColor: tokens.primary, color: 'var(--brand-on-primary)' }}
                         >
                           Join Waitlist
                         </button>
@@ -1206,8 +1208,8 @@ export default function PublicBookingPage() {
                           onClick={() => { setSelectedSlot(slot); setError(null); }}
                           className="py-2 rounded-lg text-sm font-medium border transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                           style={{
-                            borderColor: isSelected ? accent : slot.available ? '#e5e7eb' : '#f3f4f6',
-                            backgroundColor: isSelected ? `${accent}15` : 'white',
+                            borderColor: isSelected ? tokens.primary : slot.available ? '#e5e7eb' : '#f3f4f6',
+                            backgroundColor: isSelected ? `${tokens.primary}15` : 'white',
                             color: isSelected ? '#1a1a1a' : '#374151',
                           }}
                         >
@@ -1225,7 +1227,7 @@ export default function PublicBookingPage() {
               <div className="bg-white rounded-xl border border-gray-100 p-4 mb-4 space-y-4">
                 <label className="flex items-center justify-between gap-3 cursor-pointer">
                   <div className="flex items-center gap-2">
-                    <RefreshCw className="h-4 w-4" style={{ color: isRecurring ? accent : '#9ca3af' }} />
+                    <RefreshCw className="h-4 w-4" style={{ color: isRecurring ? tokens.primary : '#9ca3af' }} />
                     <div>
                       <p className="text-sm font-semibold text-gray-800">Book as recurring series</p>
                       <p className="text-xs text-gray-400">Repeat this appointment regularly</p>
@@ -1240,7 +1242,7 @@ export default function PublicBookingPage() {
                       }
                     }}
                     className="relative w-10 h-5 rounded-full transition-colors flex-shrink-0"
-                    style={{ backgroundColor: isRecurring ? accent : '#e5e7eb' }}
+                    style={{ backgroundColor: isRecurring ? tokens.primary : '#e5e7eb' }}
                   >
                     <div
                       className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${isRecurring ? 'translate-x-5' : 'translate-x-0.5'}`}
@@ -1261,8 +1263,8 @@ export default function PublicBookingPage() {
                             onClick={() => setRecurringFrequency(f)}
                             className="py-2 rounded-lg text-xs font-medium border transition-all"
                             style={{
-                              borderColor: recurringFrequency === f ? accent : '#e5e7eb',
-                              backgroundColor: recurringFrequency === f ? `${accent}15` : 'white',
+                              borderColor: recurringFrequency === f ? tokens.primary : '#e5e7eb',
+                              backgroundColor: recurringFrequency === f ? `${tokens.primary}15` : 'white',
                               color: recurringFrequency === f ? '#1a1a1a' : '#6b7280',
                             }}
                           >
@@ -1286,8 +1288,8 @@ export default function PublicBookingPage() {
                               )}
                               className="w-9 h-9 rounded-full text-xs font-medium transition-colors"
                               style={{
-                                backgroundColor: recurringDays.includes(dow) ? accent : '#f3f4f6',
-                                color: recurringDays.includes(dow) ? 'white' : '#374151',
+                                backgroundColor: recurringDays.includes(dow) ? tokens.primary : '#f3f4f6',
+                                color: recurringDays.includes(dow) ? tokens.onPrimary : '#374151',
                               }}
                             >
                               {label}
@@ -1348,7 +1350,7 @@ export default function PublicBookingPage() {
                         <div className="space-y-1 max-h-32 overflow-y-auto">
                           {recurringPreviewDates.slice(0, 8).map((iso, i) => (
                             <div key={i} className="flex items-center gap-2 text-xs text-gray-600">
-                              <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: accent }} />
+                              <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: tokens.primary, color: 'var(--brand-on-primary)' }} />
                               {new Date(iso).toLocaleDateString('en-AU', {
                                 weekday: 'short', day: 'numeric', month: 'short',
                               })}{' '}
@@ -1366,8 +1368,8 @@ export default function PublicBookingPage() {
             <button
               disabled={!selectedDate || !selectedSlot}
               onClick={() => setStep(4)}
-              className="w-full py-3 rounded-xl text-white font-semibold text-sm transition-opacity disabled:opacity-40"
-              style={{ backgroundColor: accent }}
+              className="w-full py-3 rounded-xl text-white font-semibold text-sm transition-all disabled:opacity-40 btn-brand-primary"
+              style={{ backgroundColor: tokens.primary, color: 'var(--brand-on-primary)' }}
             >
               Continue
             </button>
@@ -1443,8 +1445,8 @@ export default function PublicBookingPage() {
             <button
               disabled={!firstName.trim() || !lastName.trim()}
               onClick={() => setStep(5)}
-              className="w-full py-3 rounded-xl text-white font-semibold text-sm transition-opacity disabled:opacity-40"
-              style={{ backgroundColor: accent }}
+              className="w-full py-3 rounded-xl text-white font-semibold text-sm transition-all disabled:opacity-40 btn-brand-primary"
+              style={{ backgroundColor: tokens.primary, color: 'var(--brand-on-primary)' }}
             >
               Review Booking
             </button>
@@ -1464,7 +1466,7 @@ export default function PublicBookingPage() {
               <div className="flex items-center gap-3 pb-3 border-b border-gray-50">
                 <div
                   className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-semibold shrink-0"
-                  style={{ backgroundColor: accent }}
+                  style={{ backgroundColor: tokens.primary, color: 'var(--brand-on-primary)' }}
                 >
                   {therapistName?.charAt(0)}
                 </div>
@@ -1528,9 +1530,9 @@ export default function PublicBookingPage() {
             {business?.depositRequired && business.depositAmount != null && (
               <div
                 className="rounded-xl border p-4 mb-4 text-sm"
-                style={{ borderColor: `${accent}40`, backgroundColor: `${accent}08` }}
+                style={{ borderColor: `${tokens.primary}40`, backgroundColor: `${tokens.primary}08` }}
               >
-                <p className="font-semibold mb-1" style={{ color: accent }}>Deposit required</p>
+                <p className="font-semibold mb-1" style={{ color: tokens.primary }}>Deposit required</p>
                 <p className="text-gray-600">
                   A deposit of{' '}
                   <strong>
@@ -1553,8 +1555,8 @@ export default function PublicBookingPage() {
             <button
               disabled={submitting}
               onClick={handleBook}
-              className="w-full py-3.5 rounded-xl text-white font-semibold text-sm transition-opacity disabled:opacity-60 flex items-center justify-center gap-2"
-              style={{ backgroundColor: accent }}
+              className="w-full py-3.5 rounded-xl font-semibold text-sm transition-all disabled:opacity-60 flex items-center justify-center gap-2 btn-brand-primary"
+              style={{ backgroundColor: tokens.primary, color: 'var(--brand-on-primary)' }}
             >
               {submitting ? (
                 <>
@@ -1639,8 +1641,8 @@ export default function PublicBookingPage() {
                 <button
                   onClick={handleJoinWaitlist}
                   disabled={waitlistSubmitting || !firstName || !lastName || (!email && !phone)}
-                  className="flex-1 px-4 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-50 flex items-center justify-center gap-2"
-                  style={{ backgroundColor: accent }}
+                  className="flex-1 px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2 btn-brand-primary"
+                  style={{ backgroundColor: tokens.primary, color: 'var(--brand-on-primary)' }}
                 >
                   {waitlistSubmitting ? <><Loader2 className="h-4 w-4 animate-spin" /> Joining…</> : 'Join Waitlist'}
                 </button>
@@ -1655,9 +1657,9 @@ export default function PublicBookingPage() {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-8 text-center">
             <div
               className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
-              style={{ backgroundColor: `${accent}25` }}
+              style={{ backgroundColor: `${tokens.primary}25` }}
             >
-              <CheckCircle className="h-7 w-7" style={{ color: accent }} />
+              <CheckCircle className="h-7 w-7" style={{ color: tokens.primary }} />
             </div>
             <h3 className="text-lg font-bold text-gray-900 mb-2">You're on the waitlist!</h3>
             <p className="text-sm text-gray-500 mb-6">
@@ -1665,8 +1667,8 @@ export default function PublicBookingPage() {
             </p>
             <button
               onClick={() => setWaitlistStep('idle')}
-              className="w-full py-2.5 rounded-xl text-sm font-semibold text-white"
-              style={{ backgroundColor: accent }}
+              className="w-full py-2.5 rounded-xl text-sm font-semibold btn-brand-primary"
+              style={{ backgroundColor: tokens.primary, color: 'var(--brand-on-primary)' }}
             >
               Done
             </button>

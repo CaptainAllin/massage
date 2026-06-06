@@ -1,14 +1,17 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
+import { deriveBrandTokens, brandTokensToCssVars } from '@/lib/brandTokens';
+import type { BrandTokens } from '@/lib/brandTokens';
 
 function ClientPortalSignInContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const prefillEmail = searchParams.get('email') ?? '';
+  const businessId = searchParams.get('businessId');
   const supabase = createClient();
   const [mode, setMode] = useState<'sign-in' | 'sign-up'>('sign-in');
   const [email, setEmail] = useState(prefillEmail);
@@ -19,6 +22,21 @@ function ClientPortalSignInContent() {
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [tokens, setTokens] = useState<BrandTokens>(deriveBrandTokens(null, null));
+
+  useEffect(() => {
+    if (!businessId) return;
+    fetch(`/api/public/booking/${businessId}`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => {
+        if (d?.data?.business?.primaryColor) {
+          setTokens(deriveBrandTokens(d.data.business.primaryColor, d.data.business.secondaryColor ?? null));
+        }
+      })
+      .catch(() => {});
+  }, [businessId]);
+
+  const brandVars = brandTokensToCssVars(tokens);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,13 +96,13 @@ function ClientPortalSignInContent() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center py-12 px-4" style={{ background: '#F3F4F7' }}>
+    <div className="min-h-screen flex items-center justify-center py-12 px-4" style={{ ...brandVars, background: 'var(--brand-secondary)' }}>
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
           <div
             className="w-12 h-12 rounded-2xl flex items-center justify-center mb-3"
-            style={{ background: 'linear-gradient(135deg, #5D4AA8, #3F2F87)' }}
+            style={{ background: 'linear-gradient(135deg, var(--brand-primary), var(--brand-primary-dark))' }}
           >
             <svg width="22" height="22" viewBox="0 0 18 18" fill="none">
               <path d="M9 2C9 2 5 5.5 5 9.5C5 11.985 6.791 14 9 14C11.209 14 13 11.985 13 9.5C13 5.5 9 2 9 2Z" fill="white" opacity="0.9" />
@@ -182,8 +200,8 @@ function ClientPortalSignInContent() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 rounded-xl font-semibold text-sm text-white flex items-center justify-center gap-2 transition-opacity"
-              style={{ background: 'linear-gradient(135deg, #5D4AA8, #3F2F87)' }}
+              className="w-full py-2.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-opacity"
+              style={{ background: 'linear-gradient(135deg, var(--brand-primary), var(--brand-primary-dark))', color: 'var(--brand-on-primary)' }}
             >
               {loading && <Loader2 className="h-4 w-4 animate-spin" />}
               {mode === 'sign-in' ? 'Sign in' : 'Create account'}
@@ -194,7 +212,7 @@ function ClientPortalSignInContent() {
             <button
               onClick={() => { setMode(mode === 'sign-in' ? 'sign-up' : 'sign-in'); setError(''); setSuccessMsg(''); }}
               className="text-sm"
-              style={{ color: '#5D4AA8' }}
+              style={{ color: 'var(--brand-primary)' }}
             >
               {mode === 'sign-in' ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
             </button>
@@ -211,7 +229,7 @@ function ClientPortalSignInContent() {
 
 export default function ClientPortalSignIn() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center" style={{ background: '#F3F4F7' }}><Loader2 className="h-6 w-6 animate-spin" style={{ color: '#5D4AA8' }} /></div>}>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--brand-secondary)' }}><Loader2 className="h-6 w-6 animate-spin" style={{ color: 'var(--brand-primary)' }} /></div>}>
       <ClientPortalSignInContent />
     </Suspense>
   );

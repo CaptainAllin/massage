@@ -93,8 +93,8 @@ model Business {
   currency                   String?                      @default("AUD")
   website                    String?
   logo                       String?
-  primaryColor               String?                      @default("#A8C3A0")
-  secondaryColor             String?                      @default("#E7D8C9")
+  primaryColor               String?                      @default("#5D4AA8")
+  secondaryColor             String?                      @default("#EDE5F4")
   subscriptionTier           String?                      @default("FREE")
   subscriptionStatus         String?                      @default("ACTIVE")
   smsCreditsIncluded         Int                          @default(50)

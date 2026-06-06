@@ -1545,14 +1545,14 @@ function BrandingTab({ businessId }: { businessId: string }) {
   const [saved, setSaved] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
-  const [primaryColor, setPrimaryColor] = useState('#A8C3A0');
-  const [secondaryColor, setSecondaryColor] = useState('#E7D8C9');
+  const [primaryColor, setPrimaryColor] = useState('#5D4AA8');
+  const [secondaryColor, setSecondaryColor] = useState('#EDE5F4');
   const [emailSignature, setEmailSignature] = useState('');
 
   useEffect(() => {
     if (business) {
-      setPrimaryColor(business.primaryColor || '#A8C3A0');
-      setSecondaryColor(business.secondaryColor || '#E7D8C9');
+      setPrimaryColor(business.primaryColor || '#5D4AA8');
+      setSecondaryColor(business.secondaryColor || '#EDE5F4');
       if (business.logo) {
         setLogoUrl(getPublicUrl(BUCKETS.BRANDING, business.logo));
       }
@@ -1651,7 +1651,7 @@ function BrandingTab({ businessId }: { businessId: string }) {
             <Input
               value={primaryColor}
               onChange={(e) => setPrimaryColor(e.target.value)}
-              placeholder="#A8C3A0"
+              placeholder="#5D4AA8"
               className="flex-1"
             />
           </div>
