@@ -68,6 +68,14 @@
 
     --m-grad: linear-gradient(135deg, #5D4AA8 0%, #3F2F87 100%);
     --m-grad-hero: linear-gradient(150deg, #6A56B8 0%, #4A3895 55%, #2E2168 100%);
+
+    /* Brand tokens — overridden at runtime by client-facing page wrappers
+       (booking page and client portal) via brandTokensToCssVars() */
+    --brand-primary: #5D4AA8;
+    --brand-secondary: #EDE5F4;
+    --brand-primary-light: #C4B8E8;
+    --brand-primary-dark: #45387E;
+    --brand-on-primary: #FFFFFF;
   }
 }
 

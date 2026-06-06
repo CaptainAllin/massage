@@ -306,10 +306,14 @@ function FAB({ onPress }: FABProps) {
 
 const MORE_GROUPS: Array<{
   label: string;
+  color: string;
+  bg: string;
   items: Array<{ label: string; icon: string; route: string; view?: MobileView }>;
 }> = [
   {
     label: 'Operations',
+    color: '#5D4AA8',
+    bg: 'rgba(93,74,168,0.10)',
     items: [
       { label: 'Intake Forms', icon: '📋', route: '/intake-forms' },
       { label: 'Therapists',   icon: '👥', route: '/therapists' },
@@ -320,6 +324,8 @@ const MORE_GROUPS: Array<{
   },
   {
     label: 'Growth',
+    color: '#DE9277',
+    bg: 'rgba(222,146,119,0.12)',
     items: [
       { label: 'Promotions', icon: '🎁', route: '/promotions' },
       { label: 'Gift Cards',  icon: '💳', route: '/gift-cards' },
@@ -330,6 +336,8 @@ const MORE_GROUPS: Array<{
   },
   {
     label: 'Tools',
+    color: '#3A87D4',
+    bg: 'rgba(58,135,212,0.10)',
     items: [
       { label: 'Automation', icon: '⚡', route: '/automation' },
       { label: 'Payroll',    icon: '💰', route: '/payments',   view: 'payments' },
@@ -492,7 +500,7 @@ function MoreSheet({ open, onClose, onNavigate, userName, userEmail }: MoreSheet
           </svg>
           <input
             type="search"
-            placeholder="Search…"
+            placeholder="Jump to anything…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             style={{
@@ -505,12 +513,25 @@ function MoreSheet({ open, onClose, onNavigate, userName, userEmail }: MoreSheet
               fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)',
             }}
           />
-          {search && (
+          {search ? (
             <button onClick={() => setSearch('')} aria-label="Clear search" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 44, minHeight: 44 }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                 <path d="M18 6 6 18M6 6l12 12" stroke="var(--m-muted)" strokeWidth="2" strokeLinecap="round" />
               </svg>
             </button>
+          ) : (
+            <div
+              style={{
+                display: 'flex', alignItems: 'center',
+                padding: '2px 7px', borderRadius: 6,
+                border: '1px solid var(--m-line)', background: 'var(--m-surface)',
+                fontSize: 11, fontWeight: 600, color: 'var(--m-faint)',
+                fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)',
+                letterSpacing: 0.2, flexShrink: 0,
+              }}
+            >
+              ⌘K
+            </div>
           )}
         </div>
 
@@ -519,24 +540,18 @@ function MoreSheet({ open, onClose, onNavigate, userName, userEmail }: MoreSheet
           <div key={group.label} style={{ marginBottom: 24 }}>
             <div
               style={{
-                fontSize: 11,
-                fontWeight: 700,
+                display: 'flex', alignItems: 'center', gap: 7,
+                fontSize: 11, fontWeight: 700,
                 color: 'var(--m-muted)',
-                textTransform: 'uppercase',
-                letterSpacing: 1.2,
+                textTransform: 'uppercase', letterSpacing: 1.2,
                 marginBottom: 10,
                 fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)',
               }}
             >
+              <div style={{ width: 6, height: 6, borderRadius: '50%', background: group.color, flexShrink: 0 }} />
               {group.label}
             </div>
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: 8,
-              }}
-            >
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               {group.items.map((item) => (
                 <button
                   key={item.label}
@@ -550,36 +565,28 @@ function MoreSheet({ open, onClose, onNavigate, userName, userEmail }: MoreSheet
                     onClose();
                   }}
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    padding: '10px 12px',
-                    background: 'var(--m-bg)',
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '12px 14px',
+                    background: 'var(--m-surface)',
                     border: '1px solid var(--m-line2)',
-                    borderRadius: 14,
-                    cursor: 'pointer',
-                    textAlign: 'left',
+                    borderRadius: 16,
+                    boxShadow: '0 1px 2px rgba(28,20,54,0.07)',
+                    cursor: 'pointer', textAlign: 'left',
                   }}
                 >
                   <div
                     style={{
-                      width: 34,
-                      height: 34,
-                      borderRadius: 10,
-                      background: 'var(--m-soft)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: 16,
-                      flexShrink: 0,
+                      width: 34, height: 34, borderRadius: 10,
+                      background: group.bg,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 16, flexShrink: 0,
                     }}
                   >
                     {item.icon}
                   </div>
                   <span
                     style={{
-                      fontSize: 13.5,
-                      fontWeight: 500,
+                      fontSize: 13.5, fontWeight: 600,
                       color: 'var(--m-ink)',
                       fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)',
                       lineHeight: 1.3,

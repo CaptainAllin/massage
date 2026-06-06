@@ -6,7 +6,7 @@ import { Avatar } from '../primitives';
 import type { MobileRouter } from '../MobileShell';
 import type { MobileConversation, MobileMessage, MessageChannel } from './MobileMessages';
 import { useBusinessId } from '@/lib/hooks/use-business-id';
-import { useConversationMessages, useSendMessage } from '@/lib/hooks/use-messages';
+import { useConversationMessages, useSendMessage, useMarkConversationRead } from '@/lib/hooks/use-messages';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -239,6 +239,16 @@ export function MobileThread({ router }: MobileThreadProps) {
     1,
     50
   );
+
+  const markRead = useMarkConversationRead(businessId);
+
+  // Mark conversation as read when thread is opened
+  useEffect(() => {
+    if (convo?.id && businessId) {
+      markRead.mutate(convo.id);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [convo?.id, businessId]);
 
   // 7.3.3 — send message mutation
   const sendMessage = useSendMessage(businessId);

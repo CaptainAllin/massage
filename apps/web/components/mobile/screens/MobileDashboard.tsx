@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { LargeHeader } from '../LargeHeader';
 import { Card, Avatar, StatusChip, SectionHead } from '../primitives';
 import { AreaChart, Donut, Bars } from '../charts';
 import { useAuth } from '@massage/auth';
@@ -78,42 +77,71 @@ function StudioPill({ businessId }: { businessId: string | undefined }) {
   }
 
   return (
-    <div style={{ padding: '4px 20px 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 5,
+        padding: '4px 12px',
+        borderRadius: 999,
+        background: 'var(--m-soft)',
+        color: isOpen ? 'var(--m-primary)' : 'var(--m-muted)',
+        fontSize: 12.5,
+        fontWeight: 600,
+        fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)',
+      }}
+    >
       <span
         style={{
-          fontSize: 12.5,
-          fontWeight: 600,
-          color: 'var(--m-ink2)',
-          fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)',
+          width: 6,
+          height: 6,
+          borderRadius: '50%',
+          background: isOpen ? 'var(--m-ok)' : 'var(--m-faint)',
+          flexShrink: 0,
         }}
-      >
-        Studio
-      </span>
-      <span
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 5,
-          padding: '4px 10px',
-          borderRadius: 100,
-          background: isOpen ? 'var(--m-ok-soft)' : 'var(--m-warn-soft)',
-          color: isOpen ? 'var(--m-ok)' : 'var(--m-warn)',
-          fontSize: 12,
-          fontWeight: 600,
-          fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)',
-        }}
-      >
-        <span
-          style={{
-            width: 6,
-            height: 6,
-            borderRadius: '50%',
-            background: isOpen ? 'var(--m-ok)' : 'var(--m-warn)',
-            flexShrink: 0,
-          }}
+      />
+      {isOpen ? `Open · ${hoursLabel}` : 'Closed'}
+    </span>
+  );
+}
+
+// ─── Progress Ring ────────────────────────────────────────────────────────────
+
+function ProgressRing({
+  done,
+  total,
+  size = 46,
+  children,
+}: {
+  done: number;
+  total: number;
+  size?: number;
+  children?: React.ReactNode;
+}) {
+  const r = (size - 5) / 2;
+  const c = 2 * Math.PI * r;
+  const pct = total ? done / total : 0;
+  return (
+    <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
+      <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--m-line2)" strokeWidth={4.5} />
+        <circle
+          cx={size / 2} cy={size / 2} r={r} fill="none"
+          stroke="var(--m-primary)" strokeWidth={4.5} strokeLinecap="round"
+          strokeDasharray={c} strokeDashoffset={c * (1 - pct)}
+          style={{ transition: 'stroke-dashoffset 0.4s ease' }}
         />
-        {isOpen ? `Open · ${hoursLabel}` : 'Closed'}
-      </span>
+      </svg>
+      <div
+        style={{
+          position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 11.5, fontWeight: 700, color: 'var(--m-ink)',
+          fontVariantNumeric: 'tabular-nums', letterSpacing: -0.3,
+          fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)',
+        }}
+      >
+        {children ?? `${done}/${total}`}
+      </div>
     </div>
   );
 }
@@ -122,135 +150,130 @@ function StudioPill({ businessId }: { businessId: string | undefined }) {
 
 function SetupCard() {
   const { checklistDismissed, dismissChecklist, checkedItems, toggleItem, allDone } = useOnboarding();
+  const [expanded, setExpanded] = useState(false);
 
   if (checklistDismissed || allDone) return null;
 
   const done = checkedItems.size;
   const total = CHECKLIST_ITEMS.length;
+  const nextTask = CHECKLIST_ITEMS.find((t) => !checkedItems.has(t.id));
 
   return (
     <div style={{ padding: '0 16px 16px' }}>
       <div
         style={{
-          background: 'linear-gradient(135deg, var(--m-soft2) 0%, var(--m-surface) 100%)',
+          background: 'linear-gradient(160deg, var(--m-soft2), var(--m-surface))',
           border: '1px solid var(--m-soft)',
           borderRadius: 22,
-          padding: 16,
-          position: 'relative',
+          overflow: 'hidden',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <span
-            style={{
-              fontSize: 15,
-              fontWeight: 700,
-              color: 'var(--m-ink)',
-              fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)',
-            }}
-          >
-            Finish setup · {done}/{total}
-          </span>
-          <button
-            className="im-tab"
-            onClick={dismissChecklist}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: 0,
-              color: 'var(--m-muted)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              minWidth: 44,
-              minHeight: 44,
-            }}
-            aria-label="Dismiss setup card"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-              <path d="M18 6 6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            </svg>
-          </button>
-        </div>
-
-        <div style={{ display: 'flex', gap: 3, marginBottom: 14 }}>
-          {CHECKLIST_ITEMS.map((_, i) => (
+        {/* Collapsed header row — tap to expand */}
+        <button
+          className="im-tab im-press"
+          onClick={() => setExpanded((e) => !e)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 13, padding: 14,
+            background: 'none', border: 'none', cursor: 'pointer', width: '100%', textAlign: 'left',
+          }}
+        >
+          <ProgressRing done={done} total={total} />
+          <div style={{ flex: 1, minWidth: 0 }}>
             <div
-              key={i}
               style={{
-                flex: 1,
-                height: 4,
-                borderRadius: 100,
-                background: i < done ? 'var(--m-grad)' : 'var(--m-line2)',
-                transition: 'background 0.3s',
+                fontSize: 15, fontWeight: 600, color: 'var(--m-ink)', letterSpacing: -0.2,
+                fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)',
               }}
-            />
-          ))}
-        </div>
+            >
+              Finish setup
+            </div>
+            <div
+              style={{
+                fontSize: 12.5, color: 'var(--m-muted)', marginTop: 2,
+                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)',
+              }}
+            >
+              {nextTask
+                ? <>Next: <span style={{ color: 'var(--m-ink2)', fontWeight: 500 }}>{nextTask.label}</span></>
+                : 'All set — your practice is ready 🎉'}
+            </div>
+          </div>
+          <svg
+            width="18" height="18" viewBox="0 0 24 24" fill="none"
+            style={{
+              flexShrink: 0, color: 'var(--m-faint)',
+              transform: expanded ? 'rotate(90deg)' : 'none',
+              transition: 'transform 0.2s ease',
+            }}
+          >
+            <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {CHECKLIST_ITEMS.map((task) => {
-            const isDone = checkedItems.has(task.id);
-            return (
-              <button
-                key={task.id}
-                className="im-tab im-press"
-                onClick={() => toggleItem(task.id)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  padding: '9px 4px',
-                  background: 'none',
-                  border: 'none',
-                  borderBottom: '1px solid var(--m-line2)',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  width: '100%',
-                }}
-              >
-                <div
+        {/* Expanded task list */}
+        {expanded && (
+          <div style={{ borderTop: '1px solid var(--m-line2)', padding: '4px 12px 8px' }}>
+            {CHECKLIST_ITEMS.map((task, i) => {
+              const isDone = checkedItems.has(task.id);
+              return (
+                <button
+                  key={task.id}
+                  className="im-tab im-press"
+                  onClick={() => toggleItem(task.id)}
                   style={{
-                    width: 20,
-                    height: 20,
-                    borderRadius: '50%',
-                    border: isDone ? 'none' : '2px solid var(--m-line)',
-                    background: isDone ? 'var(--m-grad)' : 'transparent',
-                    flexShrink: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    transition: 'all 0.2s',
+                    display: 'flex', alignItems: 'center', gap: 11,
+                    padding: '11px 4px', background: 'none', border: 'none',
+                    borderBottom: i < total - 1 ? '1px solid var(--m-line3)' : 'none',
+                    cursor: 'pointer', width: '100%', textAlign: 'left',
                   }}
                 >
-                  {isDone && (
-                    <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
-                      <path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  <div
+                    style={{
+                      width: 19, height: 19, borderRadius: 10, flexShrink: 0,
+                      border: isDone ? 'none' : '2px solid var(--m-line)',
+                      background: isDone ? 'var(--m-grad)' : 'transparent',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    {isDone && (
+                      <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+                        <path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    )}
+                  </div>
+                  <span
+                    style={{
+                      flex: 1, fontSize: 13.5, fontWeight: 500,
+                      color: isDone ? 'var(--m-muted)' : 'var(--m-ink2)',
+                      textDecoration: isDone ? 'line-through' : 'none',
+                      fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)',
+                    }}
+                  >
+                    {task.label}
+                  </span>
+                  {!isDone && (
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                      <path d="M9 18l6-6-6-6" stroke="var(--m-faint)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   )}
-                </div>
-                <span
-                  style={{
-                    flex: 1,
-                    fontSize: 13.5,
-                    fontWeight: 500,
-                    color: isDone ? 'var(--m-muted)' : 'var(--m-ink)',
-                    textDecoration: isDone ? 'line-through' : 'none',
-                    fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)',
-                    transition: 'color 0.2s',
-                  }}
-                >
-                  {task.label}
-                </span>
-                {!isDone && (
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                    <path d="M9 18l6-6-6-6" stroke="var(--m-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                )}
-              </button>
-            );
-          })}
-        </div>
+                </button>
+              );
+            })}
+            <button
+              onClick={(e) => { e.stopPropagation(); dismissChecklist(); }}
+              style={{
+                width: '100%', marginTop: 6, padding: '9px 0',
+                border: 'none', background: 'none', color: 'var(--m-muted)',
+                fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)',
+                fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
+              }}
+            >
+              Hide setup
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -263,12 +286,11 @@ interface StatTileProps {
   value: string;
   delta: number;
   icon: React.ReactNode;
-  iconBg?: string;
   deltaTooltip?: string;
   onClick?: () => void;
 }
 
-function StatTile({ label, value, delta, icon, iconBg, deltaTooltip, onClick }: StatTileProps) {
+function StatTile({ label, value, delta, icon, deltaTooltip, onClick }: StatTileProps) {
   const [tooltipVisible, setTooltipVisible] = useState(false);
   const up = delta >= 0;
   return (
@@ -283,54 +305,53 @@ function StatTile({ label, value, delta, icon, iconBg, deltaTooltip, onClick }: 
         padding: '13px 13px',
         display: 'flex',
         flexDirection: 'column',
-        gap: 7,
         cursor: 'pointer',
         textAlign: 'left',
         position: 'relative',
         minHeight: 44,
       }}
     >
-      {/* Row 1: icon + label */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-        <div
-          style={{
-            width: 26,
-            height: 26,
-            borderRadius: 8,
-            background: iconBg ?? 'var(--m-soft)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-          }}
-        >
-          {icon}
-        </div>
-        <span
-          style={{
-            fontSize: 10.5,
-            fontWeight: 600,
-            textTransform: 'uppercase',
-            letterSpacing: 0.6,
-            color: 'var(--m-muted)',
-            fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)',
-            lineHeight: 1.2,
-          }}
-        >
-          {label}
-        </span>
+      {/* Icon: unboxed, top-right */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 12,
+          right: 12,
+          opacity: 0.45,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        {icon}
       </div>
 
-      {/* Row 2: value + delta */}
+      {/* Label */}
+      <span
+        style={{
+          fontSize: 12,
+          fontWeight: 600,
+          color: 'var(--m-muted)',
+          fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)',
+          lineHeight: 1.25,
+          paddingRight: 28,
+          marginBottom: 6,
+        }}
+      >
+        {label}
+      </span>
+
+      {/* Value + delta */}
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
         <span
           style={{
-            fontSize: 26,
-            fontWeight: 700,
+            fontSize: 30,
+            fontWeight: 800,
             color: 'var(--m-ink)',
             lineHeight: 1,
             fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)',
-            letterSpacing: -0.8,
+            letterSpacing: -1.2,
+            fontVariantNumeric: 'tabular-nums',
           }}
         >
           {value}
@@ -343,7 +364,7 @@ function StatTile({ label, value, delta, icon, iconBg, deltaTooltip, onClick }: 
               display: 'inline-flex',
               alignItems: 'center',
               gap: 2,
-              fontSize: 11,
+              fontSize: 11.5,
               fontWeight: 700,
               color: up ? 'var(--m-ok)' : 'var(--m-accent-dk)',
               fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)',
@@ -378,84 +399,112 @@ function StatTile({ label, value, delta, icon, iconBg, deltaTooltip, onClick }: 
   );
 }
 
-// ─── SMS Credits Bar ──────────────────────────────────────────────────────────
+// ─── SMS Credits Card ─────────────────────────────────────────────────────────
 
-function SmsCreditsCard({ used, total }: { used: number; total: number }) {
-  const pct = total > 0 ? Math.round((used / total) * 100) : 0;
+function SmsCreditsCard({
+  used,
+  total,
+  onPress,
+}: {
+  used: number;
+  total: number;
+  onPress?: () => void;
+}) {
+  const now = new Date();
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const daysLeft = daysInMonth - now.getDate();
 
   return (
     <div style={{ padding: '0 16px 16px' }}>
-      <Card padding="16px">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <button
+        className="im-tab im-press"
+        onClick={onPress}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 13,
+          width: '100%',
+          padding: 14,
+          background: 'var(--m-surface)',
+          border: '1px solid var(--m-line2)',
+          borderRadius: 22,
+          boxShadow: '0 1px 4px rgba(28,20,54,0.06)',
+          cursor: 'pointer',
+          textAlign: 'left',
+        }}
+      >
+        {/* LEFT — progress ring with SMS icon */}
+        <ProgressRing done={used} total={total}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path
+              d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+              stroke="var(--m-primary)"
+              strokeWidth="1.8"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </ProgressRing>
+
+        {/* MIDDLE — title + subtext */}
+        <div style={{ flex: 1, minWidth: 0 }}>
           <div
             style={{
-              width: 36,
-              height: 36,
-              borderRadius: 11,
-              background: 'var(--m-info-soft)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
+              fontSize: 15,
+              fontWeight: 600,
+              color: 'var(--m-ink)',
+              letterSpacing: -0.2,
+              fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)',
+              lineHeight: 1.2,
             }}
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
-                stroke="var(--m-info)" strokeWidth="1.8" strokeLinejoin="round" />
-            </svg>
+            SMS credits
           </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: 6,
-              }}
-            >
-              <span
-                style={{
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: 'var(--m-ink)',
-                  fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)',
-                }}
-              >
-                SMS credits · this period
-              </span>
-              <span
-                style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: 'var(--m-ink2)',
-                  fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)',
-                  fontVariantNumeric: 'tabular-nums',
-                }}
-              >
-                {used} / {total}
-              </span>
-            </div>
-            <div
-              style={{
-                height: 6,
-                borderRadius: 100,
-                background: 'var(--m-line2)',
-                overflow: 'hidden',
-              }}
-            >
-              <div
-                style={{
-                  height: '100%',
-                  width: `${pct}%`,
-                  borderRadius: 100,
-                  background: 'var(--m-grad)',
-                  transition: 'width 0.4s ease',
-                }}
-              />
-            </div>
+          <div
+            style={{
+              fontSize: 12.5,
+              color: 'var(--m-muted)',
+              marginTop: 2,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)',
+            }}
+          >
+            Resets in {daysLeft} day{daysLeft !== 1 ? 's' : ''} · this period
           </div>
         </div>
-      </Card>
+
+        {/* RIGHT — usage count */}
+        <div
+          style={{
+            textAlign: 'right',
+            flexShrink: 0,
+            fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)',
+          }}
+        >
+          <div
+            style={{
+              fontSize: 17,
+              fontWeight: 700,
+              fontVariantNumeric: 'tabular-nums',
+              letterSpacing: -0.4,
+              lineHeight: 1.1,
+            }}
+          >
+            <span style={{ color: 'var(--m-ink)' }}>{used}</span>
+            <span style={{ color: 'var(--m-faint)' }}> / {total}</span>
+          </div>
+          <div
+            style={{
+              fontSize: 11.5,
+              color: 'var(--m-muted)',
+              marginTop: 2,
+            }}
+          >
+            used
+          </div>
+        </div>
+      </button>
     </div>
   );
 }
@@ -1080,8 +1129,6 @@ export function MobileDashboard({ router }: DashboardProps) {
 
   const firstName = user?.user_metadata?.first_name ?? '';
   const greet = greeting();
-  const titleText = `${greet}, ${firstName || 'there'}.`;
-  const accentText = firstName ? `${firstName}.` : 'there.';
 
   const todayDate = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date());
   const sessionCount = sessions.length;
@@ -1090,22 +1137,53 @@ export function MobileDashboard({ router }: DashboardProps) {
 
   return (
     <div style={{ paddingTop: 8 }}>
-      {/* 4.1 Header */}
-      <LargeHeader
-        eyebrow="Practice overview"
-        title={titleText}
-        accentText={accentText}
-        subtitle={`${sessionCount} sessions today · ${todayDate}`}
-      />
+      {/* Compact greeting header */}
+      <div
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          gap: 12, padding: '8px 20px 14px',
+        }}
+      >
+        <div style={{ minWidth: 0 }}>
+          <h1
+            style={{
+              margin: 0, fontSize: 23, fontWeight: 700, color: 'var(--m-ink)',
+              letterSpacing: -0.6, lineHeight: 1.12,
+              fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)',
+            }}
+          >
+            {greet}{firstName ? `, ${firstName}` : ''}
+          </h1>
+          <p
+            style={{
+              margin: '5px 0 0', fontSize: 13.5, color: 'var(--m-muted)',
+              fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)',
+            }}
+          >
+            {todayDate} · {sessionCount} session{sessionCount !== 1 ? 's' : ''} today
+          </p>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+          <StudioPill businessId={businessId} />
+          <button
+            onClick={() => router.navigate('settings')}
+            style={{ border: 'none', background: 'none', padding: 6, cursor: 'pointer', color: 'var(--m-muted)', display: 'flex' }}
+            aria-label="Settings"
+          >
+            <svg width={22} height={22} viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
+          </button>
+        </div>
+      </div>
 
-      {/* 4.2 Studio Status Pill */}
-      <StudioPill businessId={businessId} />
-
-      {/* 4.3 Setup Card */}
-      <SetupCard />
-
-      {/* 4.3a Install Card — shown until dismissed or installed */}
+      {/* Install Card — shown until dismissed or installed */}
       <InstallCard />
+
+      {/* Setup Card — collapsible */}
+      <SetupCard />
 
       {/* 4.4 Stat Tiles */}
       <div style={{ padding: '0 14px 16px' }}>
@@ -1139,7 +1217,6 @@ export function MobileDashboard({ router }: DashboardProps) {
             label="This month"
             value={revenueDisplay}
             delta={revenueGrowth !== 0 ? revenueGrowth : 12}
-            iconBg="var(--m-accent-soft)"
             icon={
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <circle cx="12" cy="12" r="10" stroke="var(--m-accent-dk)" strokeWidth="1.8" />
@@ -1163,8 +1240,8 @@ export function MobileDashboard({ router }: DashboardProps) {
         </div>
       </div>
 
-      {/* 4.5 SMS Credits Bar */}
-      <SmsCreditsCard used={smsUsed} total={smsTotal} />
+      {/* 4.5 SMS Credits Card */}
+      <SmsCreditsCard used={smsUsed} total={smsTotal} onPress={() => router.navigate('settings')} />
 
       {/* 4.6 Revenue Card */}
       <RevenueCard revenueThisMonth={revenueThisMonth} revenueGrowth={revenueGrowth} />

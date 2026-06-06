@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { LargeHeader } from '../LargeHeader';
-import { Avatar, Card } from '../primitives';
+import { Avatar } from '../primitives';
 import { useBusinessId } from '@/lib/hooks/use-business-id';
 import { useConversations } from '@/lib/hooks/use-messages';
 import type { MobileRouter } from '../MobileShell';
@@ -10,6 +10,7 @@ import type { MobileRouter } from '../MobileShell';
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export type MessageChannel = 'sms' | 'email' | 'whatsapp';
+type FilterType = 'all' | 'unread' | 'sms' | 'email' | 'whatsapp';
 
 export interface MobileConversation {
   id: string;
@@ -35,6 +36,14 @@ interface MobileMessagesProps {
   param: unknown;
 }
 
+// ─── Channel config ───────────────────────────────────────────────────────────
+
+const CHANNEL_CONFIG: Record<MessageChannel, { color: string; bg: string; border: string; label: string }> = {
+  sms:      { color: '#5D4AA8', bg: 'rgba(93,74,168,0.10)',  border: 'rgba(93,74,168,0.22)',  label: 'SMS' },
+  email:    { color: '#3A87D4', bg: 'rgba(58,135,212,0.10)', border: 'rgba(58,135,212,0.22)', label: 'Email' },
+  whatsapp: { color: '#25D366', bg: 'rgba(37,211,102,0.10)', border: 'rgba(37,211,102,0.22)', label: 'WhatsApp' },
+};
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function channelFromType(type: string): MessageChannel {
@@ -50,13 +59,8 @@ function fmtTimestamp(d: Date | null): string {
   const date = new Date(d);
   const diffMs = now.getTime() - date.getTime();
   const diffDays = Math.floor(diffMs / 86400000);
-  if (diffDays === 0) {
-    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-  }
+  if (diffDays === 0) return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
   if (diffDays === 1) return 'Yesterday';
-  if (diffDays < 7) {
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  }
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
@@ -64,7 +68,6 @@ function mapConversation(c: any): MobileConversation {
   const clientName = c.client
     ? `${c.client.firstName ?? ''} ${c.client.lastName ?? ''}`.trim()
     : c.clientName ?? 'Unknown';
-
   return {
     id: c.id,
     clientId: c.clientId ?? '',
@@ -77,99 +80,108 @@ function mapConversation(c: any): MobileConversation {
   };
 }
 
-// ─── Channel Icon ─────────────────────────────────────────────────────────────
+// ─── Channel Badge (avatar overlay) ──────────────────────────────────────────
 
 function ChannelBadge({ channel }: { channel: MessageChannel }) {
-  const config = {
-    sms:      { bg: '#5D4AA8', label: 'SMS' },
-    email:    { bg: '#3A87D4', label: 'Email' },
-    whatsapp: { bg: '#25D366', label: 'WA' },
-  };
-  const { bg, label } = config[channel];
+  const { color, label } = CHANNEL_CONFIG[channel];
   return (
     <div
       style={{
-        position: 'absolute',
-        bottom: -2,
-        right: -2,
-        width: 20,
-        height: 20,
-        borderRadius: '50%',
-        background: bg,
-        border: '2px solid var(--m-surface)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        boxShadow: '0 1px 4px rgba(0,0,0,0.18)',
+        position: 'absolute', bottom: -2, right: -2,
+        width: 20, height: 20, borderRadius: '50%',
+        background: '#fff',
+        boxShadow: '0 1px 5px rgba(0,0,0,0.22)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}
     >
-      <span
+      <div
         style={{
-          fontSize: 6.5,
-          fontWeight: 800,
-          color: '#fff',
-          fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)',
-          letterSpacing: -0.3,
-          lineHeight: 1,
+          width: 16, height: 16, borderRadius: '50%', background: color,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}
       >
-        {label}
-      </span>
+        <span
+          style={{
+            fontSize: 6.5, fontWeight: 800, color: '#fff',
+            fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)',
+            letterSpacing: -0.3, lineHeight: 1,
+          }}
+        >
+          {label === 'WhatsApp' ? 'WA' : label}
+        </span>
+      </div>
     </div>
   );
 }
 
-// ─── Conversation Row ─────────────────────────────────────────────────────────
+// ─── Channel Pill ─────────────────────────────────────────────────────────────
 
-interface ConvRowProps {
-  convo: MobileConversation;
-  isLast: boolean;
-  onClick: () => void;
+function ChannelPill({ channel }: { channel: MessageChannel }) {
+  const { color, bg, label } = CHANNEL_CONFIG[channel];
+  return (
+    <span
+      style={{
+        display: 'inline-flex', alignItems: 'center',
+        padding: '2px 7px', borderRadius: 100,
+        background: bg,
+        fontSize: 10, fontWeight: 700, letterSpacing: 0.5,
+        textTransform: 'uppercase', color,
+        fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)',
+      }}
+    >
+      {label}
+    </span>
+  );
 }
 
-function ConvRow({ convo, isLast, onClick }: ConvRowProps) {
+// ─── Conversation Card ────────────────────────────────────────────────────────
+
+function ConvRow({ convo, onClick, isLast }: { convo: MobileConversation; onClick: () => void; isLast: boolean }) {
   const isUnread = convo.unreadCount > 0;
+  const { color } = CHANNEL_CONFIG[convo.channel];
+
   return (
     <button
       className="im-tab im-press"
       onClick={onClick}
       style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 12,
-        padding: '13px 16px',
-        background: isUnread ? 'var(--m-line3)' : 'none',
+        position: 'relative',
+        display: 'flex', alignItems: 'center', gap: 12,
+        padding: `10px 14px 10px ${isUnread ? '18px' : '14px'}`,
+        background: isUnread ? 'rgba(93,74,168,0.03)' : 'var(--m-surface)',
         border: 'none',
         borderBottom: isLast ? 'none' : '1px solid var(--m-line2)',
-        cursor: 'pointer',
-        width: '100%',
-        textAlign: 'left',
+        borderRadius: 0,
+        boxShadow: 'none',
+        cursor: 'pointer', width: '100%', textAlign: 'left',
+        overflow: 'hidden',
       }}
     >
+      {/* Left accent bar for unread conversations */}
+      {isUnread && (
+        <div style={{
+          position: 'absolute', left: 0, top: 0, bottom: 0,
+          width: 4, background: color,
+        }} />
+      )}
+
+      {/* Avatar + channel badge */}
       <div style={{ position: 'relative', flexShrink: 0 }}>
-        <Avatar name={convo.clientName} size={46} />
+        <Avatar name={convo.clientName} size={38} />
         <ChannelBadge channel={convo.channel} />
       </div>
 
+      {/* Content */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: 3,
-          }}
-        >
+        {/* Name + timestamp */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
           <span
             style={{
-              fontSize: 14.5,
-              fontWeight: isUnread ? 700 : 500,
+              fontSize: 14.5, fontWeight: isUnread ? 700 : 500,
               color: 'var(--m-ink)',
               fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              maxWidth: '60%',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              maxWidth: '65%',
             }}
           >
             {convo.clientName}
@@ -177,17 +189,17 @@ function ConvRow({ convo, isLast, onClick }: ConvRowProps) {
           <span
             style={{
               fontSize: 11.5,
-              color: isUnread ? 'var(--m-primary)' : 'var(--m-muted)',
+              color: isUnread ? color : 'var(--m-muted)',
               fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)',
               fontWeight: isUnread ? 600 : 400,
-              flexShrink: 0,
-              marginLeft: 8,
+              flexShrink: 0, marginLeft: 8, whiteSpace: 'nowrap',
             }}
           >
             {convo.timestamp}
           </span>
         </div>
 
+        {/* Preview + unread badge */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
           <span
             style={{
@@ -196,39 +208,97 @@ function ConvRow({ convo, isLast, onClick }: ConvRowProps) {
               fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)',
               overflow: 'hidden',
               display: '-webkit-box',
-              WebkitLineClamp: 2,
+              WebkitLineClamp: 1,
               WebkitBoxOrient: 'vertical',
-              lineHeight: 1.4,
-              flex: 1,
-              minWidth: 0,
+              lineHeight: 1.4, flex: 1, minWidth: 0,
               fontWeight: isUnread ? 500 : 400,
             }}
           >
             {convo.preview}
           </span>
-
           {isUnread && (
-            <span
+            <div
               style={{
-                background: 'var(--m-grad)',
-                color: '#fff',
-                fontSize: 10.5,
-                fontWeight: 700,
-                lineHeight: 1,
-                padding: '3px 6px',
-                borderRadius: 100,
-                minWidth: 20,
-                textAlign: 'center',
+                width: 20, height: 20, borderRadius: '50%',
+                background: color, color: '#fff',
+                fontSize: 10.5, fontWeight: 700,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
                 flexShrink: 0,
                 fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)',
               }}
             >
-              {convo.unreadCount}
-            </span>
+              {convo.unreadCount > 9 ? '9+' : convo.unreadCount}
+            </div>
           )}
         </div>
       </div>
     </button>
+  );
+}
+
+// ─── Filter Chips ─────────────────────────────────────────────────────────────
+
+function FilterChips({
+  filter,
+  setFilter,
+  unreadCount,
+}: {
+  filter: FilterType;
+  setFilter: (f: FilterType) => void;
+  unreadCount: number;
+}) {
+  const chips: Array<{ key: FilterType; label: string; color: string; badge?: number }> = [
+    { key: 'all',      label: 'All',      color: '#5D4AA8' },
+    { key: 'unread',   label: 'Unread',   color: '#5D4AA8', badge: unreadCount },
+    { key: 'sms',      label: 'SMS',      color: CHANNEL_CONFIG.sms.color },
+    { key: 'email',    label: 'Email',    color: CHANNEL_CONFIG.email.color },
+    { key: 'whatsapp', label: 'WhatsApp', color: CHANNEL_CONFIG.whatsapp.color },
+  ];
+
+  return (
+    <div
+      style={{
+        display: 'flex', gap: 7, overflowX: 'auto',
+        padding: '0 16px 12px',
+        scrollbarWidth: 'none',
+      }}
+    >
+      {chips.map(({ key, label, color, badge }) => {
+        const active = filter === key;
+        return (
+          <button
+            key={key}
+            className="im-tab"
+            onClick={() => setFilter(key)}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+              padding: '6px 13px', borderRadius: 100,
+              border: active ? 'none' : '1px solid var(--m-line2)',
+              background: active ? color : 'var(--m-surface)',
+              color: active ? '#fff' : 'var(--m-ink2)',
+              fontSize: 13, fontWeight: 600,
+              fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)',
+              cursor: 'pointer', flexShrink: 0, transition: 'all 0.15s',
+            }}
+          >
+            {label}
+            {badge !== undefined && badge > 0 && (
+              <span
+                style={{
+                  background: active ? 'rgba(255,255,255,0.3)' : color,
+                  color: '#fff', fontSize: 10, fontWeight: 700,
+                  borderRadius: 100, padding: '1px 5px',
+                  lineHeight: 1.4,
+                  fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)',
+                }}
+              >
+                {badge}
+              </span>
+            )}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
@@ -237,6 +307,7 @@ function ConvRow({ convo, isLast, onClick }: ConvRowProps) {
 export function MobileMessages({ router }: MobileMessagesProps) {
   const businessId = useBusinessId();
   const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState<FilterType>('all');
 
   const { data: convResponse, isLoading } = useConversations(businessId, {
     search: search || undefined,
@@ -244,39 +315,63 @@ export function MobileMessages({ router }: MobileMessagesProps) {
 
   const conversations: MobileConversation[] = useMemo(() => {
     const raw = (convResponse as any)?.data ?? convResponse ?? [];
-    return Array.isArray(raw) ? raw.map(mapConversation) : [];
+    if (!Array.isArray(raw)) return [];
+
+    const mapped = raw.map(mapConversation);
+
+    // Group by clientId — API returns newest-first, so first occurrence is most recent
+    const seen = new Set<string>();
+    const unreadByClient = new Map<string, number>();
+    for (const c of mapped) {
+      const key = c.clientId || c.id;
+      unreadByClient.set(key, (unreadByClient.get(key) ?? 0) + c.unreadCount);
+    }
+    return mapped
+      .filter((c) => {
+        const key = c.clientId || c.id;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .map((c) => ({ ...c, unreadCount: unreadByClient.get(c.clientId || c.id) ?? c.unreadCount }));
   }, [convResponse]);
 
   const totalUnread = conversations.reduce((sum, c) => sum + c.unreadCount, 0);
 
+  const filtered = useMemo(() => {
+    if (filter === 'all') return conversations;
+    if (filter === 'unread') return conversations.filter((c) => c.unreadCount > 0);
+    return conversations.filter((c) => c.channel === filter);
+  }, [conversations, filter]);
+
   return (
     <div style={{ paddingTop: 8 }}>
-      {/* 8.1.1 Header */}
+      {/* Header */}
       <LargeHeader
         eyebrow="Communications"
         title="Messages"
-        subtitle="SMS, Email & WhatsApp — all in one inbox."
+        subtitle={
+          totalUnread > 0
+            ? `${totalUnread} unread · SMS, Email & WhatsApp in one inbox.`
+            : 'SMS, Email & WhatsApp — all in one inbox.'
+        }
       />
 
-      {/* 8.1.2 Sticky search bar */}
+      {/* Sticky search + filter chips */}
       <div
         style={{
-          position: 'sticky',
-          top: 0,
-          zIndex: 5,
-          background: 'var(--m-bg)',
-          padding: '0 16px 12px',
+          position: 'sticky', top: 0, zIndex: 5,
+          background: 'var(--m-bg)', padding: '0 16px 0',
         }}
       >
+        {/* Search bar */}
         <div
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
+            display: 'flex', alignItems: 'center', gap: 10,
             background: 'var(--m-surface)',
             border: '1px solid var(--m-line)',
-            borderRadius: 14,
-            padding: '10px 14px',
+            borderRadius: 14, padding: '10px 14px',
+            marginBottom: 10,
           }}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
@@ -289,12 +384,8 @@ export function MobileMessages({ router }: MobileMessagesProps) {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             style={{
-              flex: 1,
-              background: 'none',
-              border: 'none',
-              outline: 'none',
-              fontSize: 14,
-              color: 'var(--m-ink)',
+              flex: 1, background: 'none', border: 'none', outline: 'none',
+              fontSize: 14, color: 'var(--m-ink)',
               fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)',
             }}
           />
@@ -311,33 +402,28 @@ export function MobileMessages({ router }: MobileMessagesProps) {
             </button>
           )}
         </div>
+
+        {/* Filter chips */}
+        <FilterChips filter={filter} setFilter={setFilter} unreadCount={totalUnread} />
       </div>
 
-      {/* 8.1.3 Conversation list */}
-      <div style={{ padding: '0 16px 16px' }}>
+      {/* Conversation list */}
+      <div style={{ padding: '0 16px 24px' }}>
         {isLoading ? (
           <div
             style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              padding: '48px 24px',
-              gap: 8,
-              color: 'var(--m-muted)',
+              display: 'flex', flexDirection: 'column', alignItems: 'center',
+              padding: '48px 24px', gap: 8, color: 'var(--m-muted)',
               fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)',
             }}
           >
             <span style={{ fontSize: 14 }}>Loading conversations…</span>
           </div>
-        ) : conversations.length === 0 ? (
+        ) : filtered.length === 0 ? (
           <div
             style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              padding: '48px 24px',
-              gap: 8,
-              color: 'var(--m-muted)',
+              display: 'flex', flexDirection: 'column', alignItems: 'center',
+              padding: '48px 24px', gap: 8, color: 'var(--m-muted)',
               fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)',
             }}
           >
@@ -352,55 +438,31 @@ export function MobileMessages({ router }: MobileMessagesProps) {
               </>
             ) : (
               <>
-                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--m-ink2)' }}>No messages yet</span>
-                <span style={{ fontSize: 12, textAlign: 'center' }}>Your client conversations will appear here</span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--m-ink2)' }}>
+                  {filter === 'all' ? 'No messages yet' : `No ${filter} conversations`}
+                </span>
+                <span style={{ fontSize: 12, textAlign: 'center' }}>
+                  {filter === 'all' ? 'Your client conversations will appear here' : 'Try a different filter'}
+                </span>
               </>
             )}
           </div>
         ) : (
-          <Card padding={0} style={{ overflow: 'hidden' }}>
-            {conversations.map((convo, i) => (
+          <div style={{
+            display: 'flex', flexDirection: 'column',
+            border: '1px solid var(--m-line2)',
+            borderRadius: 16,
+            overflow: 'hidden',
+            boxShadow: '0 1px 4px rgba(28,20,54,0.06)',
+          }}>
+            {filtered.map((convo, i) => (
               <ConvRow
                 key={convo.id}
                 convo={convo}
-                isLast={i === conversations.length - 1}
+                isLast={i === filtered.length - 1}
                 onClick={() => router.navigate('thread', convo)}
               />
             ))}
-          </Card>
-        )}
-
-        {totalUnread > 0 && !search && (
-          <div
-            style={{
-              marginTop: 12,
-              padding: '10px 14px',
-              background: 'var(--m-soft)',
-              borderRadius: 14,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-            }}
-          >
-            <span
-              style={{
-                width: 8,
-                height: 8,
-                borderRadius: '50%',
-                background: 'var(--m-primary)',
-                flexShrink: 0,
-              }}
-            />
-            <span
-              style={{
-                fontSize: 13,
-                color: 'var(--m-primary)',
-                fontWeight: 600,
-                fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)',
-              }}
-            >
-              {totalUnread} unread message{totalUnread !== 1 ? 's' : ''}
-            </span>
           </div>
         )}
       </div>
