@@ -406,7 +406,7 @@ function TeamManagement({ businessId }: { businessId: string }) {
         <button
           onClick={() => setShowModal(true)}
           className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white"
-          style={{ background: 'linear-gradient(135deg, #5D4AA8, #3F2F87)', boxShadow: '0 4px 16px rgba(93,74,168,0.28)' }}
+          style={{ background: 'linear-gradient(135deg, #5D4AA8, #3F2F87)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.18), 0 1px 2px rgba(28,20,54,0.12), 0 1px 1px rgba(28,20,54,0.06)' }}
         >
           <Plus className="h-4 w-4" />
           Add Therapist Profile

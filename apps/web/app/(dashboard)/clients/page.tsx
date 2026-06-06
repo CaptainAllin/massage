@@ -151,7 +151,7 @@ export default function ClientsPage() {
               fontWeight: 500,
               color: '#fff',
               cursor: 'pointer',
-              boxShadow: '0 4px 16px #5D4AA844',
+              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.18), 0 1px 2px rgba(28,20,54,0.12), 0 1px 1px rgba(28,20,54,0.06)',
             }}
           >
             <PlusIcon style={{ width: 15, height: 15 }} />
@@ -228,7 +228,7 @@ export default function ClientsPage() {
                   color: isActive ? '#fff' : '#3D3450',
                   cursor: 'pointer',
                   transition: 'all 0.15s',
-                  boxShadow: isActive ? '0 2px 8px #5D4AA833' : 'none',
+                  boxShadow: isActive ? '0 1px 3px rgba(28,20,54,0.15)' : 'none',
                 }}
               >
                 {f.label}

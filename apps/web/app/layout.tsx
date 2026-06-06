@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from 'next';
 import { inter, sora } from '@/lib/fonts';
 import { AuthProvider } from '@/components/providers/AuthProvider';
 import { QueryProvider } from '@/components/providers/QueryProvider';
+import { ServiceWorkerProvider } from '@/components/providers/ServiceWorkerProvider';
 
 export const metadata: Metadata = {
   title: 'Iris — Wellness Practice Management',
@@ -19,6 +20,9 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: '#5D4AA8',
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({
@@ -28,14 +32,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${inter.variable} ${sora.variable}`}>
-      <head>
-        <link rel="manifest" href="/manifest.json" />
-        <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="Iris" />
-      </head>
+      <head />
       <body>
+        <ServiceWorkerProvider />
         <AuthProvider>
           <QueryProvider>
             {children}

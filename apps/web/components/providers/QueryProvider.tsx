@@ -71,11 +71,5 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
     };
   }, [queryClient]);
 
-  // Register service worker early so all users benefit from caching, not just push-enabled ones
-  useEffect(() => {
-    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
-  }, []);
-
   return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
 }

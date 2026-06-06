@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, Button, Input, Badge } from '@massage/ui';
-import { Users, Bell, Save, Upload, Loader2, Check, BellRing, MapPin, Globe, Lock, UserCheck, ShieldCheck, KeyRound, Trash2, Plus, LayoutDashboard, ExternalLink, Copy, CheckCheck, Phone, X, Info, ChevronRight, Code2, Mail, Send, UserMinus, RefreshCw, Sliders, RotateCcw, UserCircle, Camera } from 'lucide-react';
+import { Users, Bell, Save, Upload, Loader2, Check, BellRing, MapPin, Globe, Lock, UserCheck, ShieldCheck, KeyRound, Trash2, Plus, LayoutDashboard, ExternalLink, Copy, CheckCheck, Phone, X, Info, ChevronRight, Code2, Mail, Send, UserMinus, RefreshCw, Sliders, RotateCcw, UserCircle, Camera, Download, Smartphone, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useBusinessId } from '@/lib/hooks/use-business-id';
@@ -19,6 +19,7 @@ import { PhoneInput } from '@/components/ui/PhoneInput';
 import { PostcodeInput } from '@/components/ui/PostcodeInput';
 import { apiClient } from '@/lib/api-client';
 import { usePushNotifications } from '@/lib/hooks/use-push-notifications';
+import { usePWAInstall } from '@/lib/hooks/use-pwa-install';
 import { listPasskeys, enrollPasskey, revokePasskey, type PasskeyFactor } from '@/lib/supabase/passkeys';
 import { createClient } from '@/lib/supabase/client';
 import { useIntakeFormTemplates } from '@/lib/hooks/use-intake-forms';
@@ -681,7 +682,7 @@ function InviteStaffModal({ businessId, onClose, onSent }: { businessId: string;
             type="submit"
             disabled={sendInvite.isPending}
             className="w-full py-2.5 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-2 disabled:opacity-50"
-            style={{ background: 'linear-gradient(135deg, #5D4AA8, #3F2F87)', boxShadow: '0 4px 16px rgba(93,74,168,0.27)' }}
+            style={{ background: 'linear-gradient(135deg, #5D4AA8, #3F2F87)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.18), 0 1px 2px rgba(28,20,54,0.12), 0 1px 1px rgba(28,20,54,0.06)' }}
           >
             {sendInvite.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             {sendInvite.isPending ? 'Sending…' : 'Send Invite'}
@@ -1966,6 +1967,83 @@ function BookingTab({ businessId }: { businessId: string }) {
 
 // ─── Account Tab ─────────────────────────────────────────────────────────────
 
+function GetTheAppCard() {
+  const { canInstall, hasManualInstall, isInstalled, browserType, triggerInstall } = usePWAInstall();
+
+  const manualInstructions: Record<string, string> = {
+    'ios': 'Tap the Share button (↑) at the bottom of Safari, then tap "Add to Home Screen".',
+    'mac-safari': 'In Safari, click File in the menu bar, then click "Add to Dock…"',
+    'firefox-android': 'Tap the ⋮ menu in the top right, then tap "Install".',
+  };
+
+  return (
+    <div className="space-y-3 p-5 rounded-xl" style={{ border: '1px solid #EFE9F2' }}>
+      <div className="flex items-center gap-2">
+        <Smartphone className="h-4 w-4" style={{ color: '#5D4AA8' }} />
+        <p className="text-sm font-semibold" style={{ color: '#3D3450' }}>Get the app</p>
+      </div>
+      {isInstalled ? (
+        <div className="flex items-center gap-2 text-sm" style={{ color: '#2E7D32' }}>
+          <CheckCircle2 className="h-4 w-4" />
+          Iris is installed on this device.
+        </div>
+      ) : canInstall ? (
+        <>
+          <p className="text-xs" style={{ color: '#7A7090' }}>
+            Install Iris on your device for instant home-screen access, offline support, and push notifications.
+          </p>
+          <button
+            type="button"
+            onClick={triggerInstall}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            style={{ background: 'linear-gradient(135deg, #5D4AA8, #3F2F87)' }}
+          >
+            <Download className="h-3.5 w-3.5" />
+            Install app
+          </button>
+        </>
+      ) : hasManualInstall ? (
+        <>
+          <p className="text-xs" style={{ color: '#7A7090' }}>
+            {manualInstructions[browserType] ?? 'Follow your browser\'s steps to add Iris to your home screen.'}
+          </p>
+          <div
+            className="rounded-xl p-3 text-xs space-y-1"
+            style={{ background: '#F3EFF9', color: '#3D3450', border: '1px solid #E0D5F0' }}
+          >
+            {browserType === 'ios' && (
+              <ol className="space-y-1 list-decimal list-inside">
+                <li>Tap the <strong>Share</strong> button (↑) at the bottom of Safari</li>
+                <li>Scroll down and tap <strong>"Add to Home Screen"</strong></li>
+                <li>Tap <strong>"Add"</strong> to confirm</li>
+              </ol>
+            )}
+            {browserType === 'mac-safari' && (
+              <ol className="space-y-1 list-decimal list-inside">
+                <li>Click <strong>File</strong> in the Safari menu bar</li>
+                <li>Click <strong>"Add to Dock…"</strong></li>
+                <li>Click <strong>"Add"</strong> to confirm</li>
+              </ol>
+            )}
+            {browserType === 'firefox-android' && (
+              <ol className="space-y-1 list-decimal list-inside">
+                <li>Tap the <strong>⋮ menu</strong> in the top right</li>
+                <li>Tap <strong>"Install"</strong></li>
+                <li>Tap <strong>"Add"</strong> to confirm</li>
+              </ol>
+            )}
+          </div>
+        </>
+      ) : (
+        <p className="text-xs" style={{ color: '#7A7090' }}>
+          Open Iris in <strong>Chrome</strong> or <strong>Edge</strong> to install the app on your device.
+          Firefox does not support PWA installation.
+        </p>
+      )}
+    </div>
+  );
+}
+
 function AccountTab({ businessId }: { businessId?: string }) {
   const supabase = createClient();
   const [loading, setLoading] = useState(true);
@@ -2225,6 +2303,8 @@ function AccountTab({ businessId }: { businessId?: string }) {
           </Button>
         )}
       </div>
+
+      <GetTheAppCard />
     </form>
   );
 }

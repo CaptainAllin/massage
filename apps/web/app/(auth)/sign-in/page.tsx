@@ -14,6 +14,7 @@ function SignInForm() {
   const [loading, setLoading] = useState(false);
   const [passkeyLoading, setPasskeyLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const supabase = createClient();
   const searchParams = useSearchParams();
@@ -154,22 +155,45 @@ function SignInForm() {
               <label className="block text-xs font-semibold mb-1.5" style={{ color: '#3D3450' }}>
                 Password
               </label>
-              <input
-                type="password"
-                autoComplete="current-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3.5 py-2.5 text-sm rounded-xl outline-none transition-all"
-                style={{
-                  border: '1px solid #E5DEEC',
-                  color: '#1E1830',
-                  background: '#fff',
-                }}
-                onFocus={(e) => (e.currentTarget.style.borderColor = '#5D4AA8')}
-                onBlur={(e) => (e.currentTarget.style.borderColor = '#E5DEEC')}
-                placeholder="••••••••"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-3.5 py-2.5 pr-10 text-sm rounded-xl outline-none transition-all"
+                  style={{
+                    border: '1px solid #E5DEEC',
+                    color: '#1E1830',
+                    background: '#fff',
+                  }}
+                  onFocus={(e) => (e.currentTarget.style.borderColor = '#5D4AA8')}
+                  onBlur={(e) => (e.currentTarget.style.borderColor = '#E5DEEC')}
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3"
+                  style={{ color: '#9E96B0' }}
+                  tabIndex={-1}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+                      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+                      <line x1="1" y1="1" x2="23" y2="23" />
+                    </svg>
+                  ) : (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                  )}
+                </button>
+              </div>
             </div>
 
             <button
@@ -178,7 +202,7 @@ function SignInForm() {
               className="w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50"
               style={{
                 background: 'linear-gradient(135deg, #5D4AA8, #3F2F87)',
-                boxShadow: '0 4px 16px rgba(93,74,168,0.27)',
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.18), 0 1px 2px rgba(28,20,54,0.12), 0 1px 1px rgba(28,20,54,0.06)',
                 marginTop: '8px',
               }}
             >

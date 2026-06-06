@@ -32,6 +32,42 @@
     --line2: 278 28% 93%;            /* #EFE9F2 */
     --soft1: 275 38% 91%;            /* #EDE5F4 */
     --soft2: 15 50% 93%;             /* #F7E5DD */
+
+    /* Mobile tokens */
+    --font-sora: var(--font-sora, 'Sora', system-ui, -apple-system, sans-serif);
+
+    --m-bg: #F4F3F8;
+    --m-surface: #FFFFFF;
+    --m-panel: #FBFAFD;
+    --m-ink: #1C1430;
+    --m-ink2: #3D3454;
+    --m-muted: #7A7090;
+    --m-faint: #A89EC4;
+
+    --m-line: #E5DEEC;
+    --m-line2: #EFE9F4;
+    --m-line3: #E8E0F5;
+
+    --m-primary: #5D4AA8;
+    --m-primary2: #7665C2;
+    --m-primary-dk: #3F2F87;
+
+    --m-accent: #DE9277;
+    --m-accent-dk: #C97455;
+    --m-accent-soft: #F7E5DD;
+
+    --m-soft: #EDE5F4;
+    --m-soft2: #F5F0FC;
+
+    --m-ok: #3E9E7A;
+    --m-ok-soft: #D4F0E7;
+    --m-warn: #D4783A;
+    --m-warn-soft: #FBE9D8;
+    --m-info: #3A87D4;
+    --m-info-soft: #D8EBFB;
+
+    --m-grad: linear-gradient(135deg, #5D4AA8 0%, #3F2F87 100%);
+    --m-grad-hero: linear-gradient(150deg, #6A56B8 0%, #4A3895 55%, #2E2168 100%);
   }
 }
 
@@ -58,7 +94,7 @@
   }
   /* Neutral ink-tinted shadows — no colored glows */
   .iris-shadow-cta {
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.16), 0 1px 2px rgba(28,20,54,0.16);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), 0 1px 2px rgba(28,20,54,0.12), 0 1px 1px rgba(28,20,54,0.06);
   }
   .iris-shadow-soft {
     box-shadow: 0 1px 2px rgba(28,20,54,0.08);
@@ -94,4 +130,50 @@
   background: #EDE5F4 !important;
   border-color: #E5DEEC !important;
   color: #1E1830 !important;
+}
+
+/* Mobile utilities */
+
+/* Safe-area bottom padding for fixed elements */
+.im-safe-bottom {
+  padding-bottom: max(8px, env(safe-area-inset-bottom));
+}
+
+/* Scrollable container — hide scrollbar, iOS momentum scroll */
+.im-scroll {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.im-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* Tap press — subtle scale feedback */
+.im-press {
+  transition: transform 0.1s ease;
+}
+.im-press:active {
+  transform: scale(0.96);
+}
+
+/* FAB press animation */
+.im-fab {
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.im-fab:active {
+  transform: scale(0.92);
+}
+
+/* Tab bar button — remove default tap highlight */
+.im-tab {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  user-select: none;
+}
+
+/* Sheet slide-up entrance */
+@keyframes im-sheet-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
 }

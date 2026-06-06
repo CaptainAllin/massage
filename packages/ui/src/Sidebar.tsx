@@ -63,6 +63,7 @@ export interface SidebarProps {
   userEmail?: string;
   userInitials?: string;
   onSignOut?: () => void;
+  onInstallApp?: () => void;
   /** @deprecated moved to header — no longer rendered in sidebar */
   onGetStarted?: () => void;
   /** @deprecated moved to header — no longer rendered in sidebar */
@@ -429,6 +430,7 @@ function MenuContent({
   userEmail,
   userInitials,
   onSignOut,
+  onInstallApp,
   onClose,
 }: {
   userRole?: string | null;
@@ -437,6 +439,7 @@ function MenuContent({
   userEmail?: string;
   userInitials?: string;
   onSignOut?: () => void;
+  onInstallApp?: () => void;
   onClose?: () => void;
 }) {
   const pathname = usePathname();
@@ -581,6 +584,20 @@ function MenuContent({
         </a>
       </div>
 
+      {/* Install app badge */}
+      {onInstallApp && (
+        <button
+          onClick={onInstallApp}
+          className="mx-3 mb-2 flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium w-[calc(100%-1.5rem)] transition-colors text-left"
+          style={{ background: '#EDE5F4', color: '#5D4AA8', border: '1px solid #DDD3F0' }}
+          onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = '#E0D5F0')}
+          onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = '#EDE5F4')}
+        >
+          <Download size={13} />
+          <span>Install Iris app</span>
+        </button>
+      )}
+
       {/* User profile card */}
       <div
         className="mx-3 mb-3 rounded-2xl p-3 flex items-center gap-2.5"
@@ -625,6 +642,7 @@ export function Sidebar({
   userEmail,
   userInitials,
   onSignOut,
+  onInstallApp,
 }: SidebarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
@@ -635,6 +653,7 @@ export function Sidebar({
     userEmail,
     userInitials,
     onSignOut,
+    onInstallApp,
   };
 
   return (

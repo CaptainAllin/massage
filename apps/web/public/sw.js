@@ -1,11 +1,11 @@
 // Service Worker: app shell caching + push notifications
 
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 const SHELL_CACHE = `wellness-shell-${CACHE_VERSION}`;
 const API_CACHE = `wellness-api-${CACHE_VERSION}`;
 
-// Pages to pre-cache for instant navigation
-const SHELL_PAGES = ['/dashboard', '/appointments', '/clients', '/favicon.ico'];
+// Pages to pre-cache for instant first navigation (includes offline fallback)
+const SHELL_PAGES = ['/dashboard', '/appointments', '/clients', '/offline', '/favicon.ico'];
 
 // API routes to serve stale-while-revalidate
 const CACHED_API_PREFIXES = [
@@ -46,6 +46,9 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url);
 
+  // Skip cross-origin requests (Clerk auth, Supabase, analytics, etc.)
+  if (url.origin !== self.location.origin) return;
+
   // API routes: stale-while-revalidate
   const isApiRoute = CACHED_API_PREFIXES.some((p) => url.pathname.startsWith(p));
   if (isApiRoute) {
@@ -58,25 +61,48 @@ self.addEventListener('fetch', (event) => {
             return res;
           })
           .catch(() => cached);
-        // Return cached immediately, update in background
         return cached ?? networkFetch;
       })
     );
     return;
   }
 
-  // Navigation requests: network-first, fall back to cache
+  // Navigation requests: stale-while-revalidate
+  // Serve the cached page shell immediately so the app appears instantly,
+  // then update the cache in the background. React Query's localStorage
+  // cache handles data freshness once the app hydrates.
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request).catch(() =>
-        caches.match(request).then((r) => r ?? caches.match('/dashboard'))
-      )
+      caches.open(SHELL_CACHE).then(async (cache) => {
+        const cached = await cache.match(request);
+        const networkFetch = fetch(request)
+          .then((res) => {
+            if (res.ok) cache.put(request, res.clone()).catch(() => {});
+            return res;
+          })
+          .catch(() => cached ?? caches.match('/offline'));
+        return cached ?? networkFetch;
+      })
     );
     return;
   }
 
-  // Static JS/CSS/_next assets: cache-first (they have content hashes)
+  // Static JS/CSS/_next assets: cache-first (content-hashed, never stale)
   if (url.pathname.startsWith('/_next/static/')) {
+    event.respondWith(
+      caches.open(SHELL_CACHE).then(async (cache) => {
+        const cached = await cache.match(request);
+        if (cached) return cached;
+        const res = await fetch(request);
+        if (res.ok) cache.put(request, res.clone()).catch(() => {});
+        return res;
+      })
+    );
+    return;
+  }
+
+  // Next.js image optimization: cache-first with background revalidation
+  if (url.pathname.startsWith('/_next/image')) {
     event.respondWith(
       caches.open(SHELL_CACHE).then(async (cache) => {
         const cached = await cache.match(request);

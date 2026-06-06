@@ -66,7 +66,7 @@ module.exports = {
         soft:         '0 1px 2px rgba(28,20,54,0.08)',
         'soft-lg':    '0 2px 8px rgba(28,20,54,0.10)',
         'soft-xl':    '0 8px 28px rgba(28,20,54,0.12), 0 2px 6px rgba(28,20,54,0.06)',
-        'iris-cta':   'inset 0 1px 0 rgba(255,255,255,0.16), 0 1px 2px rgba(28,20,54,0.16)',
+        'iris-cta':   'inset 0 1px 0 rgba(255,255,255,0.18), 0 1px 2px rgba(28,20,54,0.12), 0 1px 1px rgba(28,20,54,0.06)',
         'iris-float': '0 8px 28px rgba(28,20,54,0.12), 0 2px 6px rgba(28,20,54,0.06)',
         'iris-card':  '0 2px 12px rgba(28,20,54,0.06)',
       },

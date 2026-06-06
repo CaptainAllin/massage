@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { Sidebar, Header } from '@massage/ui';
@@ -18,6 +18,10 @@ import { CongratsModal } from '@/components/onboarding/CongratsModal';
 import { DashboardHeaderActions } from './DashboardHeaderActions';
 import { BusinessSwitcher } from '@/components/BusinessSwitcher';
 import { apiClient } from '@/lib/api-client';
+import { usePWAInstall } from '@/lib/hooks/use-pwa-install';
+import { PWAInstallBanner } from '@/components/pwa/PWAInstallBanner';
+import { PWAFirstLoginModal } from '@/components/pwa/PWAFirstLoginModal';
+import { MobileShell } from '@/components/mobile/MobileShell';
 
 // Prefetch all main pages' API data in the background so navigation is instant.
 // Query keys and return shapes must match exactly what each page's hook uses.
@@ -113,7 +117,20 @@ function NewSessionButton() {
   );
 }
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    setIsMobile(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+  return isMobile;
+}
+
 function DashboardContent({ children }: { children: React.ReactNode }) {
+  const isMobile = useIsMobile();
   const router = useRouter();
   const { user, signOut } = useAuth();
   const { role: globalRole } = useRole();
@@ -132,6 +149,8 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     dismissChecklist,
   } = useOnboardingContext();
 
+  const { canInstall, hasManualInstall, browserType, triggerInstall } = usePWAInstall();
+
   const firstName = user?.user_metadata?.first_name ?? '';
   const lastName = user?.user_metadata?.last_name ?? '';
   const initials = firstName
@@ -139,6 +158,11 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     : 'U';
   const fullName = [firstName, lastName].filter(Boolean).join(' ') || 'My Account';
   const email = user?.email ?? '';
+
+  // ≤767px: render mobile shell instead of desktop sidebar layout
+  if (isMobile) {
+    return <MobileShell />;
+  }
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: '#F3F4F7' }}>
@@ -149,6 +173,12 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
         userEmail={email}
         userInitials={initials}
         onSignOut={signOut}
+        onInstallApp={
+          canInstall ? triggerInstall :
+          // Manual-install browsers: badge shows, clicking navigates to Account settings
+          hasManualInstall && browserType !== 'unsupported' ? () => router.push('/settings?tab=account') :
+          undefined
+        }
       />
 
       <div className="flex flex-1 flex-col overflow-hidden lg:ml-[230px]">
@@ -172,6 +202,8 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
       <BackgroundPrefetcher />
       <QuickCallModal />
       <NewSessionModal />
+      <PWAInstallBanner />
+      <PWAFirstLoginModal />
 
       {loaded && !welcomeShown && (
         <WelcomeModal

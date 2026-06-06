@@ -187,7 +187,7 @@ function AcceptInviteContent() {
                   onClick={handleAccept}
                   disabled={accepting}
                   className="w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                  style={{ background: 'linear-gradient(135deg, #5D4AA8, #3F2F87)', boxShadow: '0 4px 16px rgba(93,74,168,0.27)' }}
+                  style={{ background: 'linear-gradient(135deg, #5D4AA8, #3F2F87)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.18), 0 1px 2px rgba(28,20,54,0.12), 0 1px 1px rgba(28,20,54,0.06)' }}
                 >
                   {accepting && <Loader2 className="h-4 w-4 animate-spin" />}
                   {accepting ? 'Accepting…' : 'Accept Invitation'}
@@ -212,7 +212,7 @@ function AcceptInviteContent() {
               <Link
                 href={`/sign-in?redirectTo=${encodeURIComponent(returnUrl)}`}
                 className="block text-center py-2.5 rounded-xl text-sm font-semibold text-white"
-                style={{ background: 'linear-gradient(135deg, #5D4AA8, #3F2F87)', boxShadow: '0 4px 16px rgba(93,74,168,0.27)' }}
+                style={{ background: 'linear-gradient(135deg, #5D4AA8, #3F2F87)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.18), 0 1px 2px rgba(28,20,54,0.12), 0 1px 1px rgba(28,20,54,0.06)' }}
               >
                 Sign in to accept
               </Link>
