@@ -48,7 +48,7 @@ const NAV: NavGroup[] = [
   { group: 'Connections', items: [
     { id: 'comms',        label: 'Communications', icon: MessageSquare, desc: 'Twilio, SendGrid, WhatsApp', href: '/settings/communications' },
     { id: 'integrations', label: 'Integrations',   icon: Link2,         desc: 'Accounting, CRM & more',    href: '/settings/integrations' },
-    { id: 'api',          label: 'Developer API',  icon: Code2,         desc: 'Keys & webhooks' },
+    { id: 'api',          label: 'Developer API',  icon: Code2,         desc: 'Keys & webhooks',     href: '/settings/api' },
   ]},
 ];
 
@@ -136,6 +136,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
     if (pathname.startsWith('/settings/leave')) return 'leave';
     if (pathname.startsWith('/settings/scheduling')) return 'scheduling';
     if (pathname.startsWith('/settings/reminders')) return 'reminders';
+    if (pathname.startsWith('/settings/api')) return 'api';
     return searchParams.get('tab') || 'overview';
   }, [pathname, searchParams]);
 

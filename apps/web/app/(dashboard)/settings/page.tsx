@@ -2929,6 +2929,12 @@ function OverviewPanel({ go }: { go: (p: string) => void }) {
 
 // ─── API panel ────────────────────────────────────────────────────────────────
 
+function ApiRedirect() {
+  const router = useRouter();
+  useEffect(() => { router.replace('/settings/api'); }, [router]);
+  return null;
+}
+
 function ApiPanel() {
   return (
     <div>
@@ -3033,7 +3039,7 @@ export default function SettingsPage() {
       case 'clinical':      return <ClinicalTab businessId={businessId} />;
       case 'security':      return <SecurityTab />;
       case 'portal':        return <ClientPortalTab businessId={businessId} />;
-      case 'api':           return <ApiPanel />;
+      case 'api':           return <ApiRedirect />;
       default:              return null;
     }
   };
