@@ -7,6 +7,7 @@ import type { MobileRouter } from '../MobileShell';
 import { useBusinessId } from '@/lib/hooks/use-business-id';
 import { useAppointments } from '@/lib/hooks/use-appointments';
 import { useTherapists } from '@/lib/hooks/use-therapists';
+import { useNewSession } from '@/components/new-session/NewSessionContext';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -794,6 +795,7 @@ function BookingCTA({ businessId }: { businessId: string | undefined }) {
 
 export function MobileAppointments({ router: _router }: AppointmentsProps) {
   const businessId = useBusinessId();
+  const { openNewSession } = useNewSession();
 
   const [calView,         setCalView]         = useState<CalView>('agenda');
   const [selectedDate,    setSelectedDate]    = useState<Date>(TODAY);
@@ -925,7 +927,7 @@ export function MobileAppointments({ router: _router }: AppointmentsProps) {
         <div style={{ marginTop: 16 }}>
 
           {calView === 'agenda' && (
-            <AgendaView appts={filteredAppts} selectedDate={selectedDate} />
+            <AgendaView appts={filteredAppts} selectedDate={selectedDate} onAddTap={openNewSession} />
           )}
 
           {calView === 'day' && (

@@ -73,6 +73,29 @@ const STATUS_STYLES: Record<TxStatus, { label: string; color: string }> = {
   refunded: { label: 'Refunded', color: 'var(--m-muted)' },
 };
 
+// ─── Skeleton helpers ────────────────────────────────────────────────────────
+
+function SkeletonRect({ width = '100%', height = 16, radius = 8, style }: { width?: string | number; height?: number; radius?: number; style?: React.CSSProperties }) {
+  return <div className="im-skeleton" style={{ width, height, borderRadius: radius, ...style }} />;
+}
+
+function HeroSkeleton() {
+  return (
+    <div style={{ borderRadius: 22, background: 'var(--m-grad-hero)', padding: '24px 20px 22px', margin: '0 0 14px', opacity: 0.7 }}>
+      <SkeletonRect width={120} height={11} radius={6} style={{ background: 'rgba(255,255,255,0.25)', marginBottom: 12 }} />
+      <SkeletonRect width={160} height={36} radius={10} style={{ background: 'rgba(255,255,255,0.3)', marginBottom: 22 }} />
+      <div style={{ display: 'flex', gap: 12 }}>
+        {[1, 2, 3].map((i) => (
+          <div key={i} style={{ flex: 1 }}>
+            <SkeletonRect width="70%" height={9} radius={5} style={{ background: 'rgba(255,255,255,0.2)', marginBottom: 7 }} />
+            <SkeletonRect width="80%" height={16} radius={7} style={{ background: 'rgba(255,255,255,0.25)' }} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── Hero Card ────────────────────────────────────────────────────────────────
 
 interface HeroCardProps {
@@ -80,9 +103,11 @@ interface HeroCardProps {
   weekTotal: number;
   pending: number;
   refunded: number;
+  statsLoading?: boolean;
 }
 
-function HeroCard({ todayTotal, weekTotal, pending, refunded }: HeroCardProps) {
+function HeroCard({ todayTotal, weekTotal, pending, refunded, statsLoading }: HeroCardProps) {
+  if (statsLoading) return <HeroSkeleton />;
   return (
     <div
       style={{
@@ -218,7 +243,7 @@ function TransactionRow({ tx, last }: { tx: Transaction; last: boolean }) {
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
-export function MobilePayments({ router: _router }: MobilePaymentsProps) {
+export function MobilePayments({ router }: MobilePaymentsProps) {
   const businessId = useBusinessId();
 
   const today = new Date();
@@ -234,8 +259,10 @@ export function MobilePayments({ router: _router }: MobilePaymentsProps) {
   const weekStartStr = weekStart.toISOString().split('T')[0];
 
   const { data: paymentsResponse, isLoading } = usePayments(businessId, { limit: 20 });
-  const { data: statsToday } = usePaymentStats(businessId, todayStr, tomorrowStr);
-  const { data: statsWeek } = usePaymentStats(businessId, weekStartStr, tomorrowStr);
+  const { data: statsToday, isLoading: statsTodayLoading } = usePaymentStats(businessId, todayStr, tomorrowStr);
+  const { data: statsWeek, isLoading: statsWeekLoading } = usePaymentStats(businessId, weekStartStr, tomorrowStr);
+
+  const statsLoading = statsTodayLoading || statsWeekLoading;
 
   const rawPayments = (paymentsResponse as any)?.data ?? [];
   const transactions: Transaction[] = Array.isArray(rawPayments)
@@ -258,7 +285,7 @@ export function MobilePayments({ router: _router }: MobilePaymentsProps) {
       <LargeHeader
         eyebrow="Finance"
         title="Payments"
-        subtitle={`${fmtCurrency(totalCollected)} collected · ${pendingCount} pending`}
+        subtitle={statsLoading ? undefined : `${fmtCurrency(totalCollected)} collected · ${pendingCount} pending`}
       />
 
       <HeroCard
@@ -266,37 +293,48 @@ export function MobilePayments({ router: _router }: MobilePaymentsProps) {
         weekTotal={weekTotal}
         pending={weekPending}
         refunded={weekRefunded}
+        statsLoading={statsLoading}
       />
 
       <SectionHead
         title="Recent transactions"
-        action="Export →"
-        onAction={() => {}}
+        action="Exports →"
+        onAction={() => router.navigate('payments')}
       />
 
       {isLoading ? (
-        <div
-          style={{
-            padding: '32px 16px',
-            textAlign: 'center',
-            color: 'var(--m-muted)',
-            fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)',
-            fontSize: 13,
-          }}
-        >
-          Loading transactions…
-        </div>
+        <Card style={{ padding: '0 16px' }}>
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 0', borderBottom: i < 4 ? '1px solid var(--m-line2)' : 'none' }}>
+              <SkeletonRect width={42} height={42} radius={21} />
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <SkeletonRect width="50%" height={13} />
+                <SkeletonRect width="35%" height={10} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 5 }}>
+                <SkeletonRect width={48} height={14} />
+                <SkeletonRect width={34} height={10} />
+              </div>
+            </div>
+          ))}
+        </Card>
       ) : transactions.length === 0 ? (
         <div
           style={{
-            padding: '32px 16px',
+            padding: '32px 20px',
             textAlign: 'center',
-            color: 'var(--m-muted)',
-            fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)',
-            fontSize: 13,
+            background: 'var(--m-surface)',
+            borderRadius: 22,
+            border: '1px solid var(--m-line2)',
           }}
         >
-          No transactions yet
+          <div style={{ fontSize: 36, marginBottom: 12 }}>💳</div>
+          <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--m-ink)', fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)', marginBottom: 4 }}>
+            No transactions yet
+          </div>
+          <div style={{ fontSize: 13, color: 'var(--m-muted)', fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)', lineHeight: 1.5 }}>
+            Payments you collect will appear here
+          </div>
         </div>
       ) : (
         <Card style={{ padding: '0 16px' }}>

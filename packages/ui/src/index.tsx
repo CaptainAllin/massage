@@ -16,6 +16,7 @@ export {
 export { Badge, type BadgeProps } from './Badge';
 export { Avatar, type AvatarProps } from './Avatar';
 export { EmptyState, type EmptyStateProps } from './EmptyState';
+export { IrisLogo, type IrisLogoProps } from './IrisLogo';
 export { Sidebar, type SidebarProps, type MenuItem } from './Sidebar';
 export { Header, type HeaderProps } from './Header';
 

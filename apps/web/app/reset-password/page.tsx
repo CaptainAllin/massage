@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { IrisLogo } from '@massage/ui';
 
 function ResetPasswordForm() {
   const [password, setPassword] = useState('');
@@ -63,19 +64,7 @@ function ResetPasswordForm() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <div
-            className="w-12 h-12 rounded-2xl flex items-center justify-center mb-3"
-            style={{ background: 'linear-gradient(135deg, #5D4AA8, #3F2F87)' }}
-          >
-            <svg width="22" height="22" viewBox="0 0 18 18" fill="none">
-              <path
-                d="M9 2C9 2 5 5.5 5 9.5C5 11.985 6.791 14 9 14C11.209 14 13 11.985 13 9.5C13 5.5 9 2 9 2Z"
-                fill="white"
-                opacity="0.9"
-              />
-              <path d="M9 14V16M6 15.5H12" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
-          </div>
+          <IrisLogo size={48} className="mb-3" />
           <h1 className="text-lg font-semibold" style={{ color: '#1E1830', letterSpacing: '-0.3px' }}>
             Iris Care Suite
           </h1>

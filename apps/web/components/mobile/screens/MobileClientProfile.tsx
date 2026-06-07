@@ -234,6 +234,7 @@ export function MobileClientProfile({ router, param }: MobileClientProfileProps)
     preview: '',
     timestamp: '',
     unreadCount: 0,
+    memberIds: [],
     messages: [],
   };
 

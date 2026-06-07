@@ -1,10 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
+import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { BottomSheet } from './BottomSheet';
 import { useAuth } from '@massage/auth';
 import { useBusinessId } from '@/lib/hooks/use-business-id';
+import { apiClient } from '@/lib/api-client';
 import { useUnreadCount } from '@/lib/hooks/use-messages';
 import { useNewSession } from '@/components/new-session/NewSessionContext';
 import { usePWAInstall } from '@/lib/hooks/use-pwa-install';
@@ -18,6 +20,11 @@ import { MobileMessages } from './screens/MobileMessages';
 import { MobileThread } from './screens/MobileThread';
 import { MobilePayments } from './screens/MobilePayments';
 import { MobileSettings } from './screens/MobileSettings';
+import { MobileAnalytics } from './screens/MobileAnalytics';
+import { MobileLoyalty } from './screens/MobileLoyalty';
+import { MobileInventory } from './screens/MobileInventory';
+import { MobilePromotions } from './screens/MobilePromotions';
+import { MobileGiftCards } from './screens/MobileGiftCards';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -29,13 +36,19 @@ export type MobileView =
   | 'messages'
   | 'thread'
   | 'payments'
-  | 'settings';
+  | 'settings'
+  | 'analytics'
+  | 'loyalty'
+  | 'inventory'
+  | 'promotions'
+  | 'gift-cards';
 
 export interface MobileRouter {
   view: MobileView;
   param: unknown;
   navigate: (view: MobileView, param?: unknown) => void;
   goBack: () => void;
+  readConversationIds: Set<string>;
 }
 
 // ─── Status Bar ──────────────────────────────────────────────────────────────
@@ -173,7 +186,7 @@ function EllipsisIcon({ active: _active }: { active?: boolean }) {
 }
 
 interface TabBarProps {
-  activeView: MobileView;
+  activeView: MobileView | null;
   onTabPress: (id: string) => void;
   unreadCount?: number;
 }
@@ -317,9 +330,9 @@ const MORE_GROUPS: Array<{
     items: [
       { label: 'Intake Forms', icon: '📋', route: '/intake-forms' },
       { label: 'Therapists',   icon: '👥', route: '/therapists' },
-      { label: 'Inventory',    icon: '📦', route: '/inventory' },
+      { label: 'Inventory',    icon: '📦', route: '/inventory',  view: 'inventory' },
       { label: 'Telehealth',   icon: '💻', route: '/telehealth' },
-      { label: 'Insurance',    icon: '🛡️', route: '/insurance' },
+      { label: 'Insurance',    icon: '🛡️', route: '/insurance-claims' },
     ],
   },
   {
@@ -327,10 +340,10 @@ const MORE_GROUPS: Array<{
     color: '#DE9277',
     bg: 'rgba(222,146,119,0.12)',
     items: [
-      { label: 'Promotions', icon: '🎁', route: '/promotions' },
-      { label: 'Gift Cards',  icon: '💳', route: '/gift-cards' },
-      { label: 'Loyalty',     icon: '⭐', route: '/loyalty' },
-      { label: 'Analytics',   icon: '📊', route: '/analytics' },
+      { label: 'Promotions', icon: '🎁', route: '/promotions', view: 'promotions' },
+      { label: 'Gift Cards',  icon: '💳', route: '/gift-cards', view: 'gift-cards' },
+      { label: 'Loyalty',     icon: '⭐', route: '/loyalty',    view: 'loyalty' },
+      { label: 'Analytics',   icon: '📊', route: '/analytics',  view: 'analytics' },
       { label: 'Reports',     icon: '📈', route: '/reports' },
     ],
   },
@@ -340,26 +353,100 @@ const MORE_GROUPS: Array<{
     bg: 'rgba(58,135,212,0.10)',
     items: [
       { label: 'Automation', icon: '⚡', route: '/automation' },
-      { label: 'Payroll',    icon: '💰', route: '/payments',   view: 'payments' },
+      { label: 'Payroll',    icon: '💰', route: '/payroll' },
       { label: 'Exports',    icon: '📤', route: '/exports' },
       { label: 'Settings',   icon: '⚙️', route: '/settings',  view: 'settings' },
     ],
   },
 ];
 
+// Data warmers for the heaviest "More" destinations. Each entry mirrors the exact
+// query key + return shape its page's hook uses, so when the page mounts React
+// Query finds the data already cached and renders without a spinner. Keys/shapes
+// must stay in lockstep with the corresponding hook in lib/hooks — verified
+// against each hook's queryKey and queryFn return value.
+function warmMoreData(qc: QueryClient, businessId: string) {
+  const STALE = 5 * 60 * 1000;
+  const warm = (key: unknown[], fn: () => Promise<unknown>) =>
+    qc.prefetchQuery({ queryKey: key, queryFn: fn, staleTime: STALE });
+
+  // useIntakeForms(businessId) → ['intake-forms', businessId, undefined], returns response.data
+  warm(['intake-forms', businessId, undefined], () =>
+    apiClient.get(`/intake-forms?businessId=${businessId}`).then((r) => r.data)
+  );
+  // usePromotions(businessId) → ['promotions', businessId, undefined], returns response.data.data
+  warm(['promotions', businessId, undefined], () =>
+    apiClient.get(`/promotions?businessId=${businessId}`).then((r) => r.data.data)
+  );
+  // useLoyaltyAccounts(businessId) → ['loyalty-accounts', businessId], returns response.data
+  warm(['loyalty-accounts', businessId], () =>
+    apiClient.get(`/loyalty/accounts?businessId=${businessId}`).then((r) => r.data)
+  );
+  // useLoyaltySettings(businessId) → ['loyalty-settings', businessId], returns response.data
+  warm(['loyalty-settings', businessId], () =>
+    apiClient.get(`/loyalty/settings?businessId=${businessId}`).then((r) => r.data)
+  );
+  // useGiftCards(businessId, {}) → ['gift-cards', businessId, {}], returns response.data.data
+  warm(['gift-cards', businessId, {}], () =>
+    apiClient.get(`/gift-cards?businessId=${businessId}`).then((r) => r.data.data)
+  );
+  // useInventory(businessId, {}) → ['inventory', businessId, {}], returns response.data
+  warm(['inventory', businessId, {}], () =>
+    apiClient.get(`/inventory?businessId=${businessId}`).then((r) => r.data)
+  );
+  // useAutomationRules(businessId) → ['automation', businessId], returns response.data
+  warm(['automation', businessId], () =>
+    apiClient.get(`/automation?businessId=${businessId}`).then((r) => r.data)
+  );
+  // usePayrollPeriods(businessId) → ['payroll', businessId], returns response.data
+  warm(['payroll', businessId], () =>
+    apiClient.get(`/payroll?businessId=${businessId}`).then((r) => r.data)
+  );
+  // Analytics page: useDashboardOverview({ startDate, endDate }) defaults to the
+  // last 30 days → ['analytics', 'overview', params], returns response.data.data.
+  // We reproduce the page's exact default param object so the key hashes match.
+  const params = {
+    startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    endDate: new Date().toISOString().split('T')[0],
+  };
+  warm(['analytics', 'overview', params], () =>
+    apiClient.get('/analytics/overview', { params }).then((r) => r.data.data)
+  );
+}
+
 interface MoreSheetProps {
   open: boolean;
   onClose: () => void;
   onNavigate: (view: MobileView) => void;
+  /** Fired when a route-based destination is tapped, so the shell can show its
+   *  navigation progress bar while the page loads. */
+  onNavigateStart: () => void;
   userName: string;
   userEmail: string;
 }
 
-function MoreSheet({ open, onClose, onNavigate, userName, userEmail }: MoreSheetProps) {
+function MoreSheet({ open, onClose, onNavigate, onNavigateStart, userName, userEmail }: MoreSheetProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const businessId = useBusinessId();
   const [search, setSearch] = useState('');
   const [showInstallHelp, setShowInstallHelp] = useState(false);
   const { canInstall, hasManualInstall, isInstalled, browserType, triggerInstall } = usePWAInstall();
+
+  // When the sheet opens, warm both halves of every "More" destination's cost:
+  //   1. the route bundle + RSC payload (router.prefetch) — no cold chunk on tap
+  //   2. the page's data (warmMoreData) — so it mounts already populated, no spinner
+  // Together these make the pushed overlay feel native-instant. Both are deduped
+  // (Next for routes, React Query for data), so re-opening is cheap.
+  useEffect(() => {
+    if (!open) return;
+    for (const group of MORE_GROUPS) {
+      for (const item of group.items) {
+        if (!item.view) router.prefetch(item.route);
+      }
+    }
+    if (businessId) warmMoreData(queryClient, businessId);
+  }, [open, router, queryClient, businessId]);
 
   const handleInstallPress = async () => {
     if (canInstall) {
@@ -556,10 +643,14 @@ function MoreSheet({ open, onClose, onNavigate, userName, userEmail }: MoreSheet
                 <button
                   key={item.label}
                   className="im-tab im-press"
+                  // Press-intent prefetch: fires before the click resolves, giving
+                  // the route chunk a head start the instant a finger touches down.
+                  onPointerDown={() => { if (!item.view) router.prefetch(item.route); }}
                   onClick={() => {
                     if (item.view) {
                       onNavigate(item.view);
                     } else {
+                      onNavigateStart();
                       router.push(item.route);
                     }
                     onClose();
@@ -748,6 +839,81 @@ function CreateSheet({ open, onClose, onNavigate, onNewSession }: CreateSheetPro
   );
 }
 
+// ─── Route Overlay ────────────────────────────────────────────────────────────
+// Renders a full desktop route page (Intake Forms, Promotions, etc.) inside the
+// mobile device frame as a pushed view with a back button. Used for the "More"
+// menu destinations that don't have a dedicated native mobile screen.
+
+interface RouteOverlayProps {
+  title: string;
+  onBack: () => void;
+  children: React.ReactNode;
+}
+
+function RouteOverlay({ title, onBack, children }: RouteOverlayProps) {
+  return (
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          padding: '12px 16px',
+          flexShrink: 0,
+          borderBottom: '1px solid var(--m-line)',
+          background: 'var(--m-surface)',
+        }}
+      >
+        <button
+          onClick={onBack}
+          aria-label="Back"
+          className="im-press"
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 12,
+            background: 'var(--m-soft)',
+            border: 'none',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+            color: 'var(--m-ink)',
+          }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M19 12H5M12 5l-7 7 7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+        <div
+          style={{
+            fontSize: 18,
+            fontWeight: 700,
+            color: 'var(--m-ink)',
+            fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)',
+            letterSpacing: -0.3,
+          }}
+        >
+          {title}
+        </div>
+      </div>
+      <div
+        className="im-scroll"
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          padding: 16,
+          // Clear the always-visible tab bar (64px) plus normal breathing room.
+          paddingBottom: 'calc(88px + env(safe-area-inset-bottom))',
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
 // Screen registry — swapped out as phases are built
 const SCREENS: Record<MobileView, React.ComponentType<{ router: MobileRouter; param: unknown }>> = {
   dashboard:        MobileDashboard,
@@ -758,18 +924,81 @@ const SCREENS: Record<MobileView, React.ComponentType<{ router: MobileRouter; pa
   thread:           MobileThread,
   payments:         MobilePayments,
   settings:         MobileSettings,
+  analytics:        MobileAnalytics,
+  loyalty:          MobileLoyalty,
+  inventory:        MobileInventory,
+  promotions:       MobilePromotions,
+  'gift-cards':     MobileGiftCards,
 };
 
-// Detail views that suppress the tab bar and FAB
+// Detail views that suppress the FAB (the tab bar now stays visible everywhere)
 const DETAIL_VIEWS: MobileView[] = ['client-profile', 'thread'];
+
+// Detail views map back to their originating tab so the bar still highlights it
+const DETAIL_PARENT_TAB: Partial<Record<MobileView, MobileView>> = {
+  'client-profile': 'clients',
+  thread: 'messages',
+};
+
+// Next.js routes for each core tab — used to leave a route overlay on tab press
+const TAB_ROUTE: Record<string, string> = {
+  dashboard: '/dashboard',
+  appts: '/appointments',
+  clients: '/clients',
+  messages: '/messages',
+};
+
+// Vertical space the always-visible tab bar occupies (icon + label + safe area)
+const TAB_BAR_SPACE = 'calc(64px + env(safe-area-inset-bottom))';
+
+// ─── Nav Progress Bar ─────────────────────────────────────────────────────────
+// Thin indeterminate bar pinned to the top of the device frame. Shows the instant
+// a route navigation starts (tap registered) and clears once the new route commits,
+// so a "More" destination never feels like a dead tap while its page loads.
+
+function NavProgressBar({ active }: { active: boolean }) {
+  if (!active) return null;
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        top: 'env(safe-area-inset-top)',
+        left: 0,
+        right: 0,
+        height: 3,
+        overflow: 'hidden',
+        zIndex: 100,
+        pointerEvents: 'none',
+        background: 'var(--m-soft)',
+      }}
+    >
+      <div
+        className="im-navbar-fill"
+        style={{
+          height: '100%',
+          width: '40%',
+          borderRadius: 100,
+          background: 'var(--m-grad)',
+        }}
+      />
+    </div>
+  );
+}
 
 // ─── Mobile Shell ─────────────────────────────────────────────────────────────
 
 interface MobileShellProps {
   initialView?: MobileView;
+  /** When set, a non-core route page (e.g. Intake Forms) is shown as a pushed
+   *  overlay inside the device frame instead of a native mobile screen. */
+  routeOverlay?: { title: string; node: React.ReactNode } | null;
+  /** Invoked when the overlay's back button is pressed (typically router.back). */
+  onRouteBack?: () => void;
 }
 
-export function MobileShell({ initialView = 'dashboard' }: MobileShellProps) {
+export function MobileShell({ initialView = 'dashboard', routeOverlay = null, onRouteBack }: MobileShellProps) {
+  const nextRouter = useRouter();
+  const pathname = usePathname();
   const { user } = useAuth();
   const businessId = useBusinessId();
   const { data: unreadCount = 0 } = useUnreadCount(businessId);
@@ -779,6 +1008,22 @@ export function MobileShell({ initialView = 'dashboard' }: MobileShellProps) {
   const [history, setHistory] = useState<Array<{ view: MobileView; param: unknown }>>([]);
   const [moreOpen, setMoreOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const [readConversationIds, setReadConversationIds] = useState<Set<string>>(new Set());
+  const [navigating, setNavigating] = useState(false);
+
+  // A route navigation has committed once the pathname changes — clear the bar.
+  // Also clears whenever a fresh route overlay arrives (e.g. its page resolved).
+  useEffect(() => {
+    setNavigating(false);
+  }, [pathname]);
+
+  // Safety net: never let the bar hang if a navigation stalls or targets the
+  // current route (no pathname change to clear it).
+  useEffect(() => {
+    if (!navigating) return;
+    const id = setTimeout(() => setNavigating(false), 8000);
+    return () => clearTimeout(id);
+  }, [navigating]);
 
   const firstName = user?.user_metadata?.first_name ?? '';
   const lastName  = user?.user_metadata?.last_name ?? '';
@@ -786,6 +1031,21 @@ export function MobileShell({ initialView = 'dashboard' }: MobileShellProps) {
   const email     = user?.email ?? '';
 
   const navigate = useCallback((nextView: MobileView, nextParam?: unknown) => {
+    if (nextView === 'thread' && nextParam) {
+      const p = nextParam as any;
+      // A client row collapses every channel-conversation; clear them all so the
+      // aggregate badge fully disappears once the thread is opened.
+      const ids: string[] = Array.isArray(p.memberIds) && p.memberIds.length
+        ? p.memberIds
+        : typeof p.id === 'string' ? [p.id] : [];
+      if (ids.length) {
+        setReadConversationIds((prev) => {
+          const next = new Set(prev);
+          ids.forEach((id) => next.add(id));
+          return next;
+        });
+      }
+    }
     setHistory((h) => [...h, { view, param }]);
     setView(nextView);
     setParam(nextParam ?? null);
@@ -800,7 +1060,7 @@ export function MobileShell({ initialView = 'dashboard' }: MobileShellProps) {
     }
   }, [history]);
 
-  const router: MobileRouter = { view, param, navigate, goBack };
+  const router: MobileRouter = { view, param, navigate, goBack, readConversationIds };
 
   const handleTabPress = (id: string) => {
     if (id === 'more') {
@@ -810,11 +1070,17 @@ export function MobileShell({ initialView = 'dashboard' }: MobileShellProps) {
     setHistory([]);
     setView(id as MobileView);
     setParam(null);
+    // While a route overlay (a "More" destination) is showing, the displayed
+    // screen is driven by the URL — push the core route so the overlay clears.
+    if (routeOverlay) {
+      setNavigating(true);
+      nextRouter.push(TAB_ROUTE[id] ?? '/dashboard');
+    }
   };
 
   const isDetailView = DETAIL_VIEWS.includes(view);
   const anySheetOpen = moreOpen || createOpen;
-  const showFAB = !isDetailView && !anySheetOpen && FAB_VIEWS.includes(view);
+  const showFAB = !isDetailView && !anySheetOpen && !routeOverlay && FAB_VIEWS.includes(view);
 
   const Screen = SCREENS[view];
 
@@ -848,10 +1114,20 @@ export function MobileShell({ initialView = 'dashboard' }: MobileShellProps) {
           <StatusBar />
         </div>
 
+        {/* Top navigation progress bar — instant feedback that a tap registered */}
+        <NavProgressBar active={navigating} />
+
         {/* Screen content */}
-        {isDetailView ? (
-          // Detail views: no scroll wrapper, full flex column
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {routeOverlay ? (
+          // Pushed route page (More menu destination) shown inside the frame
+          <RouteOverlay title={routeOverlay.title} onBack={() => onRouteBack?.()}>
+            {routeOverlay.node}
+          </RouteOverlay>
+        ) : isDetailView ? (
+          // Detail views: no scroll wrapper, full flex column. Reserve space at the
+          // bottom so the screen's own footer (e.g. the thread composer) sits above
+          // the always-visible tab bar instead of behind it.
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', paddingBottom: TAB_BAR_SPACE }}>
             <Screen router={router} param={param} />
           </div>
         ) : (
@@ -868,14 +1144,13 @@ export function MobileShell({ initialView = 'dashboard' }: MobileShellProps) {
           </div>
         )}
 
-        {/* Bottom tab bar */}
-        {!isDetailView && (
-          <TabBar
-            activeView={view}
-            onTabPress={handleTabPress}
-            unreadCount={unreadCount}
-          />
-        )}
+        {/* Bottom tab bar — always visible so navigation is never lost. Detail
+            views highlight their parent tab; route overlays highlight nothing. */}
+        <TabBar
+          activeView={routeOverlay ? null : (DETAIL_PARENT_TAB[view] ?? view)}
+          onTabPress={handleTabPress}
+          unreadCount={unreadCount}
+        />
 
         {/* FAB */}
         {showFAB && <FAB onPress={() => setCreateOpen(true)} />}
@@ -888,6 +1163,7 @@ export function MobileShell({ initialView = 'dashboard' }: MobileShellProps) {
           open={moreOpen}
           onClose={() => setMoreOpen(false)}
           onNavigate={(v) => { setView(v); setHistory([]); }}
+          onNavigateStart={() => setNavigating(true)}
           userName={fullName}
           userEmail={email}
         />
@@ -902,6 +1178,18 @@ export function MobileShell({ initialView = 'dashboard' }: MobileShellProps) {
       <style>{`
         /* Status bar hidden by default — shown only in desktop frame simulation */
         .im-status-bar-wrap { display: none; }
+
+        /* Indeterminate sweep for the top navigation progress bar */
+        @keyframes im-navbar-sweep {
+          0%   { transform: translateX(-100%); }
+          100% { transform: translateX(350%); }
+        }
+        .im-navbar-fill {
+          animation: im-navbar-sweep 1s ease-in-out infinite;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .im-navbar-fill { animation-duration: 1.8s; }
+        }
 
         /* Desktop browser: show device frame and fake status bar */
         @media (hover: hover) and (pointer: fine) and (min-width: 480px) {

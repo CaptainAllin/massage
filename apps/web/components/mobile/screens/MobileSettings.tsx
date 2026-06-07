@@ -20,51 +20,71 @@ interface MobileSettingsProps {
   param: unknown;
 }
 
-type SettingsSubView = 'business' | 'team' | 'hours' | 'booking' | 'notifications' | 'security' | 'account';
+type SettingsSubView = 'business' | 'team' | 'hours' | 'booking' | 'notifications' | 'security' | 'account' | 'billing' | 'preferences';
 
 // ─── Shared primitives ────────────────────────────────────────────────────────
 
-function SubViewHeader({ title, subtitle, onBack }: { title: string; subtitle?: string; onBack: () => void }) {
+function SubViewHeader({ title, eyebrow, onBack }: { title: string; eyebrow?: string; onBack: () => void }) {
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 12,
-        padding: '16px 16px 0',
-        marginBottom: 20,
-        flexShrink: 0,
-      }}
-    >
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '14px 16px 0', marginBottom: 4, flexShrink: 0 }}>
       <button
         onClick={onBack}
         style={{
-          width: 36,
-          height: 36,
-          borderRadius: 12,
-          background: 'var(--m-soft)',
-          border: 'none',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0,
-          color: 'var(--m-ink)',
+          width: 36, height: 36, borderRadius: 12,
+          background: 'var(--m-soft)', border: 'none', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          flexShrink: 0, color: 'var(--m-ink)', marginTop: 2,
         }}
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
           <path d="M19 12H5M12 5l-7 7 7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </button>
-      <div>
-        <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--m-ink)', fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)', letterSpacing: -0.3 }}>
-          {title}
-        </div>
-        {subtitle && (
-          <div style={{ fontSize: 12, color: 'var(--m-muted)', marginTop: 1, fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)' }}>
-            {subtitle}
-          </div>
+      <div style={{ fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)' }}>
+        {eyebrow && (
+          <p style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1.4, color: 'var(--m-primary)', margin: '0 0 4px' }}>
+            {eyebrow}
+          </p>
         )}
+        <h2 style={{ fontSize: 24, fontWeight: 700, letterSpacing: -0.6, color: 'var(--m-ink)', margin: 0, lineHeight: 1.15 }}>
+          {title}
+        </h2>
+      </div>
+    </div>
+  );
+}
+
+function SkeletonRect({ width = '100%', height = 16, radius = 8, style }: { width?: string | number; height?: number; radius?: number; style?: React.CSSProperties }) {
+  return <div className="im-skeleton" style={{ width, height, borderRadius: radius, ...style }} />;
+}
+
+function SkeletonInputs({ count = 4 }: { count?: number }) {
+  return (
+    <div style={{ padding: '0 16px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i}>
+          <SkeletonRect width={80} height={10} radius={6} style={{ marginBottom: 8 }} />
+          <SkeletonRect height={44} radius={12} />
+        </div>
+      ))}
+      <SkeletonRect height={50} radius={14} style={{ marginTop: 4 }} />
+    </div>
+  );
+}
+
+function SkeletonRows({ count = 4 }: { count?: number }) {
+  return (
+    <div style={{ padding: '0 16px 24px' }}>
+      <div style={{ background: 'var(--m-surface)', borderRadius: 22, border: '1px solid var(--m-line2)', padding: '0 14px' }}>
+        {Array.from({ length: count }).map((_, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 0', borderBottom: i < count - 1 ? '1px solid var(--m-line2)' : 'none' }}>
+            <SkeletonRect width={36} height={36} radius={10} />
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <SkeletonRect width="55%" height={13} />
+              <SkeletonRect width="35%" height={10} />
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -237,9 +257,7 @@ function BusinessSubView({ businessId }: { businessId: string }) {
     }
   };
 
-  if (isLoading) {
-    return <div style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--m-muted)', fontSize: 14 }}>Loading…</div>;
-  }
+  if (isLoading) return <SkeletonInputs count={6} />;
 
   return (
     <form onSubmit={handleSubmit} style={{ padding: '0 16px 24px' }}>
@@ -265,9 +283,7 @@ function TeamSubView({ businessId }: { businessId: string }) {
   const { data: members, isLoading: mLoading } = useBusinessMembers(businessId);
   const { data: invites, isLoading: iLoading } = useStaffInvites(businessId);
 
-  if (mLoading || iLoading) {
-    return <div style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--m-muted)', fontSize: 14 }}>Loading…</div>;
-  }
+  if (mLoading || iLoading) return <SkeletonRows count={4} />;
 
   const pendingInvites = (invites || []).filter((inv: any) => !inv.acceptedAt && new Date(inv.expiresAt) > new Date());
 
@@ -439,9 +455,7 @@ function HoursSubView({ businessId }: { businessId: string }) {
     }
   };
 
-  if (isLoading) {
-    return <div style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--m-muted)', fontSize: 14 }}>Loading…</div>;
-  }
+  if (isLoading) return <SkeletonRows count={7} />;
 
   return (
     <div style={{ padding: '0 16px 24px' }}>
@@ -547,9 +561,7 @@ function BookingSubView({ businessId }: { businessId: string }) {
     }
   };
 
-  if (isLoading) {
-    return <div style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--m-muted)', fontSize: 14 }}>Loading…</div>;
-  }
+  if (isLoading) return <SkeletonInputs count={3} />;
 
   return (
     <div style={{ padding: '0 16px 24px' }}>
@@ -677,9 +689,7 @@ function NotificationsSubView({ businessId }: { businessId: string }) {
     }
   };
 
-  if (isLoading) {
-    return <div style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--m-muted)', fontSize: 14 }}>Loading…</div>;
-  }
+  if (isLoading) return <SkeletonRows count={5} />;
 
   return (
     <div style={{ padding: '0 16px 24px' }}>
@@ -748,6 +758,7 @@ function SecuritySubView() {
   const [enrolling, setEnrolling] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [confirmingRevoke, setConfirmingRevoke] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -778,13 +789,14 @@ function SecuritySubView() {
   };
 
   const handleRevoke = async (factorId: string) => {
-    if (!confirm('Remove this passkey?')) return;
     try {
       await revokePasskey(factorId);
       setSuccess('Passkey removed.');
+      setConfirmingRevoke(null);
       await load();
     } catch (e: any) {
       setError(e.message || 'Failed to remove passkey');
+      setConfirmingRevoke(null);
     }
   };
 
@@ -804,7 +816,10 @@ function SecuritySubView() {
       <FieldLabel>Passkeys</FieldLabel>
       <Card style={{ padding: '0 14px', marginBottom: 16 }}>
         {loading && (
-          <div style={{ padding: '16px 0', textAlign: 'center', color: 'var(--m-muted)', fontSize: 13 }}>Loading…</div>
+          <div style={{ padding: '8px 0 4px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <SkeletonRect height={44} radius={10} />
+            <SkeletonRect height={44} radius={10} />
+          </div>
         )}
         {!loading && passkeys.length === 0 && (
           <div style={{ padding: '16px 0', textAlign: 'center', color: 'var(--m-muted)', fontSize: 13, fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)' }}>
@@ -812,40 +827,57 @@ function SecuritySubView() {
           </div>
         )}
         {passkeys.map((pk, i) => (
-          <div
-            key={pk.id}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              padding: '12px 0',
-              borderBottom: i < passkeys.length - 1 ? '1px solid var(--m-line2)' : 'none',
-            }}
-          >
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--m-ink)', fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)' }}>
-                {pk.friendlyName || 'Passkey'}
+          <div key={pk.id} style={{ borderBottom: i < passkeys.length - 1 ? '1px solid var(--m-line2)' : 'none' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0' }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--m-ink)', fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)' }}>
+                  {pk.friendlyName || 'Passkey'}
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--m-muted)', marginTop: 1, fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)' }}>
+                  Added {new Date(pk.createdAt).toLocaleDateString()}
+                </div>
               </div>
-              <div style={{ fontSize: 12, color: 'var(--m-muted)', marginTop: 1, fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)' }}>
-                Added {new Date(pk.createdAt).toLocaleDateString()}
-              </div>
+              <button
+                onClick={() => setConfirmingRevoke(confirmingRevoke === pk.id ? null : pk.id)}
+                style={{
+                  padding: '5px 10px', borderRadius: 8,
+                  background: 'none', border: '1.5px solid var(--m-line2)',
+                  color: 'var(--m-muted)', fontSize: 12, fontWeight: 600,
+                  cursor: 'pointer', fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)',
+                }}
+              >
+                Remove
+              </button>
             </div>
-            <button
-              onClick={() => handleRevoke(pk.id)}
-              style={{
-                padding: '5px 10px',
-                borderRadius: 8,
-                background: 'none',
-                border: '1.5px solid #FCA5A5',
-                color: '#DC2626',
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: 'pointer',
-                fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)',
-              }}
-            >
-              Remove
-            </button>
+            {confirmingRevoke === pk.id && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 0 12px', paddingLeft: 0 }}>
+                <span style={{ flex: 1, fontSize: 12.5, color: 'var(--m-muted)', fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)' }}>
+                  Remove this passkey?
+                </span>
+                <button
+                  onClick={() => handleRevoke(pk.id)}
+                  style={{
+                    padding: '6px 12px', borderRadius: 8,
+                    background: '#DC2626', border: 'none',
+                    color: '#fff', fontSize: 12, fontWeight: 700,
+                    cursor: 'pointer', fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)',
+                  }}
+                >
+                  Yes, remove
+                </button>
+                <button
+                  onClick={() => setConfirmingRevoke(null)}
+                  style={{
+                    padding: '6px 12px', borderRadius: 8,
+                    background: 'var(--m-soft)', border: 'none',
+                    color: 'var(--m-ink)', fontSize: 12, fontWeight: 600,
+                    cursor: 'pointer', fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)',
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
           </div>
         ))}
       </Card>
@@ -1278,6 +1310,67 @@ function InstallRow({ isInstalled, canInstall, hasManualInstall, browserType, sh
   );
 }
 
+// ─── BillingSubView ───────────────────────────────────────────────────────────
+
+function BillingSubView() {
+  return (
+    <div style={{ padding: '0 16px 24px' }}>
+      <Card style={{ padding: '16px', marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 42, height: 42, borderRadius: 13, background: 'var(--m-grad)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <rect x="2" y="6" width="20" height="14" rx="3" stroke="#fff" strokeWidth="1.8" />
+              <path d="M2 10h20" stroke="#fff" strokeWidth="1.8" />
+              <path d="M6 15h4" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" />
+            </svg>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--m-ink)', fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)' }}>Pro Plan</div>
+            <div style={{ fontSize: 12.5, color: 'var(--m-muted)', marginTop: 2, fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)' }}>Active subscription</div>
+          </div>
+          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--m-ok)', background: 'rgba(62,158,122,0.12)', padding: '3px 9px', borderRadius: 8, fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)' }}>
+            Active
+          </span>
+        </div>
+      </Card>
+      <div style={{ padding: '12px 14px', borderRadius: 12, background: 'var(--m-soft)', fontSize: 12.5, color: 'var(--m-muted)', fontFamily: 'var(--font-sora, Sora, system-ui, sans-serif)', lineHeight: 1.5 }}>
+        To manage your subscription, update payment details, or view invoices, visit Billing on desktop.
+      </div>
+    </div>
+  );
+}
+
+// ─── PreferencesSubView ───────────────────────────────────────────────────────
+
+function PreferencesSubView() {
+  const [use24h, setUse24h] = useState(false);
+  const [startMonday, setStartMonday] = useState(true);
+
+  useEffect(() => {
+    setUse24h(!!localStorage.getItem('pref-24h'));
+    setStartMonday(localStorage.getItem('pref-week-start') !== 'sunday');
+  }, []);
+
+  const toggle24h = (v: boolean) => {
+    setUse24h(v);
+    if (v) localStorage.setItem('pref-24h', '1');
+    else localStorage.removeItem('pref-24h');
+  };
+  const toggleWeekStart = (v: boolean) => {
+    setStartMonday(v);
+    localStorage.setItem('pref-week-start', v ? 'monday' : 'sunday');
+  };
+
+  return (
+    <div style={{ padding: '0 16px 24px' }}>
+      <Card style={{ padding: '0 14px' }}>
+        <ToggleRow label="24-hour time" description="Display times in 24h format" checked={use24h} onChange={toggle24h} />
+        <ToggleRow label="Week starts Monday" description="Calendar and schedule views" checked={startMonday} onChange={toggleWeekStart} />
+      </Card>
+    </div>
+  );
+}
+
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export function MobileSettings({ router: _router }: MobileSettingsProps) {
@@ -1286,6 +1379,19 @@ export function MobileSettings({ router: _router }: MobileSettingsProps) {
   const { canInstall, isInstalled, hasManualInstall, browserType, triggerInstall } = usePWAInstall();
   const [showInstallHelp, setShowInstallHelp] = useState(false);
   const [subView, setSubView] = useState<SettingsSubView | null>(null);
+
+  // Value-preview data for settings rows
+  const { data: business } = useBusiness(businessId);
+  const { data: members } = useBusinessMembers(businessId);
+  const { data: commSettings } = useCommunicationSettings(businessId);
+  const { data: businessHours } = useBusinessHours(businessId);
+
+  const bookingModeLabel: Record<string, string> = { PUBLIC: 'Public', EXISTING_CLIENTS_ONLY: 'Existing', INVITE_ONLY: 'Invite only' };
+  const bookingPreview = business ? (bookingModeLabel[(business as any).bookingMode] ?? 'Public') : undefined;
+  const teamPreview = members ? `${members.length} member${members.length !== 1 ? 's' : ''}` : undefined;
+  const notifChannels = commSettings ? [commSettings.emailEnabled && 'Email', commSettings.smsEnabled && 'SMS', commSettings.whatsappEnabled && 'WA'].filter(Boolean).join(' · ') || 'Off' : undefined;
+  const openDays = businessHours ? businessHours.filter((h: any) => !h.isClosed).length : undefined;
+  const hoursPreview = openDays !== undefined ? `${openDays} day${openDays !== 1 ? 's' : ''}` : undefined;
 
   const firstName = user?.user_metadata?.first_name ?? '';
   const lastName  = user?.user_metadata?.last_name ?? '';
@@ -1302,24 +1408,24 @@ export function MobileSettings({ router: _router }: MobileSettingsProps) {
     }
   };
 
-  const SUB_VIEW_TITLES: Record<SettingsSubView, string> = {
-    business:      'Business Profile',
-    team:          'Team & Therapists',
-    hours:         'Hours & Availability',
-    booking:       'Booking Page',
-    notifications: 'Notifications',
-    security:      'Privacy & Security',
-    account:       'My Account',
+  const SUB_VIEW_META: Record<SettingsSubView, { title: string; eyebrow: string }> = {
+    business:      { title: 'Business Profile',   eyebrow: 'Practice' },
+    team:          { title: 'Team & Therapists',   eyebrow: 'Practice' },
+    hours:         { title: 'Hours & Availability',eyebrow: 'Practice' },
+    booking:       { title: 'Booking Page',        eyebrow: 'Practice' },
+    notifications: { title: 'Notifications',       eyebrow: 'Account' },
+    security:      { title: 'Privacy & Security',  eyebrow: 'Account' },
+    account:       { title: 'My Account',          eyebrow: 'You' },
+    billing:       { title: 'Billing & Plan',      eyebrow: 'Account' },
+    preferences:   { title: 'Preferences',         eyebrow: 'Account' },
   };
 
   // Render sub-view
   if (subView) {
+    const meta = SUB_VIEW_META[subView];
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <SubViewHeader
-          title={SUB_VIEW_TITLES[subView]}
-          onBack={() => setSubView(null)}
-        />
+        <SubViewHeader title={meta.title} eyebrow={meta.eyebrow} onBack={() => setSubView(null)} />
         <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 32 }}>
           {subView === 'business'      && <BusinessSubView businessId={businessId} />}
           {subView === 'team'          && <TeamSubView businessId={businessId} />}
@@ -1328,6 +1434,8 @@ export function MobileSettings({ router: _router }: MobileSettingsProps) {
           {subView === 'notifications' && <NotificationsSubView businessId={businessId} />}
           {subView === 'security'      && <SecuritySubView />}
           {subView === 'account'       && <AccountSubView />}
+          {subView === 'billing'       && <BillingSubView />}
+          {subView === 'preferences'   && <PreferencesSubView />}
         </div>
       </div>
     );
@@ -1420,10 +1528,10 @@ export function MobileSettings({ router: _router }: MobileSettingsProps) {
       <div style={{ marginBottom: 24 }}>
         <GroupLabel label="Practice" />
         <Card style={{ padding: '0 16px' }}>
-          <SettingsRow icon={<BuildingIcon />} label="Business profile"     onPress={() => setSubView('business')} />
-          <SettingsRow icon={<UsersIcon />}    label="Team & therapists"    onPress={() => setSubView('team')} />
-          <SettingsRow icon={<ClockIcon />}    label="Hours & availability" onPress={() => setSubView('hours')} />
-          <SettingsRow icon={<LinkIcon />}     label="Booking page"         onPress={() => setSubView('booking')} last />
+          <SettingsRow icon={<BuildingIcon />} label="Business profile"     value={(business as any)?.name ? undefined : undefined} onPress={() => setSubView('business')} />
+          <SettingsRow icon={<UsersIcon />}    label="Team & therapists"    value={teamPreview}    onPress={() => setSubView('team')} />
+          <SettingsRow icon={<ClockIcon />}    label="Hours & availability" value={hoursPreview}   onPress={() => setSubView('hours')} />
+          <SettingsRow icon={<LinkIcon />}     label="Booking page"         value={bookingPreview} onPress={() => setSubView('booking')} last />
         </Card>
       </div>
 
@@ -1431,10 +1539,10 @@ export function MobileSettings({ router: _router }: MobileSettingsProps) {
       <div style={{ marginBottom: 32 }}>
         <GroupLabel label="Account" />
         <Card style={{ padding: '0 16px' }}>
-          <SettingsRow icon={<BellIcon />}       label="Notifications"      onPress={() => setSubView('notifications')} />
-          <SettingsRow icon={<ShieldIcon />}     label="Privacy & security" onPress={() => setSubView('security')} />
-          <SettingsRow icon={<CreditCardIcon />} label="Billing & plan"     value="Pro" onPress={() => setSubView('account')} />
-          <SettingsRow icon={<SlidersIcon />}    label="Preferences"        onPress={() => setSubView('account')} last />
+          <SettingsRow icon={<BellIcon />}       label="Notifications"      value={notifChannels}  onPress={() => setSubView('notifications')} />
+          <SettingsRow icon={<ShieldIcon />}     label="Privacy & security"                        onPress={() => setSubView('security')} />
+          <SettingsRow icon={<CreditCardIcon />} label="Billing & plan"     value="Pro"            onPress={() => setSubView('billing')} />
+          <SettingsRow icon={<SlidersIcon />}    label="Preferences"                               onPress={() => setSubView('preferences')} last />
         </Card>
       </div>
 

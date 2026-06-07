@@ -4,6 +4,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from './utils';
+import { IrisLogo } from './IrisLogo';
 import {
   LayoutDashboard,
   Calendar,
@@ -258,35 +259,10 @@ const COLLAPSIBLE_GROUPS: MenuGroup[] = [
   },
 ];
 
-function IrisLogo() {
+function IrisLogoLink() {
   return (
-    <Link href="/dashboard" className="flex items-center gap-3 px-5 py-4 border-b border-[#EFE9F2]">
-      <div
-        className="h-9 w-9 rounded-xl flex items-center justify-center flex-shrink-0"
-        style={{ background: 'linear-gradient(135deg, #5D4AA8, #3F2F87)' }}
-      >
-        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-          <path
-            d="M9 2C9 2 5 5.5 5 9.5C5 11.985 6.791 14 9 14C11.209 14 13 11.985 13 9.5C13 5.5 9 2 9 2Z"
-            fill="white"
-            opacity="0.9"
-          />
-          <path
-            d="M9 14V16M6 15.5H12"
-            stroke="white"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-          />
-        </svg>
-      </div>
-      <div className="flex flex-col leading-none">
-        <span style={{ fontFamily: 'Sora, system-ui, sans-serif', fontSize: '15px', fontWeight: 600, color: '#1E1830', letterSpacing: '-0.3px' }}>
-          Iris
-        </span>
-        <span style={{ fontFamily: 'Sora, system-ui, sans-serif', fontSize: '10px', fontWeight: 400, color: '#7A7090', letterSpacing: '1.5px', textTransform: 'uppercase', marginTop: '1px' }}>
-          Care Suite
-        </span>
-      </div>
+    <Link href="/dashboard" className="flex items-center px-5 py-4 border-b border-[#EFE9F2]">
+      <IrisLogo size={36} wordmark="stacked" />
     </Link>
   );
 }
@@ -525,7 +501,7 @@ function MenuContent({
 
   return (
     <div className="flex h-full flex-col" style={{ background: '#FBF8FD' }}>
-      <IrisLogo />
+      <IrisLogoLink />
 
       <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-4" style={{ scrollbarWidth: 'none' }}>
         {/* Pinned section */}

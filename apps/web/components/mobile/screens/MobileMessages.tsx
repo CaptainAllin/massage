@@ -20,6 +20,9 @@ export interface MobileConversation {
   preview: string;
   timestamp: string;
   unreadCount: number;
+  /** All conversation IDs belonging to this client (one per channel), so opening
+   *  the collapsed thread can mark every underlying conversation read. */
+  memberIds: string[];
   messages: MobileMessage[];
 }
 
@@ -76,6 +79,7 @@ function mapConversation(c: any): MobileConversation {
     preview: c.lastMessagePreview ?? '(no preview)',
     timestamp: fmtTimestamp(c.lastMessageAt),
     unreadCount: c.unreadCount ?? 0,
+    memberIds: [c.id],
     messages: [],
   };
 }
@@ -148,7 +152,7 @@ function ConvRow({ convo, onClick, isLast }: { convo: MobileConversation; onClic
         position: 'relative',
         display: 'flex', alignItems: 'center', gap: 12,
         padding: `10px 14px 10px ${isUnread ? '18px' : '14px'}`,
-        background: isUnread ? 'rgba(93,74,168,0.03)' : 'var(--m-surface)',
+        background: isUnread ? 'rgba(93,74,168,0.03)' : 'none',
         border: 'none',
         borderBottom: isLast ? 'none' : '1px solid var(--m-line2)',
         borderRadius: 0,
@@ -313,6 +317,8 @@ export function MobileMessages({ router }: MobileMessagesProps) {
     search: search || undefined,
   });
 
+  const { readConversationIds } = router;
+
   const conversations: MobileConversation[] = useMemo(() => {
     const raw = (convResponse as any)?.data ?? convResponse ?? [];
     if (!Array.isArray(raw)) return [];
@@ -322,9 +328,14 @@ export function MobileMessages({ router }: MobileMessagesProps) {
     // Group by clientId — API returns newest-first, so first occurrence is most recent
     const seen = new Set<string>();
     const unreadByClient = new Map<string, number>();
+    const idsByClient = new Map<string, string[]>();
     for (const c of mapped) {
       const key = c.clientId || c.id;
-      unreadByClient.set(key, (unreadByClient.get(key) ?? 0) + c.unreadCount);
+      const unread = readConversationIds.has(c.id) ? 0 : c.unreadCount;
+      unreadByClient.set(key, (unreadByClient.get(key) ?? 0) + unread);
+      const ids = idsByClient.get(key) ?? [];
+      ids.push(c.id);
+      idsByClient.set(key, ids);
     }
     return mapped
       .filter((c) => {
@@ -333,8 +344,15 @@ export function MobileMessages({ router }: MobileMessagesProps) {
         seen.add(key);
         return true;
       })
-      .map((c) => ({ ...c, unreadCount: unreadByClient.get(c.clientId || c.id) ?? c.unreadCount }));
-  }, [convResponse]);
+      .map((c) => {
+        const key = c.clientId || c.id;
+        return {
+          ...c,
+          unreadCount: unreadByClient.get(key) ?? c.unreadCount,
+          memberIds: idsByClient.get(key) ?? [c.id],
+        };
+      });
+  }, [convResponse, readConversationIds]);
 
   const totalUnread = conversations.reduce((sum, c) => sum + c.unreadCount, 0);
 
@@ -450,6 +468,7 @@ export function MobileMessages({ router }: MobileMessagesProps) {
         ) : (
           <div style={{
             display: 'flex', flexDirection: 'column',
+            background: '#fff',
             border: '1px solid var(--m-line2)',
             borderRadius: 16,
             overflow: 'hidden',

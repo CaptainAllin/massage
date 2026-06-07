@@ -9,7 +9,7 @@ export function useInventory(businessId: string | undefined, filters?: { isActiv
       if (filters?.isActive !== undefined) params.set('isActive', String(filters.isActive));
       if (filters?.category) params.set('category', filters.category);
       const response = await apiClient.get(`/inventory?${params}`);
-      return response.data as { products: any[]; lowStockCount: number };
+      return response.data.data as { products: any[]; lowStockCount: number };
     },
     enabled: !!businessId,
   });
@@ -20,7 +20,7 @@ export function useProduct(id: string | undefined) {
     queryKey: ['product', id],
     queryFn: async () => {
       const response = await apiClient.get(`/inventory/${id}`);
-      return response.data;
+      return response.data.data;
     },
     enabled: !!id,
   });

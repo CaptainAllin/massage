@@ -242,11 +242,13 @@ export function MobileThread({ router }: MobileThreadProps) {
 
   const markRead = useMarkConversationRead(businessId);
 
-  // Mark conversation as read when thread is opened
+  // Mark conversation as read on the server when thread is opened. A client row
+  // collapses every channel-conversation, so clear each one — otherwise the
+  // aggregate unread badge in the list keeps showing the other channels' counts.
   useEffect(() => {
-    if (convo?.id && businessId) {
-      markRead.mutate(convo.id);
-    }
+    if (!convo || !businessId) return;
+    const ids = convo.memberIds?.length ? convo.memberIds : convo.id ? [convo.id] : [];
+    ids.forEach((id) => markRead.mutate(id));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [convo?.id, businessId]);
 

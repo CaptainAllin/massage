@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { Sidebar, Header } from '@massage/ui';
 import { useAuth, useRole } from '@massage/auth';
@@ -21,7 +21,51 @@ import { apiClient } from '@/lib/api-client';
 import { usePWAInstall } from '@/lib/hooks/use-pwa-install';
 import { PWAInstallBanner } from '@/components/pwa/PWAInstallBanner';
 import { PWAFirstLoginModal } from '@/components/pwa/PWAFirstLoginModal';
-import { MobileShell } from '@/components/mobile/MobileShell';
+import { MobileShell, type MobileView } from '@/components/mobile/MobileShell';
+
+// Routes the mobile shell renders natively via its own tab navigation. Anything
+// else under (dashboard) is shown as a pushed overlay inside the shell so the
+// "More" menu destinations (Intake Forms, Promotions, etc.) work on mobile.
+const MOBILE_CORE_ROUTES: Record<string, MobileView> = {
+  dashboard:    'dashboard',
+  appointments: 'appts',
+  clients:      'clients',
+  messages:     'messages',
+  payments:     'payments',
+  settings:     'settings',
+};
+
+// Titles for the pushed-overlay header, keyed by the first path segment.
+const MOBILE_ROUTE_TITLES: Record<string, string> = {
+  'intake-forms':     'Intake Forms',
+  'therapists':       'Therapists',
+  'inventory':        'Inventory',
+  'telehealth':       'Telehealth',
+  'insurance-claims': 'Insurance',
+  'promotions':       'Promotions',
+  'gift-cards':       'Gift Cards',
+  'loyalty':          'Loyalty',
+  'analytics':        'Analytics',
+  'reports':          'Reports',
+  'automation':       'Automation',
+  'exports':          'Exports',
+  'payroll':          'Payroll',
+  'invoices':         'Invoices',
+  'services':         'Services',
+  'packages':         'Packages',
+  'memberships':      'Memberships',
+  'communications':   'Communications',
+  'treatment-notes':  'Treatment Notes',
+  'tasks':            'Tasks',
+};
+
+// Title-case a path segment as a fallback when not in the explicit map.
+function segmentToTitle(seg: string): string {
+  return seg
+    .split('-')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+}
 
 // Prefetch all main pages' API data in the background so navigation is instant.
 // Query keys and return shapes must match exactly what each page's hook uses.
@@ -132,6 +176,7 @@ function useIsMobile() {
 function DashboardContent({ children }: { children: React.ReactNode }) {
   const isMobile = useIsMobile();
   const router = useRouter();
+  const pathname = usePathname();
   const { user, signOut } = useAuth();
   const { role: globalRole } = useRole();
   const businessId = useBusinessId();
@@ -161,7 +206,34 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
 
   // ≤767px: render mobile shell instead of desktop sidebar layout
   if (isMobile) {
-    return <MobileShell />;
+    const seg = (pathname?.split('/')[1] ?? '') || 'dashboard';
+    const coreView = MOBILE_CORE_ROUTES[seg];
+    // Non-core routes (Intake Forms, Promotions, …) render their real page as a
+    // pushed overlay inside the device frame, with a back button.
+    const routeOverlay = coreView
+      ? null
+      : { title: MOBILE_ROUTE_TITLES[seg] ?? segmentToTitle(seg), node: children };
+
+    const handleRouteBack = () => {
+      if (typeof window !== 'undefined' && window.history.length > 1) {
+        router.back();
+      } else {
+        router.push('/dashboard');
+      }
+    };
+
+    return (
+      <>
+        <MobileShell
+          initialView={coreView ?? 'dashboard'}
+          routeOverlay={routeOverlay}
+          onRouteBack={handleRouteBack}
+        />
+        <NewSessionModal />
+        {/* Warm core screen data on mobile too, so tab switches render instantly. */}
+        <BackgroundPrefetcher />
+      </>
+    );
   }
 
   return (

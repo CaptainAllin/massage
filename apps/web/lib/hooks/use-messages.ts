@@ -93,6 +93,20 @@ export function useMarkConversationRead(businessId: string | undefined) {
       );
       return response.data.data;
     },
+    onMutate: (conversationId: string) => {
+      // Optimistically zero out unread count so badge disappears immediately on back-navigation
+      queryClient.setQueriesData<any>(
+        { queryKey: ['conversations', businessId] },
+        (old: any) => {
+          if (!old) return old;
+          const arr: any[] = Array.isArray(old.data) ? old.data : (Array.isArray(old) ? old : []);
+          const updated = arr.map((c: any) =>
+            c.id === conversationId ? { ...c, unreadCount: 0 } : c
+          );
+          return old?.data !== undefined ? { ...old, data: updated } : updated;
+        }
+      );
+    },
     onSuccess: (_, conversationId) => {
       queryClient.invalidateQueries({ queryKey: ['conversations', businessId] });
       queryClient.invalidateQueries({ queryKey: ['conversation', conversationId] });
@@ -105,10 +119,10 @@ export function useUnreadCount(businessId: string | undefined) {
   return useQuery({
     queryKey: ['unread-count', businessId],
     queryFn: async () => {
-      const response = await apiClient.get<ApiResponse<{ count: number }>>(
+      const response = await apiClient.get<ApiResponse<{ unreadCount: number }>>(
         `/conversations/unread-count?businessId=${businessId}`
       );
-      return response.data.data?.count || 0;
+      return response.data.data?.unreadCount || 0;
     },
     enabled: !!businessId,
     refetchInterval: 30000, // Refetch every 30 seconds

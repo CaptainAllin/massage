@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import { Input, Textarea, Select, Checkbox, Radio } from '@massage/ui';
 import { IntakeFormField } from '@massage/types';
 import { BodyMapSelector, BodyMapSelection } from '@/components/body-map/BodyMapSelector';
+import { AnatomySearch } from '@/components/body-map/AnatomySearch';
+import { frontViewRegions, BodyRegion } from '@/components/body-map/body-regions';
 
 interface IntakeFormRendererProps {
   fields: IntakeFormField[];
@@ -189,6 +191,21 @@ function BodyMapField({
     onChange({ ...value, back: selections });
   };
 
+  const handleSearchSelect = (region: BodyRegion) => {
+    const isFront = frontViewRegions.some((r) => r.id === region.id);
+    const view = isFront ? 'front' : 'back';
+    setActiveView(view);
+
+    const current = isFront ? frontSelections : backSelections;
+    if (current.some((s) => s.regionId === region.id)) return; // already marked
+
+    const next = [
+      ...current,
+      { regionId: region.id, regionName: region.name, painLevel: 0 },
+    ];
+    onChange({ ...value, [view]: next });
+  };
+
   const totalSelected = frontSelections.length + backSelections.length;
 
   return (
@@ -200,8 +217,14 @@ function BodyMapField({
       <p className="text-xs text-gray-500 mb-3">
         {readOnly
           ? `${totalSelected} area${totalSelected !== 1 ? 's' : ''} marked`
-          : 'Click on body areas to indicate problem regions. Set pain level (0-10) for each.'}
+          : 'Click on body areas — or search by name below — to mark problem regions. Set pain level (0-10) for each.'}
       </p>
+
+      {!readOnly && (
+        <div className="mb-4">
+          <AnatomySearch onRegionSelect={handleSearchSelect} />
+        </div>
+      )}
 
       <div className="flex gap-2 mb-4">
         <button

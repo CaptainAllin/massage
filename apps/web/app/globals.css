@@ -191,3 +191,14 @@
   from { transform: translateY(100%); }
   to   { transform: translateY(0); }
 }
+
+/* Skeleton loading pulse */
+@keyframes im-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.45; }
+}
+.im-skeleton {
+  background: var(--m-soft);
+  border-radius: 8px;
+  animation: im-pulse 1.4s ease-in-out infinite;
+}
